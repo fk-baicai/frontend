@@ -493,6 +493,21 @@
         render(computeLocal(localElapsedMs()));
     }
 
+    function applyExecHangarPayload(data) {
+        if (!data || !data.ok) {
+            showError(formatErr(data, null, 'SRV_001'));
+            return;
+        }
+        hideError();
+        if (metaEl) {
+            var metaText = buildSyncMetaText(data);
+            metaEl.textContent = metaText;
+            metaEl.hidden = !metaText;
+        }
+        reanchorFromServer(data);
+        render(computeLocal(data.elapsedMs != null ? Number(data.elapsedMs) : localElapsedMs()));
+    }
+
     function fetchState(fresh) {
         var url =
             apiBase() +
@@ -515,33 +530,51 @@
                 });
             })
             .then(function (data) {
-                if (!data || !data.ok) {
-                    showError(formatErr(data, null, 'SRV_001'));
-                    return;
-                }
-                hideError();
-                if (metaEl) {
-                    var metaText = buildSyncMetaText(data);
-                    metaEl.textContent = metaText;
-                    metaEl.hidden = !metaText;
-                }
-                reanchorFromServer(data);
-                render(computeLocal(data.elapsedMs != null ? Number(data.elapsedMs) : localElapsedMs()));
+                applyExecHangarPayload(data);
             })
             .catch(function (e) {
                 showError(formatErr(null, e, 'NET_E001'));
             });
     }
 
-    function start() {
-        renderLoading();
-        fetchState(true);
+    function startTimers() {
         if (tickTimer) clearInterval(tickTimer);
         tickTimer = setInterval(tick, 1000);
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = setInterval(function () {
-            fetchState(true);
+            if (window.UssHomeStatusLoader) {
+                window.UssHomeStatusLoader.refresh();
+            } else {
+                fetchState(false);
+            }
         }, POLL_MS);
+    }
+
+    function startWithLoader() {
+        var cached = window.UssHomeStatusLoader.getCached();
+        if (cached && cached.execHangar && cached.execHangar.ok) {
+            applyExecHangarPayload(cached.execHangar);
+        } else {
+            renderLoading();
+        }
+        window.UssHomeStatusLoader.subscribe(function (payload) {
+            if (payload && payload.execHangar) applyExecHangarPayload(payload.execHangar);
+        });
+        startTimers();
+    }
+
+    function startLegacy() {
+        renderLoading();
+        fetchState(false);
+        startTimers();
+    }
+
+    function start() {
+        if (window.UssHomeStatusLoader) {
+            startWithLoader();
+            return;
+        }
+        startLegacy();
     }
 
     if (document.readyState === 'loading') {

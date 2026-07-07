@@ -160,10 +160,14 @@
             var base = bases[i];
             try {
                 var url = base + '/api/rsi-server-status?_=' + Date.now();
-                var r = await fetch(url, {
+                var fetchOpts = {
                     cache: 'no-store',
                     headers: { Pragma: 'no-cache', 'Cache-Control': 'no-cache' },
-                });
+                };
+                if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+                    fetchOpts.signal = AbortSignal.timeout(5000);
+                }
+                var r = await fetch(url, fetchOpts);
                 var data = {};
                 try {
                     data = await r.json();
@@ -197,6 +201,8 @@
         }
     }
 
+    var optsSilent = false;
+
     function scheduleRefresh() {
         if (timer) clearInterval(timer);
         timer = setInterval(function () {
@@ -204,7 +210,54 @@
         }, REFRESH_MS);
     }
 
-    function init() {
+    function initWithLoader() {
+        gridEl = document.getElementById('rsiServerStatusGrid');
+        if (!gridEl) return;
+        ensureUpdatedEl();
+
+        var cached = window.UssHomeStatusLoader.getCached();
+        if (cached && cached.rsiServerStatus && cached.rsiServerStatus.ok) {
+            render(cached.rsiServerStatus);
+        } else {
+            renderLoading();
+        }
+
+        window.UssHomeStatusLoader.subscribe(function (payload) {
+            if (!payload || !payload.rsiServerStatus) return;
+            if (payload.rsiServerStatus.ok) {
+                render(payload.rsiServerStatus);
+                return;
+            }
+            if (!optsSilent) {
+                renderError(
+                    typeof UssApiError !== 'undefined'
+                        ? UssApiError.formatUserError(payload.rsiServerStatus.code || 'RSI_001')
+                        : '暂时无法获取 RSI 服务器状态，请稍后刷新。'
+                );
+            }
+        });
+
+        scheduleRefreshLoader();
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState !== 'visible') return;
+            optsSilent = true;
+            window.UssHomeStatusLoader.refresh().finally(function () {
+                optsSilent = false;
+            });
+        });
+    }
+
+    function scheduleRefreshLoader() {
+        if (timer) clearInterval(timer);
+        timer = setInterval(function () {
+            optsSilent = true;
+            window.UssHomeStatusLoader.refresh().finally(function () {
+                optsSilent = false;
+            });
+        }, REFRESH_MS);
+    }
+
+    function initLegacy() {
         gridEl = document.getElementById('rsiServerStatusGrid');
         if (!gridEl) return;
         ensureUpdatedEl();
@@ -214,6 +267,14 @@
             if (document.visibilityState !== 'visible') return;
             loadStatus({ silent: true });
         });
+    }
+
+    function init() {
+        if (window.UssHomeStatusLoader) {
+            initWithLoader();
+            return;
+        }
+        initLegacy();
     }
 
     function scheduleInit() {

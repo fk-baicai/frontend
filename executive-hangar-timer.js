@@ -14,7 +14,6 @@
     var board = document.getElementById('execHangarBoard');
     var errBox = document.getElementById('execHangarError');
     var metaEl = document.getElementById('execHangarSyncMeta');
-    var metaEl = document.getElementById('execHangarSyncMeta');
     var phaseRail = document.getElementById('execPhaseRail');
     var insertBanner = document.getElementById('execInsertBanner');
     var insertText = document.getElementById('execInsertText');
@@ -31,10 +30,51 @@
     var cycleMarker = document.getElementById('execCycleMarker');
 
     function apiBase() {
-        return (
-            (typeof window !== 'undefined' && window.USS_AUTH_API_BASE) ||
-            'http://127.0.0.1:3789'
-        ).replace(/\/$/, '');
+        if (window.UssAuthApi && window.UssAuthApi.base) {
+            return String(window.UssAuthApi.base).replace(/\/$/, '');
+        }
+        if (typeof window !== 'undefined' && window.USS_AUTH_API_BASE) {
+            return String(window.USS_AUTH_API_BASE).replace(/\/$/, '');
+        }
+        return 'http://127.0.0.1:3789';
+    }
+
+    function apiBaseCandidates() {
+        var seen = {};
+        var list = [];
+        function add(url) {
+            var u = String(url || '').replace(/\/$/, '');
+            if (!u || seen[u]) return;
+            seen[u] = true;
+            list.push(u);
+        }
+        add(apiBase());
+        var origin = window.location && window.location.origin;
+        var host = window.location && window.location.hostname;
+        if (origin && /^https?:\/\//i.test(origin)) add(origin);
+        if (host === 'localhost' || host === '[::1]' || host === '::1') add('http://localhost:3789');
+        add('http://127.0.0.1:3789');
+        return list;
+    }
+
+    function formatFetchError(err) {
+        var msg = (err && err.message) || '';
+        if (!msg || msg === 'Failed to fetch' || (err && err.name === 'TypeError')) {
+            return '无法连接后端 API，请确认 backend 已启动；生产环境请检查 /api 反代是否正常';
+        }
+        return msg;
+    }
+
+    function setSyncing(syncing) {
+        if (board) board.classList.toggle('is-syncing', !!syncing);
+        if (metaEl) {
+            if (syncing) {
+                metaEl.textContent = '正在同步行政机库…';
+                metaEl.hidden = false;
+            } else if (!metaEl.textContent || metaEl.textContent.indexOf('正在同步') === 0) {
+                metaEl.hidden = true;
+            }
+        }
     }
 
     function modMs(n, d) {
@@ -374,30 +414,50 @@
         render(renderFromPayload(data));
     }
 
-    function fetchState(fresh) {
-        var url =
-            apiBase() +
-            '/api/exec-hangar/state?fresh=' +
-            (fresh ? '1' : '0') +
-            '&_=' +
-            Date.now();
-        return fetch(url, {
-            cache: 'no-store',
-            headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-        })
-            .then(function (r) {
-                return r.json().then(function (j) {
-                    if (!r.ok) {
-                        var err = new Error(formatErr(j, null, 'SRV_001'));
-                        err.code = (j && j.code) || 'SRV_001';
-                        throw err;
-                    }
-                    return j;
-                });
+    function fetchFromBackend(fresh) {
+        var bases = apiBaseCandidates();
+        var lastErr = null;
+        var idx = 0;
+
+        function tryOne() {
+            if (idx >= bases.length) {
+                return Promise.reject(lastErr || new Error('Failed to fetch'));
+            }
+            var base = bases[idx++];
+            var url =
+                base +
+                '/api/exec-hangar/state?fresh=' +
+                (fresh ? '1' : '0') +
+                '&_=' +
+                Date.now();
+            return fetch(url, {
+                cache: 'no-store',
+                headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
             })
+                .then(function (r) {
+                    return r.json().then(function (j) {
+                        if (!r.ok || !j || j.ok === false) {
+                            var err = new Error(formatErr(j, null, 'SRV_001'));
+                            err.code = (j && j.code) || 'SRV_001';
+                            throw err;
+                        }
+                        return j;
+                    });
+                })
+                .catch(function (e) {
+                    lastErr = e;
+                    return tryOne();
+                });
+        }
+
+        return tryOne();
+    }
+
+    function fetchState(fresh) {
+        return fetchFromBackend(!!fresh)
             .then(applyServerPayload)
             .catch(function (e) {
-                showError(formatErr(null, e, 'NET_E001'));
+                showError(formatFetchError(e));
             });
     }
 
@@ -472,13 +532,17 @@
             tickTimer = setInterval(tick, 1000);
             return;
         }
-        fetchState(true);
-        if (tickTimer) clearInterval(tickTimer);
-        tickTimer = setInterval(tick, 1000);
-        if (pollTimer) clearInterval(pollTimer);
-        pollTimer = setInterval(function () {
-            fetchState(true);
-        }, POLL_MS);
+        setSyncing(true);
+        fetchState(true).then(function () {
+            setSyncing(false);
+            if (anchorStartTime == null) return;
+            if (tickTimer) clearInterval(tickTimer);
+            tickTimer = setInterval(tick, 1000);
+            if (pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(function () {
+                fetchState(true);
+            }, POLL_MS);
+        });
     }
 
     if (document.readyState === 'loading') {

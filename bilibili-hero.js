@@ -59,7 +59,7 @@
             video.muted = true;
             video.playsInline = true;
             video.loop = false;
-            video.preload = 'auto';
+            video.preload = 'metadata';
             video.dataset.heroSrc = sources[index] || sources[0];
         });
 
@@ -140,27 +140,51 @@
             progressRaf = requestAnimationFrame(tickProgress);
         }
 
-        function attachSource(video, forceReload) {
-            const src = video.dataset.heroSrc;
-            if (!src) return;
-            if (!forceReload && video.dataset.loadedSrc === src) return;
-
+        function applyMediaUrl(video, mediaUrl, forceReload) {
+            if (!forceReload && video.dataset.loadedSrc === mediaUrl) return;
             const source = video.querySelector('source');
             if (source) {
-                source.src = src;
+                source.src = mediaUrl;
             } else {
-                video.src = src;
+                video.src = mediaUrl;
             }
-            video.dataset.loadedSrc = src;
-            try {
-                video.load();
-            } catch (ignore) {}
+            video.dataset.loadedSrc = mediaUrl;
+            if (video.readyState < 2) {
+                try {
+                    video.load();
+                } catch (ignore) {}
+            }
         }
 
-        function preloadAllVideos() {
-            videos.forEach(function (video) {
-                attachSource(video);
-            });
+        function attachSource(video, forceReload) {
+            const src = video.dataset.heroSrc;
+            if (!src) return Promise.resolve();
+
+            const cache = window.UssHeroVideoCache;
+            if (cache && typeof cache.resolveUrl === 'function') {
+                return cache
+                    .resolveUrl(src)
+                    .then(function (mediaUrl) {
+                        applyMediaUrl(video, mediaUrl, forceReload);
+                    })
+                    .catch(function () {
+                        applyMediaUrl(video, src, forceReload);
+                    });
+            }
+
+            applyMediaUrl(video, src, forceReload);
+            return Promise.resolve();
+        }
+
+        function preloadNextVideoWhenIdle() {
+            const run = function () {
+                attachSource(nextVideo).catch(function () {});
+            };
+            if (window.requestIdleCallback) {
+                window.requestIdleCallback(run, { timeout: 3000 });
+            } else {
+                setTimeout(run, 1500);
+            }
         }
 
         function revealVideo(video) {
@@ -197,12 +221,14 @@
         }
 
         function playVideo(video, fromStart) {
-            attachSource(video);
             if (fromStart) {
                 video.dataset.heroSkipIntro = '1';
             }
 
-            return waitForVideoReady(video)
+            return attachSource(video)
+                .then(function () {
+                    return waitForVideoReady(video);
+                })
                 .then(function () {
                     if (fromStart) {
                         try {
@@ -239,14 +265,16 @@
             playVideo(currentVideo, true)
                 .catch(function () {
                     delete currentVideo.dataset.loadedSrc;
-                    attachSource(currentVideo, true);
-                    return playVideo(currentVideo, true);
+                    return attachSource(currentVideo, true).then(function () {
+                        return playVideo(currentVideo, true);
+                    });
                 })
                 .catch(function () {
                     swapCurrentVideo();
                     delete currentVideo.dataset.loadedSrc;
-                    attachSource(currentVideo, true);
-                    return playVideo(currentVideo, true);
+                    return attachSource(currentVideo, true).then(function () {
+                        return playVideo(currentVideo, true);
+                    });
                 })
                 .catch(function () {
                     /* 仍失败则等 endWatch 再次尝试 */
@@ -291,8 +319,8 @@
         }
 
         videos.forEach(bindVideoEvents);
-        preloadAllVideos();
         startEndWatch();
+        preloadNextVideoWhenIdle();
 
         playVideo(currentVideo, false).catch(function () {
             playVideo(currentVideo, true).catch(function () {

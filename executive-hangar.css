@@ -926,6 +926,16 @@ body.exec-hangar-body::before {
     box-shadow: 0 0 24px rgba(80, 180, 255, 0.22);
 }
 
+.exec-console.is-syncing {
+    opacity: 0.72;
+}
+
+.exec-console.is-syncing .exec-hero-clock b,
+.exec-console.is-syncing .exec-meta-value,
+.exec-console.is-syncing #execLedCount {
+    opacity: 0.35;
+}
+
 .exec-hangar-sync-meta {
     margin: 0 0 1rem;
     font-size: 0.88rem;
