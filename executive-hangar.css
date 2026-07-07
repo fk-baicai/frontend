@@ -926,6 +926,18 @@ body.exec-hangar-body::before {
     box-shadow: 0 0 24px rgba(80, 180, 255, 0.22);
 }
 
+.exec-hangar-sync-meta {
+    margin: 0 0 1rem;
+    font-size: 0.88rem;
+    color: rgba(168, 216, 232, 0.68);
+    text-align: center;
+    letter-spacing: 0.02em;
+}
+
+.exec-hangar-sync-meta[hidden] {
+    display: none;
+}
+
 .exec-hangar-error {
     margin-bottom: 1.25rem;
     padding: 0.85rem 1rem;

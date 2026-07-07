@@ -13,6 +13,8 @@
 
     var board = document.getElementById('execHangarBoard');
     var errBox = document.getElementById('execHangarError');
+    var metaEl = document.getElementById('execHangarSyncMeta');
+    var metaEl = document.getElementById('execHangarSyncMeta');
     var phaseRail = document.getElementById('execPhaseRail');
     var insertBanner = document.getElementById('execInsertBanner');
     var insertText = document.getElementById('execInsertText');
@@ -296,13 +298,50 @@
         if (errBox) errBox.classList.add('is-hidden');
     }
 
+    function formatSyncedAt(iso) {
+        if (!iso) return '';
+        try {
+            var d = new Date(iso);
+            if (isNaN(d.getTime())) return '';
+            return d.toLocaleString('zh-CN', {
+                hour12: false,
+                timeZone: 'Asia/Shanghai',
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+            });
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function buildSyncMetaText(data) {
+        if (!data || !data.ok) return '';
+        var calibratedAt = data.webCalibratedAt || data.ingestedAt || '';
+        var when = formatSyncedAt(calibratedAt);
+        if (!when) return '';
+        var parts = ['校准于 ' + when];
+        if (data.webElapsedTextAtCalibrate) {
+            parts.push('校准时 ' + data.webElapsedTextAtCalibrate);
+        } else if (data.elapsedText) {
+            parts.push('当前 ' + data.elapsedText);
+        }
+        if (data.ingestMode) parts.push('上报同步');
+        return parts.join(' · ');
+    }
+
     function reanchorFromServer(data) {
         if (data.cycleDurationMs) CYCLE_MS = data.cycleDurationMs;
         calibrationOffsetMs = 0;
-
-        // 用 API 已进行时间对齐到访客本机时钟，避免服务器 anchor 与浏览器时钟不一致
         if (data.elapsedMs != null && Number.isFinite(Number(data.elapsedMs))) {
-            anchorStartTime = Date.now() - modMs(Number(data.elapsedMs), CYCLE_MS);
+            var serverNow =
+                data.serverNow != null && Number.isFinite(Number(data.serverNow))
+                    ? Number(data.serverNow)
+                    : Date.now();
+            anchorStartTime = serverNow - modMs(Number(data.elapsedMs), CYCLE_MS);
             return;
         }
         if (data.anchorStartTime != null) {
@@ -327,6 +366,11 @@
             return;
         }
         hideError();
+        if (metaEl) {
+            var metaText = buildSyncMetaText(data);
+            metaEl.textContent = metaText;
+            metaEl.hidden = !metaText;
+        }
         reanchorFromServer(data);
         render(renderFromPayload(data));
     }

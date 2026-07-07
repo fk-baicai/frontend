@@ -8,6 +8,7 @@
 
     var gridEl = document.getElementById('homeExecHangarGrid');
     var errEl = document.getElementById('homeExecHangarError');
+    var metaEl = document.getElementById('homeExecHangarUpdated');
     if (!gridEl) return;
 
     var CYCLE_MS = 185 * 60 * 1000;
@@ -405,11 +406,50 @@
         if (errEl) errEl.classList.add('is-hidden');
     }
 
+    function formatSyncedAt(iso) {
+        if (!iso) return '';
+        try {
+            var d = new Date(iso);
+            if (isNaN(d.getTime())) return '';
+            return d.toLocaleString('zh-CN', {
+                hour12: false,
+                timeZone: 'Asia/Shanghai',
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+            });
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function buildSyncMetaText(data) {
+        if (!data || !data.ok) return '';
+        var calibratedAt = data.webCalibratedAt || data.ingestedAt || '';
+        var when = formatSyncedAt(calibratedAt);
+        if (!when) return '';
+        var parts = ['校准于 ' + when];
+        if (data.webElapsedTextAtCalibrate) {
+            parts.push('校准时 ' + data.webElapsedTextAtCalibrate);
+        } else if (data.elapsedText) {
+            parts.push('当前 ' + data.elapsedText);
+        }
+        if (data.ingestMode) parts.push('上报同步');
+        return parts.join(' · ');
+    }
+
     function reanchorFromServer(data) {
         if (data.cycleDurationMs) CYCLE_MS = data.cycleDurationMs;
         calibrationOffsetMs = 0;
         if (data.elapsedMs != null && Number.isFinite(Number(data.elapsedMs))) {
-            anchorStartTime = Date.now() - modMs(Number(data.elapsedMs), CYCLE_MS);
+            var serverNow =
+                data.serverNow != null && Number.isFinite(Number(data.serverNow))
+                    ? Number(data.serverNow)
+                    : Date.now();
+            anchorStartTime = serverNow - modMs(Number(data.elapsedMs), CYCLE_MS);
             return;
         }
         if (data.anchorStartTime != null) {
@@ -460,6 +500,11 @@
                     return;
                 }
                 hideError();
+                if (metaEl) {
+                    var metaText = buildSyncMetaText(data);
+                    metaEl.textContent = metaText;
+                    metaEl.hidden = !metaText;
+                }
                 reanchorFromServer(data);
                 render(computeLocal(data.elapsedMs != null ? Number(data.elapsedMs) : localElapsedMs()));
             })

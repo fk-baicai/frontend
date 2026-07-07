@@ -3135,6 +3135,10 @@ body.home-page-body .home-exec-hangar-section {
  padding-left: calc(0.62rem + 2px);
 }
 
+.home-exec-hangar-lead-row .rsi-status-updated {
+ margin: 0;
+}
+
 .home-exec-hangar-lead {
  margin: 0;
  font-size: var(--home-section-lead-size);
