@@ -1,5 +1,5 @@
 /**
- * 行政机库计时器 — exec.xyxyll.com 定期校对 + 访客本机时间每秒推算
+ * 行政机库计时器 — 仅从后端 API 读取锚点，访客本机时间每秒推算
  */
 (function () {
     if (typeof document === 'undefined') return;
@@ -9,9 +9,7 @@
     var calibrationOffsetMs = 0;
     var tickTimer = null;
     var pollTimer = null;
-    var calibrateTimer = null;
-    /** 与后端 WEB_CALIBRATE_INTERVAL_MS 一致：每 3 分钟带 fresh 拉一次网站校对 */
-    var CALIBRATE_POLL_MS = 24 * 60 * 60 * 1000;
+    var POLL_MS = 30 * 1000;
 
     var board = document.getElementById('execHangarBoard');
     var errBox = document.getElementById('execHangarError');
@@ -320,8 +318,7 @@
     function formatErr(data, err, fallback) {
         var code = (data && data.code) || (err && err.code) || fallback || 'SRV_001';
         if (typeof UssApiError !== 'undefined') return UssApiError.formatUserError(code);
-        if (err && err.message && /^错误代码：/.test(err.message)) return err.message;
-        return '错误代码：' + code;
+        return '暂时无法获取行政机库状态，请稍后刷新。';
     }
 
     function applyServerPayload(data) {
@@ -424,17 +421,13 @@
             tickTimer = setInterval(tick, 1000);
             return;
         }
-        fetchState(true);
+        fetchState(false);
         if (tickTimer) clearInterval(tickTimer);
         tickTimer = setInterval(tick, 1000);
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = setInterval(function () {
             fetchState(false);
-        }, 30000);
-        if (calibrateTimer) clearInterval(calibrateTimer);
-        calibrateTimer = setInterval(function () {
-            fetchState(true);
-        }, CALIBRATE_POLL_MS);
+        }, POLL_MS);
     }
 
     if (document.readyState === 'loading') {

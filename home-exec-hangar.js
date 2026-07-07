@@ -15,8 +15,7 @@
     var calibrationOffsetMs = 0;
     var tickTimer = null;
     var pollTimer = null;
-    var calibrateTimer = null;
-    var CALIBRATE_POLL_MS = 24 * 60 * 60 * 1000;
+    var POLL_MS = 30 * 1000;
 
     var PHASE_RANGE = {
         charging: '0 – 120 分钟',
@@ -426,8 +425,7 @@
     function formatErr(data, err, fallback) {
         var code = (data && data.code) || (err && err.code) || fallback || 'SRV_001';
         if (typeof UssApiError !== 'undefined') return UssApiError.formatUserError(code);
-        if (err && err.message && /^错误代码：/.test(err.message)) return err.message;
-        return '错误代码：' + code;
+        return '暂时无法获取行政机库状态，请稍后刷新。';
     }
 
     function tick() {
@@ -464,17 +462,13 @@
 
     function start() {
         renderLoading();
-        fetchState(true);
+        fetchState(false);
         if (tickTimer) clearInterval(tickTimer);
         tickTimer = setInterval(tick, 1000);
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = setInterval(function () {
             fetchState(false);
-        }, 30000);
-        if (calibrateTimer) clearInterval(calibrateTimer);
-        calibrateTimer = setInterval(function () {
-            fetchState(true);
-        }, CALIBRATE_POLL_MS);
+        }, POLL_MS);
     }
 
     if (document.readyState === 'loading') {

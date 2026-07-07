@@ -48,7 +48,7 @@
         if (Err) err = Err.createApiError(r.status, data, fallbackCode);
         else {
             var code = (data && data.code) || fallbackCode || 'NET_E001';
-            err = new Error('错误代码：' + code);
+            err = new Error(Err ? Err.formatUserError(code) : '网络异常，请稍后重试。');
             err.code = code;
         }
         err.status = r.status;
@@ -184,8 +184,7 @@
                 reportProgress({ stage: 'pending', message: message || '正在处理注册，请稍候…' });
                 while (Date.now() < deadline) {
                     if (controller && controller.signal && controller.signal.aborted) {
-                        var abortErr = new Error('错误代码：REG_P001');
-                        abortErr.code = 'REG_P001';
+                        var abortErr = Err ? Err.makeError('REG_P001') : new Error('注册仍在处理中，请稍后在登录页尝试。');
                         throw abortErr;
                     }
                     await sleep(interval);
@@ -202,8 +201,7 @@
                     transientFails = 0;
                     var statusData = await parseJson(sr);
                     if (sr.status === 404) {
-                        var expiredErr = new Error('错误代码：REG_P002');
-                        expiredErr.code = 'REG_P002';
+                        var expiredErr = Err ? Err.makeError('REG_P002') : new Error('注册任务已过期，请重新提交注册。');
                         throw expiredErr;
                     }
                     if (!sr.ok && statusData && statusData.code) {
@@ -225,14 +223,11 @@
                     }
                     if (statusData.status === 'failed') {
                         var failCode = (statusData && statusData.code) || 'SRV_001';
-                        var failErr = new Error('错误代码：' + failCode);
-                        failErr.code = failCode;
-                        if (statusData && statusData.action) failErr.action = statusData.action;
+                        var failErr = Err ? Err.makeError(failCode, statusData && statusData.action ? { action: statusData.action } : null) : new Error('注册失败，请稍后重试。');
                         throw failErr;
                     }
                 }
-                var pollTimeoutErr = new Error('错误代码：REG_P001');
-                pollTimeoutErr.code = 'REG_P001';
+                var pollTimeoutErr = Err ? Err.makeError('REG_P001') : new Error('注册仍在处理中，请稍后在登录页尝试。');
                 throw pollTimeoutErr;
             }
 
@@ -260,8 +255,7 @@
                     } catch (fetchErr) {
                         lastErr = fetchErr;
                         if (fetchErr && fetchErr.name === 'AbortError') {
-                            var timeoutErr = new Error('错误代码：REG_P001');
-                            timeoutErr.code = 'REG_P001';
+                            var timeoutErr = Err ? Err.makeError('REG_P001') : new Error('注册仍在处理中，请稍后在登录页尝试。');
                             throw timeoutErr;
                         }
                         if (bi < bases.length - 1 && isFetchNetworkFailure(fetchErr)) {
@@ -270,7 +264,7 @@
                         throw fetchErr;
                     }
                 }
-                throw lastErr || new Error('错误代码：NET_E001');
+                throw lastErr || (Err ? Err.makeError('NET_E001') : new Error('网络异常，请检查网络后重试。'));
             } finally {
                 if (timer) clearTimeout(timer);
             }

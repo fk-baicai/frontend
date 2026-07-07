@@ -61,16 +61,7 @@
 
     function ensureUpdatedEl() {
         if (updatedEl) return updatedEl;
-        var wrap = gridEl && gridEl.closest('.rsi-status-wrap');
-        if (!wrap) return null;
         updatedEl = document.getElementById('rsiServerStatusUpdated');
-        if (!updatedEl) {
-            updatedEl = document.createElement('p');
-            updatedEl.id = 'rsiServerStatusUpdated';
-            updatedEl.className = 'rsi-funding-updated';
-            updatedEl.hidden = true;
-            wrap.appendChild(updatedEl);
-        }
         return updatedEl;
     }
 
@@ -81,14 +72,8 @@
             return;
         }
         var when = formatFetchedAt(data.fetchedAt);
-        var ageMs = Number(data.cacheAgeMs) || 0;
-        var showStale = !!data.stale && ageMs > 30 * 60 * 1000;
-        if (showStale || ageMs > 6 * 60 * 60 * 1000) {
-            when += ' · 待后端更新';
-        }
-        el.textContent = when ? '更新时间：' + when : '';
+        el.textContent = when || '';
         el.hidden = !when;
-        el.classList.toggle('is-stale', showStale || ageMs > 6 * 60 * 60 * 1000);
     }
 
     function renderLoading() {
@@ -187,11 +172,9 @@
                 }
                 if (!r.ok || !data.ok) {
                     var code = (data && data.code) || 'RSI_001';
-                    throw new Error(
-                        typeof UssApiError !== 'undefined'
-                            ? UssApiError.formatUserError(code)
-                            : '错误代码：' + code
-                    );
+                    throw typeof UssApiError !== 'undefined'
+                        ? UssApiError.createApiError(r.status, data, code)
+                        : new Error('暂时无法获取 RSI 服务器状态，请稍后刷新。');
                 }
                 return data;
             } catch (err) {
@@ -210,7 +193,6 @@
             var data = await fetchFromBackend();
             render(data);
         } catch (err) {
-            if (opts.silent && lastData) return;
             renderError(formatFetchError(err));
         }
     }

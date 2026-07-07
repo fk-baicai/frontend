@@ -8,8 +8,41 @@
     <meta name="keywords" content="星际公民,Star Citizen,星际公民新手教程,星际公民服务器,行政机库,飞船攻略,游戏卡顿修复,舰队招募,星际公民版本更新">
     <meta name="robots" content="index,follow,max-image-preview:large">
     <meta name="theme-color" content="#081625">
+    <style id="home-critical-css">
+        /* F5 / 本地首屏：styles.css 未就绪时避免 video 默认 300×150 浅色块 */
+        .video-container {
+            position: relative;
+            overflow: hidden;
+            background: #081625;
+        }
+        #myVideo1,
+        #myVideo2 {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none;
+            background: #000;
+        }
+        #myVideo1.active.is-ready,
+        #myVideo2.active.is-ready {
+            opacity: 1 !important;
+            visibility: visible !important;
+            pointer-events: auto;
+        }
+        #heroScSearchSuggest[hidden],
+        #heroScSearchSuggest:empty,
+        .nav-mega-panel[hidden] {
+            display: none !important;
+        }
+    </style>
     <link rel="canonical" href="https://ussxc.org/">
-    <link rel="stylesheet" href="styles.css?v=20260619a">
+    <link rel="stylesheet" href="styles.css?v=20260707d">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
@@ -223,7 +256,7 @@
 
     <div class="hero">
         <div class="video-container">
-            <video id="myVideo1" class="video-player" autoplay muted playsinline preload="none">
+            <video id="myVideo1" class="video-player" muted playsinline preload="none">
                 <source type="video/mp4">
             </video>
             <video id="myVideo2" class="video-player" muted playsinline preload="none">
@@ -301,6 +334,7 @@
                     <h2 class="rsi-status-title">服务器状态</h2>
                     <div class="rsi-status-lead-row">
                         <p class="rsi-status-lead">星际公民官方服务 · 数据来自 Roberts Space Industries</p>
+                        <span class="rsi-status-updated" id="rsiServerStatusUpdated" hidden></span>
                     </div>
                 </div>
             </header>
@@ -903,7 +937,7 @@
     <script src="home-boot.js"></script>
     <script defer src="material-icons-svg.js"></script>
     <script defer src="pw-toggle-icons.js"></script>
-    <script defer src="bilibili-hero.js"></script>
+    <script defer src="bilibili-hero.js?v=20260707e"></script>
     <script defer src="hero-sc-search.js?v=2"></script>
     <script defer src="script.js"></script>
     <script defer src="rsi-client.js"></script>
@@ -1153,10 +1187,11 @@
                 var m = String(err.message).match(/^错误代码：([A-Z0-9_]+)$/);
                 if (m) code = m[1];
             }
-            if (code && typeof UssApiError !== 'undefined' && UssApiError.registerHintForCode) {
+            if (code && typeof UssApiError !== 'undefined') {
                 var hint = UssApiError.registerHintForCode(code);
                 if (hint) return hint;
             }
+            if (err && err.message) return safeUserFacingMessage(err.message);
             return safeUserFacingMessage(err);
         }
 
@@ -1168,10 +1203,11 @@
                 var m = String(err.message).match(/^错误代码：([A-Z0-9_]+)$/);
                 if (m) code = m[1];
             }
-            if (code && typeof UssApiError !== 'undefined' && UssApiError.loginHintForCode) {
+            if (code && typeof UssApiError !== 'undefined') {
                 var hint = UssApiError.loginHintForCode(code);
                 if (hint) return hint;
             }
+            if (err && err.message) return safeUserFacingMessage(err.message);
             return safeUserFacingMessage(err);
         }
 
@@ -1197,12 +1233,14 @@
             if (typeof UssApiError !== 'undefined') {
                 return UssApiError.sanitizeUserMessage(msg);
             }
-            if (msg && typeof msg === 'object' && msg.code) {
-                return '错误代码：' + msg.code;
+            if (msg && typeof msg === 'object' && msg.message) {
+                return safeUserFacingMessage(msg.message);
             }
             var s = msg == null ? '' : String(msg).trim();
-            if (/^错误代码：[A-Z0-9_]+$/.test(s)) return s;
-            return '错误代码：NET_E001';
+            if (!s || /^[A-Z][A-Z0-9_]{2,}$/.test(s) || /^错误代码：/.test(s)) {
+                return '操作失败，请稍后重试。';
+            }
+            return s;
         }
 
         function formatCommunityChatHintError(err) {
@@ -5677,7 +5715,7 @@
     </script>
     <script defer src="oopz-bind.js"></script>
     <script defer src="oopz-user-prefs.js"></script>
-    <script defer src="rsi-server-status.js?v=20260619e"></script>
+    <script defer src="rsi-server-status.js?v=20260707c"></script>
     <script defer src="sc-festival-countdown.js?v=20260606a"></script>
     <script defer src="home-exec-hangar.js?v=20260617a"></script>
     <script defer src="oopz-bridge.js"></script>

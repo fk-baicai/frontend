@@ -315,7 +315,8 @@ body.home-page-body .home-section-eyebrow {
 }
 
 body.home-page-body .rsi-status-lead,
-body.home-page-body .sc-festival-lead {
+body.home-page-body .sc-festival-lead,
+body.home-page-body .rsi-status-updated {
     color: var(--text-muted);
 }
 

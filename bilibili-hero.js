@@ -1,7 +1,9 @@
 (function () {
     /** 首页舰船宣传视频（本地静态资源，原 B 站 BV1MqVr6KESA / BV1uqVr6KETK） */
     const HERO_SOURCES = ['videos/hero-1.mp4', 'videos/hero-2.mp4'];
-    const END_EPSILON = 0.08;
+    const END_EPSILON = 0.25;
+    const SWITCH_UNLOCK_MS = 5000;
+    const END_WATCH_MS = 200;
     let started = false;
 
     function deferHeroStart() {
@@ -13,11 +15,7 @@
     function scheduleHeroVideos() {
         if (started) return;
         const run = function () {
-            if (window.UssLazyMedia && typeof window.UssLazyMedia.runWhenIdle === 'function') {
-                window.UssLazyMedia.runWhenIdle(deferHeroStart, 900);
-            } else {
-                setTimeout(deferHeroStart, 900);
-            }
+            deferHeroStart();
         };
         if (window.__ussPageReady) {
             run();
@@ -33,7 +31,7 @@
         );
         setTimeout(function () {
             if (!started) run();
-        }, 4000);
+        }, 1500);
     }
 
     function setProgressScale(el, ratio) {
@@ -52,14 +50,16 @@
 
         const videos = [video1, video2];
         const sources = HERO_SOURCES.slice(0, videos.length);
-        let currentIndex = 0;
         let progressRaf = 0;
+        let endWatchTimer = 0;
+        let switchUnlockTimer = 0;
 
         videos.forEach(function (video, index) {
+            video.removeAttribute('autoplay');
             video.muted = true;
             video.playsInline = true;
             video.loop = false;
-            video.preload = 'none';
+            video.preload = 'auto';
             video.dataset.heroSrc = sources[index] || sources[0];
         });
 
@@ -74,10 +74,46 @@
             }
         }
 
+        function stopEndWatch() {
+            if (endWatchTimer) {
+                clearInterval(endWatchTimer);
+                endWatchTimer = 0;
+            }
+        }
+
+        function startEndWatch() {
+            stopEndWatch();
+            endWatchTimer = setInterval(checkAdvance, END_WATCH_MS);
+        }
+
+        function lockSwitch() {
+            isSwitching = true;
+            if (switchUnlockTimer) clearTimeout(switchUnlockTimer);
+            switchUnlockTimer = setTimeout(function () {
+                isSwitching = false;
+                switchUnlockTimer = 0;
+            }, SWITCH_UNLOCK_MS);
+        }
+
+        function unlockSwitch() {
+            if (switchUnlockTimer) {
+                clearTimeout(switchUnlockTimer);
+                switchUnlockTimer = 0;
+            }
+            isSwitching = false;
+        }
+
         function shouldAdvanceVideo(video) {
             if (!video || !video.duration || !isFinite(video.duration)) return false;
             if (video.ended) return true;
             return video.currentTime >= Math.max(0, video.duration - END_EPSILON);
+        }
+
+        function checkAdvance() {
+            if (!currentVideo || isSwitching) return;
+            if (shouldAdvanceVideo(currentVideo)) {
+                switchVideos();
+            }
         }
 
         function tickProgress() {
@@ -104,9 +140,11 @@
             progressRaf = requestAnimationFrame(tickProgress);
         }
 
-        function attachSource(video) {
+        function attachSource(video, forceReload) {
             const src = video.dataset.heroSrc;
-            if (!src || video.dataset.loadedSrc === src) return;
+            if (!src) return;
+            if (!forceReload && video.dataset.loadedSrc === src) return;
+
             const source = video.querySelector('source');
             if (source) {
                 source.src = src;
@@ -114,64 +152,127 @@
                 video.src = src;
             }
             video.dataset.loadedSrc = src;
-            video.load();
-        }
-
-        function preloadNextVideo() {
-            if (!nextVideo || nextVideo === currentVideo) return;
-            if (nextVideo.dataset.loadedSrc) return;
-            attachSource(nextVideo);
-        }
-
-        function playCurrentVideo(fromStart) {
-            attachSource(currentVideo);
-            if (fromStart) {
-                currentVideo.dataset.heroSkipIntro = '1';
-                try {
-                    currentVideo.currentTime = 0;
-                } catch (ignore) {}
-            }
-            setProgressScale(progressFill, 0);
-            const playPromise = currentVideo.play();
-            if (playPromise !== undefined) {
-                playPromise
-                    .then(function () {
-                        startProgressLoop();
-                        if (window.UssLazyMedia) {
-                            window.UssLazyMedia.runWhenIdle(preloadNextVideo, 1200);
-                        } else {
-                            setTimeout(preloadNextVideo, 1200);
-                        }
-                    })
-                    .catch(function () {});
-            }
-        }
-
-        function switchVideos() {
-            if (isSwitching) return;
-            isSwitching = true;
-            stopProgressLoop();
-            currentVideo.classList.remove('active');
-            currentVideo.pause();
             try {
+                video.load();
+            } catch (ignore) {}
+        }
+
+        function preloadAllVideos() {
+            videos.forEach(function (video) {
+                attachSource(video);
+            });
+        }
+
+        function revealVideo(video) {
+            if (!video) return;
+            video.classList.add('active', 'is-ready');
+        }
+
+        function concealVideo(video) {
+            if (!video) return;
+            video.classList.remove('active', 'is-ready');
+        }
+
+        function waitForVideoReady(video) {
+            return new Promise(function (resolve, reject) {
+                if (video.readyState >= 2) {
+                    resolve();
+                    return;
+                }
+                function onReady() {
+                    cleanup();
+                    resolve();
+                }
+                function onError() {
+                    cleanup();
+                    reject(new Error('hero video load failed'));
+                }
+                function cleanup() {
+                    video.removeEventListener('loadeddata', onReady);
+                    video.removeEventListener('error', onError);
+                }
+                video.addEventListener('loadeddata', onReady, { once: true });
+                video.addEventListener('error', onError, { once: true });
+            });
+        }
+
+        function playVideo(video, fromStart) {
+            attachSource(video);
+            if (fromStart) {
+                video.dataset.heroSkipIntro = '1';
+            }
+
+            return waitForVideoReady(video)
+                .then(function () {
+                    if (fromStart) {
+                        try {
+                            video.currentTime = 0;
+                        } catch (ignore) {}
+                    }
+                    setProgressScale(progressFill, 0);
+                    return video.play();
+                })
+                .then(function () {
+                    revealVideo(video);
+                    startProgressLoop();
+                });
+        }
+
+        function swapCurrentVideo() {
+            stopProgressLoop();
+            concealVideo(currentVideo);
+            try {
+                currentVideo.pause();
                 currentVideo.currentTime = 0;
             } catch (ignore) {}
 
             const temp = currentVideo;
             currentVideo = nextVideo;
             nextVideo = temp;
-            currentIndex = (currentIndex + 1) % sources.length;
-
-            currentVideo.classList.add('active');
-            playCurrentVideo(true);
-            isSwitching = false;
         }
 
-        function bindVideoProgress(video) {
+        function switchVideos() {
+            if (isSwitching) return;
+            lockSwitch();
+            swapCurrentVideo();
+
+            playVideo(currentVideo, true)
+                .catch(function () {
+                    delete currentVideo.dataset.loadedSrc;
+                    attachSource(currentVideo, true);
+                    return playVideo(currentVideo, true);
+                })
+                .catch(function () {
+                    swapCurrentVideo();
+                    delete currentVideo.dataset.loadedSrc;
+                    attachSource(currentVideo, true);
+                    return playVideo(currentVideo, true);
+                })
+                .catch(function () {
+                    /* 仍失败则等 endWatch 再次尝试 */
+                })
+                .finally(function () {
+                    unlockSwitch();
+                });
+        }
+
+        function bindVideoEvents(video) {
             video.addEventListener('play', startProgressLoop);
-            video.addEventListener('pause', stopProgressLoop);
+            video.addEventListener('pause', function () {
+                stopProgressLoop();
+                if (video === currentVideo) checkAdvance();
+            });
             video.addEventListener('ended', function () {
-                if (video === currentVideo) switchVideos();
+                if (video !== currentVideo || isSwitching) return;
+                switchVideos();
+            });
+            video.addEventListener('timeupdate', function () {
+                if (video !== currentVideo || isSwitching) return;
+                if (shouldAdvanceVideo(video)) switchVideos();
+            });
+            video.addEventListener('error', function () {
+                if (video !== currentVideo || isSwitching) return;
+                switchVideos();
             });
             video.addEventListener('seeking', function () {
                 if (video !== currentVideo || !progressFill || !video.duration) return;
@@ -189,14 +290,32 @@
             });
         }
 
-        video1.classList.add('active');
-        bindVideoProgress(video1);
-        bindVideoProgress(video2);
-        playCurrentVideo(false);
+        videos.forEach(bindVideoEvents);
+        preloadAllVideos();
+        startEndWatch();
+
+        playVideo(currentVideo, false).catch(function () {
+            playVideo(currentVideo, true).catch(function () {
+                /* 首次播放失败时静默，用户可手动点下一段 */
+            });
+        });
 
         if (nextVideoBtn) {
             nextVideoBtn.addEventListener('click', switchVideos);
         }
+
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState !== 'visible' || isSwitching) return;
+            if (currentVideo && shouldAdvanceVideo(currentVideo)) {
+                switchVideos();
+                return;
+            }
+            if (currentVideo && currentVideo.paused) {
+                currentVideo.play().then(startProgressLoop).catch(function () {
+                    switchVideos();
+                });
+            }
+        });
     }
 
     if (document.readyState === 'loading') {

@@ -180,7 +180,7 @@
             var waitMsg =
                 typeof UssApiError !== 'undefined'
                     ? UssApiError.formatUserError(waitCode)
-                    : '错误代码：IP_001';
+                    : '服务器 IP 尚未上报。';
             metaEl.textContent = opts.maskIp ? '登录后可见真实 IP · ' + waitMsg : waitMsg;
         }
         renderDetails(null);
@@ -192,13 +192,12 @@
             if (err) return UssApiError.sanitizeUserMessage(err);
             if (data && data.code) return UssApiError.formatUserError(data.code);
         }
-        if (err && err.message && /^错误代码：/.test(err.message)) return err.message;
-        return '错误代码：IP_001';
+        return '暂时无法获取服务器 IP 信息，请稍后刷新。';
     }
 
     function fetchServerIp() {
         if (!window.UssAuthApi) {
-            showError('错误代码：NET_E001');
+            showError(typeof UssApiError !== 'undefined' ? UssApiError.formatUserError('NET_E001') : '网络异常，请检查网络后重试。');
             return Promise.resolve();
         }
         var sess = loadSession();
@@ -217,7 +216,7 @@
     function fetchGuestStatus() {
         if (!window.UssAuthApi) {
             render(null, { maskIp: true });
-            showError('错误代码：NET_E001');
+            showError(typeof UssApiError !== 'undefined' ? UssApiError.formatUserError('NET_E001') : '网络异常，请检查网络后重试。');
             return Promise.resolve();
         }
 

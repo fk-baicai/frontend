@@ -469,11 +469,9 @@
                 }
                 if (!r.ok || !data.ok) {
                     var code = (data && data.code) || 'RSI_002';
-                    throw new Error(
-                        typeof UssApiError !== 'undefined'
-                            ? UssApiError.formatUserError(code)
-                            : '错误代码：' + code
-                    );
+                    throw typeof UssApiError !== 'undefined'
+                        ? UssApiError.createApiError(r.status, data, code)
+                        : new Error('暂时无法获取 RSI 资金统计，请稍后刷新。');
                 }
                 return data;
             } catch (err) {
@@ -491,7 +489,6 @@
             var data = await fetchFromBackend();
             render(data);
         } catch (err) {
-            if (opts.silent && lastData) return;
             renderError(formatFetchError(err));
         }
     }

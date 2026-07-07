@@ -129,8 +129,10 @@
             return UssApiError.sanitizeUserMessage(msg);
         }
         var s = msg == null ? '' : String(msg).trim();
-        if (/^错误代码：[A-Z0-9_]+$/.test(s)) return s;
-        return '错误代码：NET_E001';
+        if (!s || /^[A-Z][A-Z0-9_]{2,}$/.test(s) || /^错误代码：/.test(s)) {
+            return '操作失败，请稍后重试。';
+        }
+        return s;
     }
 
     function setPanelHidden(el, hidden) {
