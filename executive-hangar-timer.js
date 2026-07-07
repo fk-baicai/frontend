@@ -323,13 +323,12 @@
         var calibratedAt = data.webCalibratedAt || data.ingestedAt || '';
         var when = formatSyncedAt(calibratedAt);
         if (!when) return '';
-        var parts = ['校准于 ' + when];
+        var parts = [when];
         if (data.webElapsedTextAtCalibrate) {
             parts.push('校准时 ' + data.webElapsedTextAtCalibrate);
         } else if (data.elapsedText) {
             parts.push('当前 ' + data.elapsedText);
         }
-        if (data.ingestMode) parts.push('上报同步');
         return parts.join(' · ');
     }
 

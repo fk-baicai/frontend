@@ -3218,6 +3218,12 @@ body.home-page-body .home-exec-hangar-section {
  box-shadow: 0 0 6px rgba(61, 217, 122, 0.55);
 }
 
+.home-exec-pipeline-dot.is-red {
+ border-color: rgba(255, 0, 24, 0.75);
+ background: radial-gradient(circle at 35% 28%, #ff9999 0%, #ff0024 38%, #9a0010 72%, #3a0006 100%);
+ box-shadow: 0 0 8px rgba(255, 0, 24, 0.65);
+}
+
 @media (max-width: 900px) {
  .home-exec-hangar-grid.rsi-status-grid {
  grid-template-columns: repeat(2, minmax(0, 1fr));

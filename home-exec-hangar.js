@@ -98,14 +98,38 @@
         }
 
         var greenCount = 0;
+        var leds = [];
+        var ledDetails = [];
+        var i;
         var dt = dischargeOffset(t);
         if (phase === 'charging') {
             greenCount = Math.min(5, Math.floor(t / (24 * 60000)));
+            for (i = 0; i < 5; i++) {
+                var isGreenCharge = i < greenCount;
+                leds.push(isGreenCharge);
+                ledDetails.push({ green: isGreenCharge, red: !isGreenCharge });
+            }
         } else if (phase === 'discharge') {
-            if (dt < INSERT_WINDOW) greenCount = 5;
-            else {
+            if (dt < INSERT_WINDOW) {
+                greenCount = 5;
+                for (i = 0; i < 5; i++) {
+                    leds.push(true);
+                    ledDetails.push({ green: true, red: false });
+                }
+            } else {
                 var extinguished = Math.min(5, Math.floor((dt - INSERT_WINDOW) / (12 * 60000)) + 1);
                 greenCount = Math.max(0, 5 - extinguished);
+                for (i = 0; i < 5; i++) {
+                    var isGreenDischarge = i < greenCount;
+                    leds.push(isGreenDischarge);
+                    ledDetails.push({ green: isGreenDischarge, red: false });
+                }
+            }
+        } else {
+            greenCount = 0;
+            for (i = 0; i < 5; i++) {
+                leds.push(false);
+                ledDetails.push({ green: false, red: true });
             }
         }
 
@@ -178,6 +202,8 @@
             cycleRemainingText: formatClockParts(partsFromMs(cycleRemainingMs)),
             cycleProgress: Math.round((t / CYCLE_MS) * 100),
             greenCount: greenCount,
+            leds: leds,
+            ledDetails: ledDetails,
             canInsert: canInsert,
             goldenWindow: goldenWindow,
             insertLabel: insertLabel,
@@ -194,7 +220,7 @@
         return modMs(Date.now() - anchorStartTime + calibrationOffsetMs, CYCLE_MS);
     }
 
-    function buildCard(title, sub, badgeText, tone, details, leds, opts) {
+    function buildCard(title, sub, badgeText, tone, details, ledDetails, opts) {
         opts = opts || {};
         var card = document.createElement('article');
         card.className = 'rsi-status-card rsi-status-card--' + (tone || 'gray');
@@ -232,13 +258,19 @@
             head.appendChild(dl);
         }
 
-        if (Array.isArray(leds) && leds.length === 5) {
+        if (Array.isArray(ledDetails) && ledDetails.length === 5) {
             var ledRow = document.createElement('div');
             ledRow.className = 'home-exec-pipeline';
-            ledRow.setAttribute('aria-label', '五盏指示灯 ' + leds.filter(Boolean).length + ' 盏亮');
-            leds.forEach(function (on) {
+            var greenLit = ledDetails.filter(function (d) {
+                return d && d.green;
+            }).length;
+            ledRow.setAttribute('aria-label', '五盏指示灯 ' + greenLit + ' 盏绿');
+            ledDetails.forEach(function (d) {
                 var dot = document.createElement('span');
-                dot.className = 'home-exec-pipeline-dot' + (on ? ' is-on' : '');
+                var cls = 'home-exec-pipeline-dot';
+                if (d && d.green) cls += ' is-on';
+                else if (d && d.red) cls += ' is-red';
+                dot.className = cls;
                 dot.setAttribute('aria-hidden', 'true');
                 ledRow.appendChild(dot);
             });
@@ -269,16 +301,6 @@
         return 'gray';
     }
 
-    function pipelineLeds(greenCount, phase) {
-        var leds = [];
-        var i;
-        for (i = 0; i < 5; i++) {
-            if (phase === 'cooldown') leds.push(false);
-            else leds.push(i < greenCount);
-        }
-        return leds;
-    }
-
     function isSoon(ms) {
         return ms != null && ms <= 10 * 60000;
     }
@@ -301,7 +323,6 @@
                 : state.cycleRemainingText + ' 后开始（含冷却）';
 
         var phaseSub = state.phaseLabel + ' · ' + state.phaseRange;
-        var leds = pipelineLeds(state.greenCount, state.phase);
         var showIndicator = state.phase === 'charging' || state.phase === 'discharge';
         var insertSoon = !state.canInsert && isSoon(state.nextAccessMs);
         var insertClosing = state.canInsert && isSoon(state.phaseRemainingMs);
@@ -332,7 +353,7 @@
                         emphasis: state.goldenWindow ? 'key' : 'hint',
                     },
                 ],
-                leds,
+                state.ledDetails,
             ),
         );
         gridEl.appendChild(
@@ -431,13 +452,12 @@
         var calibratedAt = data.webCalibratedAt || data.ingestedAt || '';
         var when = formatSyncedAt(calibratedAt);
         if (!when) return '';
-        var parts = ['校准于 ' + when];
+        var parts = [when];
         if (data.webElapsedTextAtCalibrate) {
             parts.push('校准时 ' + data.webElapsedTextAtCalibrate);
         } else if (data.elapsedText) {
             parts.push('当前 ' + data.elapsedText);
         }
-        if (data.ingestMode) parts.push('上报同步');
         return parts.join(' · ');
     }
 
