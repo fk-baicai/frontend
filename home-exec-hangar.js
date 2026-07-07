@@ -434,8 +434,16 @@
     }
 
     function fetchState(fresh) {
-        var url = apiBase() + '/api/exec-hangar/state' + (fresh ? '?fresh=1' : '');
-        return fetch(url, { cache: 'no-store' })
+        var url =
+            apiBase() +
+            '/api/exec-hangar/state?fresh=' +
+            (fresh ? '1' : '0') +
+            '&_=' +
+            Date.now();
+        return fetch(url, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+        })
             .then(function (r) {
                 return r.json().then(function (j) {
                     if (!r.ok) {
@@ -462,12 +470,12 @@
 
     function start() {
         renderLoading();
-        fetchState(false);
+        fetchState(true);
         if (tickTimer) clearInterval(tickTimer);
         tickTimer = setInterval(tick, 1000);
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = setInterval(function () {
-            fetchState(false);
+            fetchState(true);
         }, POLL_MS);
     }
 
