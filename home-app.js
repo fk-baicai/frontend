@@ -4752,4 +4752,4 @@
         initCommunityBoard();
         initLoginSessionSelect();
         syncAuthFloatFields();
-        markPageReadyOnce();
+        bootHomeAfterAuth();

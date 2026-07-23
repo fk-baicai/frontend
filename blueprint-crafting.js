@@ -376,7 +376,7 @@
     }
 
     function stashBlueprintDetailFromNav(bp) {
-        if (!bp || !bp.uuid) return;
+        if (!bp || !bp.uuid || !blueprintDetailUsableForSim(bp)) return;
         normalizeBlueprintIngredients(bp);
         cacheBlueprintDetail(bp);
     }
@@ -1879,8 +1879,13 @@
         updateBlueprintListItemUsage(bp);
     }
 
+    function blueprintDetailUsableForSim(bp) {
+        return !!(bp && bp.base_stats && Object.keys(bp.base_stats).length);
+    }
+
     function getCachedBlueprintDetail(id) {
-        return (id && BLUEPRINT_DETAIL_CACHE[id]) || null;
+        var hit = (id && BLUEPRINT_DETAIL_CACHE[id]) || null;
+        return blueprintDetailUsableForSim(hit) ? hit : null;
     }
 
     function cacheBlueprintDetail(bp) {
