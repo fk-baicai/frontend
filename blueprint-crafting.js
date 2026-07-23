@@ -7,7 +7,7 @@
         ''
     ).replace(/\/$/, '');
 
-    var PAGE_SIZE = 200;
+    var PAGE_SIZE = 400;
     var LS_KEY = 'uss_bp_craft_qualities_v1';
     var LIST_CACHE = {};
     var BLUEPRINT_DETAIL_CACHE = {};
@@ -375,6 +375,12 @@
         if (bp.nav_type) state.type = bp.nav_type;
     }
 
+    function stashBlueprintDetailFromNav(bp) {
+        if (!bp || !bp.uuid) return;
+        normalizeBlueprintIngredients(bp);
+        cacheBlueprintDetail(bp);
+    }
+
     function resolveSelectedBlueprintNav() {
         if (!state.selectedId && state.pendingComponentId) {
             return fetchJson(
@@ -384,6 +390,7 @@
                     var bp = data && data.blueprint;
                     if (bp && bp.uuid) state.selectedId = bp.uuid;
                     applyBlueprintNavContext(bp);
+                    stashBlueprintDetailFromNav(bp);
                     return bp;
                 })
                 .catch(function () {
@@ -391,10 +398,15 @@
                 });
         }
         if (!state.selectedId) return Promise.resolve(null);
+        if (getCachedBlueprintDetail(state.selectedId)) {
+            applyBlueprintNavContext(getCachedBlueprintDetail(state.selectedId));
+            return Promise.resolve(getCachedBlueprintDetail(state.selectedId));
+        }
         return fetchJson('/api/sc/blueprints/' + encodeURIComponent(state.selectedId))
             .then(function (data) {
                 var bp = data && data.blueprint;
                 applyBlueprintNavContext(bp);
+                stashBlueprintDetailFromNav(bp);
                 return bp;
             })
             .catch(function () {

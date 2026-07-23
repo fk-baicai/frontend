@@ -1,9 +1,10 @@
 (function () {
     var form = document.getElementById('heroScSearchForm');
     var input = document.getElementById('heroScSearchInput');
-    var suggest = document.getElementById('heroScSearchSuggest');
+    var suggestMount = document.getElementById('heroScSearchSuggestMount');
     if (!form || !input) return;
 
+    var suggest = null;
     var API_BASE = (
         (typeof window !== 'undefined' &&
             (window.USS_SC_COMPONENTS_API_BASE || window.USS_AUTH_API_BASE || window.USS_REGISTER_API_BASE)) ||
@@ -13,6 +14,20 @@
     var suggestTimer = null;
     var suggestController = null;
     var suggestItems = [];
+
+    function ensureSuggest() {
+        if (suggest) return suggest;
+        if (!suggestMount) return null;
+        suggest = document.createElement('div');
+        suggest.id = 'heroScSearchSuggest';
+        suggest.className = 'hero-sc-search-suggest';
+        suggest.setAttribute('role', 'listbox');
+        suggest.setAttribute('aria-label', '配件匹配结果');
+        suggest.hidden = true;
+        suggest.style.display = 'none';
+        suggestMount.appendChild(suggest);
+        return suggest;
+    }
 
     function apiUrl(path) {
         return API_BASE + path;
@@ -83,12 +98,17 @@
 
     function setSuggestOpen(open) {
         input.setAttribute('aria-expanded', open ? 'true' : 'false');
-        if (!suggest) return;
+        var panel = ensureSuggest();
+        if (!panel) return;
         if (open && suggestItems.length) {
-            suggest.hidden = false;
+            panel.hidden = false;
+            panel.style.display = '';
+            panel.classList.add('is-open');
         } else {
-            suggest.hidden = true;
-            suggest.innerHTML = '';
+            panel.hidden = true;
+            panel.style.display = 'none';
+            panel.classList.remove('is-open');
+            panel.innerHTML = '';
         }
     }
 
@@ -98,8 +118,9 @@
     }
 
     function renderSuggest() {
-        if (!suggest) return;
-        suggest.innerHTML = '';
+        var panel = ensureSuggest();
+        if (!panel) return;
+        panel.innerHTML = '';
         if (!suggestItems.length) {
             setSuggestOpen(false);
             return;
@@ -107,7 +128,7 @@
         var label = document.createElement('p');
         label.className = 'hero-sc-search-suggest-label';
         label.textContent = '匹配结果';
-        suggest.appendChild(label);
+        panel.appendChild(label);
         suggestItems.forEach(function (item) {
             var btn = document.createElement('button');
             btn.type = 'button';
@@ -127,7 +148,7 @@
             btn.addEventListener('click', function () {
                 window.location.href = componentDetailUrl(item);
             });
-            suggest.appendChild(btn);
+            panel.appendChild(btn);
         });
         setSuggestOpen(true);
     }

@@ -1490,11 +1490,13 @@
         var showCraftBanner = shouldShowCraftBlueprintBanner(options);
 
         try {
-            var craftBlueprint = await fetchCraftBlueprint(item);
+            var craftPromise = fetchCraftBlueprint(item);
+            var missionsPromise = fetchBlueprintMissions(item);
+            var craftBlueprint = await craftPromise;
             if (!container.isConnected) return;
             var craftBanner = showCraftBanner ? renderCraftBlueprintBanner(craftBlueprint) : '';
             container._bpCraftBanner = craftBanner;
-            var missions = await fetchBlueprintMissions(item);
+            var missions = await missionsPromise;
             rememberMissionsOnPanel(container, item, missions);
             if (!container.isConnected) return;
             var expandedId = options.expandedId || container.dataset.expandedMission || '';

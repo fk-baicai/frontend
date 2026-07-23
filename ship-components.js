@@ -4255,13 +4255,23 @@
         window.addEventListener('resize', onShellWidthChange);
     }
 
-    async function loadMeta() {
+    async function loadTypesCatalog() {
         try {
-            var res = await fetch(apiUrl('/api/sc/components/meta'));
-            var data = await res.json();
-            if (data.ok) {
-                state.meta = Object.assign(state.meta || {}, data);
-                updateMetaBar();
+            var typesUrl = '/api/sc/components/types';
+            var syncParam = apiDataVersionParam();
+            if (syncParam) typesUrl += '?' + syncParam;
+            var typesRes = await fetch(apiUrl(typesUrl));
+            var typesData = await typesRes.json();
+            if (typesData.ok && typesData.types) {
+                var normalized = normalizeCategoriesPayload(typesData.types, typesData.groups);
+                state.types = normalized.types;
+                state.groups = normalized.groups;
+                normalizeGroupState();
+                ensureTypeInGroup();
+                updateHero();
+                renderGroupTabs();
+                renderTabs();
+                updateUrlState();
             }
         } catch (e) {
             /* ignore */
@@ -4292,28 +4302,7 @@
         updateUrlState();
         refreshMobileTableScrollState = initMobileTableDragScroll();
         initDesktopTableColumnSync();
-        loadMeta();
-        try {
-            var typesUrl = '/api/sc/components/types';
-            var syncParam = apiDataVersionParam();
-            if (syncParam) typesUrl += '?' + syncParam;
-            var typesRes = await fetch(apiUrl(typesUrl));
-            var typesData = await typesRes.json();
-            if (typesData.ok && typesData.types) {
-                var normalized = normalizeCategoriesPayload(typesData.types, typesData.groups);
-                state.types = normalized.types;
-                state.groups = normalized.groups;
-                normalizeGroupState();
-                ensureTypeInGroup();
-                updateHero();
-                renderGroupTabs();
-                renderTabs();
-                updateUrlState();
-            }
-        } catch (e) {
-            /* ignore */
-        }
-
+        var typesPromise = loadTypesCatalog();
         if (els.search) {
             els.search.addEventListener('input', function () {
                 syncBodyMode();
@@ -4354,9 +4343,11 @@
             }
             applyArmorVariantRestore(pendingRestore.armorVariantKeys);
         }
-        loadList().then(function () {
+        var listPromise = loadList().then(function () {
             return maybeRestoreListView();
         });
+        typesPromise.catch(function () {});
+        await listPromise;
     }
 
     window.UssScComponentsListNav = {

@@ -275,6 +275,8 @@
         /* 签到整表：固定列宽铺满容器，避免底部横向滚动条 */
         .grid-sched {
             --sched-branch-bg: rgba(0, 0, 0, 0.2);
+            --sched-ui-font: 0.76rem;
+            --sched-control-h: 1.62rem;
             overflow-x: hidden;
             width: 100%;
             max-width: 100%;
@@ -287,13 +289,13 @@
             width: 100%;
             max-width: 100%;
             border-collapse: collapse;
-            font-size: 0.78rem;
+            font-size: var(--sched-ui-font);
         }
         .grid-sched .sched-grid-table > thead > tr > th {
             padding: 0.28rem 0.18rem;
-            font-size: 0.8rem;
+            font-size: var(--sched-ui-font);
             font-weight: 600;
-            line-height: 1.2;
+            line-height: 1.25;
             white-space: normal;
             word-break: break-all;
             vertical-align: bottom;
@@ -314,10 +316,10 @@
             background: var(--sched-branch-bg);
         }
         .grid-sched .sched-branch-title-tr > td.sched-branch-head-cell {
-            padding: 0.5rem 0.45rem 0.4rem;
-            font-size: 0.82rem;
+            padding: 0.45rem 0.45rem 0.38rem;
+            font-size: var(--sched-ui-font);
             font-weight: 700;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.03em;
             color: var(--txt);
             vertical-align: middle;
             border-top: none;
@@ -352,13 +354,14 @@
         }
         .sched-branch-name-label {
             word-break: keep-all;
-            line-height: 1.2;
+            line-height: 1.25;
+            font-size: var(--sched-ui-font);
         }
         .sched-branch-points-inline {
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
-            font-size: 0.78rem;
+            font-size: var(--sched-ui-font);
             font-weight: 600;
             color: rgba(180, 210, 255, 0.88);
             margin-right: auto;
@@ -368,16 +371,19 @@
             align-items: center;
             gap: 0.28rem;
             cursor: pointer;
+            font-size: var(--sched-ui-font);
+            line-height: 1.25;
         }
         .sched-branch-points-inline .sched-ppt-inp {
-            width: 3.5rem;
-            min-height: 1.42rem;
-            padding: 0.12rem 0.28rem;
+            width: 3.25rem;
+            min-height: var(--sched-control-h);
+            padding: 0.16rem 0.28rem;
             border-radius: 6px;
             border: 1px solid rgba(95, 184, 255, 0.35);
             background: rgba(6, 14, 28, 0.92);
             color: var(--txt);
-            font-size: 0.8rem;
+            font-size: var(--sched-ui-font);
+            line-height: 1.25;
         }
         .grid-sched .sched-branch-spacer {
             padding: 0.2rem 0.15rem 0.85rem;
@@ -402,13 +408,13 @@
             width: auto;
             vertical-align: top;
             padding: 0.28rem 0.18rem;
-            font-size: 0.76rem;
+            font-size: var(--sched-ui-font);
         }
         .grid-sched .sched-branch-template-tr > td {
             border-top: 1px solid rgba(95, 184, 255, 0.14);
         }
         .grid-sched .sched-branch-template-tr > td.sched-template-label {
-            font-size: 0.72rem;
+            font-size: var(--sched-ui-font);
             color: var(--muted);
             white-space: nowrap;
             vertical-align: top;
@@ -443,8 +449,9 @@
             max-width: 100%;
             margin-bottom: 0.35rem;
             color: var(--text);
-            font-size: 0.78rem;
+            font-size: var(--sched-ui-font);
             font-weight: 600;
+            line-height: 1.25;
         }
         .sched-template-cell .sch-template-enable-wrap span {
             pointer-events: none;
@@ -473,7 +480,7 @@
             line-height: 1.2;
         }
         .sched-cell .sch-allday-wrap span {
-            font-size: 0.74rem;
+            font-size: var(--sched-ui-font);
             pointer-events: none;
             user-select: none;
         }
@@ -485,8 +492,8 @@
             flex-direction: column;
             gap: 0.12rem;
             color: var(--muted);
-            font-size: 0.72rem;
-            line-height: 1.2;
+            font-size: var(--sched-ui-font);
+            line-height: 1.25;
         }
         .sched-cell label.sch-time-lbl {
             margin-bottom: 0.22rem;
@@ -501,9 +508,9 @@
         .sched-cell input[type="time"] {
             width: 100%;
             max-width: 100%;
-            min-height: 1.55rem;
-            padding: 0.12rem 0.15rem;
-            font-size: 0.74rem;
+            min-height: var(--sched-control-h);
+            padding: 0.14rem 0.15rem;
+            font-size: var(--sched-ui-font);
             color-scheme: dark;
             padding-inline-end: 0.28rem;
         }
@@ -559,20 +566,25 @@
             width: min(5.8rem, 34vw);
         }
         .sched-cell .sch-dur-unit {
-            font-size: 0.68rem;
+            font-size: var(--sched-ui-font);
             flex-shrink: 0;
         }
         button.sched-fold-btn {
             flex-shrink: 0;
-            padding: 0.15rem 0.35rem;
-            min-width: 1.6rem;
-            line-height: 1;
-            font-size: 0.72rem;
+            padding: 0.14rem 0.32rem;
+            min-width: 1.55rem;
+            min-height: var(--sched-control-h);
+            line-height: 1.2;
+            font-size: var(--sched-ui-font);
             color: var(--accent);
+            transform: none;
+        }
+        button.sched-fold-btn:hover {
+            transform: none;
         }
         button.sched-fold-btn .sched-fold-icon {
             display: inline-block;
-            font-size: 0.75rem;
+            font-size: var(--sched-ui-font);
             opacity: 0.95;
         }
         tr.sched-branch-data-tr.sched-branch-tr-collapsed,
@@ -591,13 +603,36 @@
             flex-shrink: 0;
         }
         .btn-save-sched-branch {
-            font-size: 0.82rem;
-            padding: 0.32rem 0.9rem;
+            font-size: var(--sched-ui-font);
+            font-weight: 600;
+            line-height: 1.25;
+            min-height: var(--sched-control-h);
+            padding: 0.16rem 0.62rem;
             white-space: nowrap;
+            transform: none;
+        }
+        .btn-save-sched-branch:hover {
+            transform: none;
         }
         .sched-save-ok {
-            font-size: 0.82rem;
+            font-size: var(--sched-ui-font);
             white-space: nowrap;
+        }
+        .grid-sched input.sched-num-inp {
+            min-height: var(--sched-control-h);
+            padding: 0.16rem 0.32rem;
+            font-size: var(--sched-ui-font);
+            line-height: 1.25;
+        }
+        .grid-sched input[type="checkbox"] {
+            width: 0.92rem;
+            height: 0.92rem;
+            margin: 0;
+            padding: 0;
+            flex-shrink: 0;
+            accent-color: var(--accent);
+            background: rgba(6, 14, 28, 0.92);
+            border-radius: 3px;
         }
         #secSchedule h2 {
             font-size: 1.05rem;

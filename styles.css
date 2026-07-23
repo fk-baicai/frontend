@@ -525,8 +525,9 @@ html.auth-session-cached #navLoginBtn {
  padding: 0.12rem;
 }
 
-/* 未登录：隐藏 OOPZ 语音、聊天、贴子（与顶栏 auth-session-cached 同步） */
-html:not(.auth-session-cached) .auth-member-gated {
+/* 已登录：hero 就绪前隐藏会员区；未登录整段隐藏 */
+html:not(.auth-session-cached) .auth-member-gated,
+html.auth-session-cached:not(.hero-video-live) .auth-member-gated {
  display: none !important;
 }
 
@@ -1775,18 +1776,6 @@ body.home-page-body .video-container {
  height: 100%;
 }
 
-#myVideo {
- position: absolute;
- right: 0;
- bottom: 0;
- min-width: 100%;
- min-height: 100%;
- width: auto;
- height: auto;
- z-index: -1;
- object-fit: cover;
-}
-
 .hero-content {
  position: absolute;
  top: 50%;
@@ -1832,22 +1821,71 @@ body.home-page-body .video-container {
  background: #081625;
 }
 
-.video-player {
+#heroVideoParking {
+ position: fixed;
+ left: -120vw;
+ width: 1px;
+ height: 1px;
+ overflow: hidden;
+ opacity: 0;
+ pointer-events: none;
+ z-index: -1;
+}
+
+.hero-video-stage {
+ position: absolute;
+ inset: 0;
+ overflow: hidden;
+ background: #081625;
+ z-index: 0;
+}
+
+#heroBootCover,
+.hero-boot-cover {
+ position: absolute;
+ inset: 0;
+ z-index: 100;
+ background: #081625;
+ pointer-events: none;
+}
+
+html:not(.hero-video-live) #heroBootCover,
+html:not(.hero-video-live) .hero-boot-cover {
+ opacity: 1;
+ visibility: visible;
+}
+
+html.hero-video-live #heroBootCover,
+html.hero-video-live .hero-boot-cover {
+ opacity: 0;
+ visibility: hidden;
+ transition: opacity 0.4s ease;
+}
+
+html:not(.hero-video-live) .hero-video-stage,
+html:not(.hero-video-live) .video-player {
+ display: none !important;
+}
+
+.video-player.is-parked {
+ position: fixed;
+ left: -120vw;
+ width: 1px;
+ height: 1px;
+ overflow: hidden;
+ opacity: 0;
+ pointer-events: none;
+}
+
+.video-player.active.is-ready {
  position: absolute;
  inset: 0;
  width: 100%;
  height: 100%;
  object-fit: cover;
  object-position: center;
- background: #000;
- opacity: 0;
- visibility: hidden;
- transition: opacity 0.6s ease;
-}
-
-.video-player.active.is-ready {
- opacity: 1;
- visibility: visible;
+ display: block;
+ background: #081625;
 }
 
 .progress-container {
@@ -1976,6 +2014,18 @@ body.home-page-body .video-container {
  position: relative;
  width: min(100%, 18rem);
  margin: 0 0 0 auto;
+}
+
+#heroScSearchSuggestMount {
+ position: static;
+ display: block;
+ margin: 0;
+ padding: 0;
+ border: 0;
+}
+
+#heroScSearchSuggestMount:not(:has(.is-open)) {
+ display: none !important;
 }
 
 .hero-sc-search-field {
@@ -2125,8 +2175,18 @@ body.home-page-body .video-container {
 }
 
 .hero-sc-search-suggest[hidden],
-.hero-sc-search-suggest:empty {
+.hero-sc-search-suggest:empty,
+.hero-sc-search-suggest:not(.is-open) {
  display: none !important;
+ visibility: hidden !important;
+ pointer-events: none !important;
+ opacity: 0 !important;
+ height: 0 !important;
+ padding: 0 !important;
+ border: 0 !important;
+ box-shadow: none !important;
+ backdrop-filter: none !important;
+ -webkit-backdrop-filter: none !important;
 }
 
 .hero-sc-search-suggest-label {
@@ -7519,27 +7579,6 @@ a.community-author-avatar-link:focus-visible {
  body.home-page-body .video-container {
  height: 54vw;
  min-height: 198px;
- }
- .video-player {
- position: absolute !important;
- top: 0;
- left: 0;
- right: 0;
- bottom: 0;
- width: 100% !important;
- height: 100% !important;
- min-width: 100%;
- min-height: 100%;
- object-fit: cover !important;
- object-position: center;
- background: #000;
- display: block;
- visibility: hidden;
- opacity: 0;
- }
- .video-player.active.is-ready {
- visibility: visible;
- opacity: 1;
  }
  .progress-container {
  padding: 8px var(--home-content-pad-x) calc(10px + env(safe-area-inset-bottom, 0px));

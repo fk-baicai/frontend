@@ -70,6 +70,12 @@
         return;
     }
 
+    /** HTTPS 页面（自定义域 / staging）默认同源 /api，避免 Mixed Content */
+    if (window.location && window.location.protocol === 'https:') {
+        window.USS_AUTH_API_BASE = String(window.location.origin || '').replace(/\/$/, '');
+        return;
+    }
+
     window.USS_AUTH_API_BASE = 'http://8.138.237.183:3789';
 })();
 
