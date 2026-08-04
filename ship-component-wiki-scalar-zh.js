@@ -1,4 +1,4 @@
-/** 由 frontend/build-wiki-scalar-zh.js 从汉化库生成 */
+﻿/** 由 frontend/build-wiki-scalar-zh.js 从汉化库生成 */
 (function (global) {
     'use strict';
     global.WIKI_SCALAR_LOC = {
@@ -46,6 +46,10 @@
         "ballistic": "实弹",
         "Ballistic": "实弹",
         "ballistic cannon": "实弹加农炮",
+        "Ball Turret": "球形炮塔",
+        "Top Turret": "顶部炮塔",
+        "Bottom Turret": "底部炮塔",
+        "Modifier": "模组",
         "Ballistic Cannon": "实弹加农炮",
         "ballistic cannon turret": "实弹加农炮炮塔",
         "Ballistic Cannon Turret": "实弹加农炮炮塔",
@@ -473,3 +477,4 @@
         "µSCU": "µSCU",
     };
 })(typeof window !== 'undefined' ? window : global);
+

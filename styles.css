@@ -4837,6 +4837,9 @@ body.oopz-bind-open {
  display: flex;
  flex-direction: column;
  gap: 6px;
+ overflow-x: hidden;
+ overflow-y: auto;
+ -webkit-overflow-scrolling: touch;
 }
 
 .community-chat-roster-inner[hidden] {
@@ -6042,6 +6045,8 @@ a.community-author-avatar-link:focus-visible {
  min-height: 0;
  width: 100%;
  box-sizing: border-box;
+ display: flex;
+ flex-direction: column;
  overflow-y: auto;
  overflow-x: hidden;
  overscroll-behavior: auto;
@@ -6254,7 +6259,11 @@ a.community-author-avatar-link:focus-visible {
 
 .community-chat-log {
  display: block;
+ width: 100%;
+ box-sizing: border-box;
  padding: 12px 14px 14px;
+ /* 消息不足一屏时贴底，避免刷新后大片空白 */
+ margin-top: auto;
 }
 
 .community-chat-log::after {
@@ -6451,11 +6460,14 @@ a.community-author-avatar-link:focus-visible {
  line-height: 0;
  width: auto;
  height: auto;
+ min-width: 120px;
+ min-height: 90px;
  max-width: 220px;
  max-height: 220px;
  border-radius: 8px;
  overflow: hidden;
  vertical-align: top;
+ background: rgba(0, 0, 0, 0.35);
 }
 
 .community-chat-img-wrap--censored .community-chat-img {

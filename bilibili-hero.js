@@ -231,6 +231,11 @@
             stage.setAttribute('aria-hidden', 'false');
             const coverEl = document.getElementById('heroBootCover');
             if (coverEl) coverEl.setAttribute('aria-hidden', 'true');
+            try {
+                window.dispatchEvent(new CustomEvent('uss:hero-live'));
+            } catch (e) {
+                /* ignore */
+            }
         }
 
         function parkVideo() {

@@ -608,19 +608,22 @@
 
         /** 首页舰员交流区：帖子列表（无需登录） */
         async communityListPosts(limit) {
-            var q = '';
-            if (limit != null && limit !== '') {
-                q = '?limit=' + encodeURIComponent(limit);
-            }
-            var r = await fetch(joinUrl('/api/community/posts') + q);
+            var q = limit != null && limit !== '' ? '?limit=' + encodeURIComponent(limit) : '';
+            var sep = q ? '&' : '?';
+            var r = await fetch(joinUrl('/api/community/posts') + q + sep + '_=' + Date.now(), {
+                cache: 'no-store',
+            });
             var data = await parseJson(r);
             throwIfNotOk(r, data, 'COMM_P002');
             return data;
         },
 
-        /** 单帖详情（无需登录） */
+        /** 单帖详情（无需登录；禁缓存以便回复后立刻刷新） */
         async communityGetPost(postId) {
-            var r = await fetch(joinUrl('/api/community/posts/' + encodeURIComponent(postId)));
+            var r = await fetch(
+                joinUrl('/api/community/posts/' + encodeURIComponent(postId)) + '?_=' + Date.now(),
+                { cache: 'no-store' }
+            );
             var data = await parseJson(r);
             if (r.status === 404) throwIfNotOk(r, data, 'COMM_P002');
             throwIfNotOk(r, data, 'COMM_P002');

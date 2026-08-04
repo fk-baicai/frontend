@@ -1304,7 +1304,17 @@
         } else {
             return [];
         }
-        if (listCache[cacheKey]) return listCache[cacheKey];
+        if (listCache[cacheKey]) {
+            var cachedList = listCache[cacheKey];
+            var cachedIncomplete =
+                Array.isArray(cachedList) &&
+                cachedList.length > 0 &&
+                cachedList.some(function (m) {
+                    return m && !m.mission_type && !m.mission_type_zh && !m.mission_giver && !m.mission_giver_zh;
+                });
+            if (!cachedIncomplete) return listCache[cacheKey];
+            delete listCache[cacheKey];
+        }
 
         var embedded = embeddedBlueprintMissions(item);
         try {

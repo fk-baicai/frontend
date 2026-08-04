@@ -1346,16 +1346,8 @@
         if (next) {
             next.classList.add('is-active');
             next.setAttribute('aria-selected', 'true');
-            return;
         }
-        if (state.listVirt.enabled) {
-            scrollToBlueprintIndex(blueprintIndexById(id));
-            next = el.blueprintList.querySelector('.bp-list-item[data-uuid="' + id + '"]');
-            if (next) {
-                next.classList.add('is-active');
-                next.setAttribute('aria-selected', 'true');
-            }
-        }
+        // 虚拟列表窗口外不强制滚回选中项；需要可见时由 scrollActiveListItem / selectBlueprint 显式调用
     }
 
     function updateBlueprintListItemUsage(bp) {
@@ -2020,6 +2012,7 @@
         state.selectedId = id;
         pushUrlState();
         setBlueprintListActive(id);
+        scrollActiveListItem();
         if (el.craftEmpty) el.craftEmpty.classList.add('is-hidden');
         if (el.missionsBar) el.missionsBar.classList.remove('is-hidden');
         if (el.craftDetail) {

@@ -220,6 +220,10 @@
         Light: '轻甲',
         Medium: '中甲',
         Heavy: '重甲',
+        'Ball Turret': '球形炮塔',
+        'Top Turret': '顶部炮塔',
+        'Bottom Turret': '底部炮塔',
+        Modifier: '模组',
     };
 
     var ARMOR_CLASS_ZH = {

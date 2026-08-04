@@ -8,6 +8,9 @@
     var URL_RE = /(https?:\/\/[^\s<>"']+)/gi;
 
     function loadSession() {
+        if (window.UssAuthSessionSync && typeof window.UssAuthSessionSync.loadAuthSession === 'function') {
+            return window.UssAuthSessionSync.loadAuthSession();
+        }
         try {
             var raw = sessionStorage.getItem(AUTH_KEY) || localStorage.getItem(AUTH_KEY);
             if (raw) return JSON.parse(raw);
@@ -136,12 +139,22 @@
         return null;
     }
 
+    function isGenericDefaultAvatar(url) {
+        var s = String(url || '');
+        if (!s) return true;
+        var def = String(window.USS_DEFAULT_AVATAR || 'default-avatar.png');
+        if (s === def) return true;
+        return /(?:^|\/)default-avatar\.png(?:$|\?)/i.test(s);
+    }
+
     function avatarSrc(avatarUrl) {
         if (avatarUrl && window.UssAuthApi) {
             var url = resolveAsset(avatarUrl);
             if (url) return url;
         }
-        return window.USS_DEFAULT_AVATAR || 'default-avatar.png';
+        if (avatarUrl && /^https?:\/\//i.test(String(avatarUrl))) return String(avatarUrl);
+        if (avatarUrl && String(avatarUrl).charAt(0) === '/') return String(avatarUrl);
+        return '';
     }
 
     function avatarFallback(initial) {
@@ -200,7 +213,7 @@
         return 'https://robertsspaceindustries.com/en/citizens/' + encodeURIComponent(h);
     }
 
-    function buildAuthorRow(bindingId, avatarUrl, createdAt, trailingEl, authorLabel) {
+    function buildAuthorRow(bindingId, avatarUrl, createdAt, trailingEl, authorLabel, rsiAvatarUrl) {
         var row = document.createElement('div');
         row.className = 'community-author-row';
         var displayName =
@@ -220,7 +233,27 @@
         var remote = avatarSrc(resolveAvatarUrl(bindingId, avatarUrl));
         var fallback = avatarFallback(authorInitial(bindingId, authorLabel));
         img.src = fallback;
-        if (remote && remote !== fallback && remote !== (window.USS_DEFAULT_AVATAR || 'default-avatar.png')) {
+        var rsiFb = rsiAvatarUrl;
+        if (rsiFb && String(rsiFb).trim()) {
+            var rsiResolved = avatarSrc(String(rsiFb).trim()) || String(rsiFb).trim();
+            if (rsiResolved && !isGenericDefaultAvatar(rsiResolved)) {
+                img.dataset.rsiFallback = rsiResolved;
+            }
+            if ((!remote || isGenericDefaultAvatar(remote)) && rsiResolved) {
+                remote = rsiResolved;
+            }
+        }
+        img.onerror = function () {
+            if (img.dataset.rsiFallback) {
+                var next = img.dataset.rsiFallback;
+                delete img.dataset.rsiFallback;
+                img.src = next;
+                return;
+            }
+            img.onerror = null;
+            img.src = fallback;
+        };
+        if (remote && remote !== fallback && !isGenericDefaultAvatar(remote)) {
             img.src = remote;
         }
         var rsi = rsiCitizenProfileUrl(bindingId);
@@ -331,10 +364,10 @@
                 }
             });
             head.appendChild(
-                buildAuthorRow(p.bindingId, p.avatarUrl, p.createdAt, del, p.authorLabel)
+                buildAuthorRow(p.bindingId, p.avatarUrl, p.createdAt, del, p.authorLabel, p.rsiAvatarUrl)
             );
         } else {
-            head.appendChild(buildAuthorRow(p.bindingId, p.avatarUrl, p.createdAt, null, p.authorLabel));
+            head.appendChild(buildAuthorRow(p.bindingId, p.avatarUrl, p.createdAt, null, p.authorLabel, p.rsiAvatarUrl));
         }
 
         main.appendChild(head);
@@ -360,6 +393,11 @@
                 im.style.cursor = 'pointer';
                 im.dataset.fullSrc = resolveAsset(rel);
                 im.src = resolveThumb(rel);
+                im.onerror = function () {
+                    if (im.dataset.fallbackTried) return;
+                    im.dataset.fallbackTried = '1';
+                    im.src = resolveAsset(rel);
+                };
                 im.addEventListener('click', function () {
                     openLightbox(im.dataset.fullSrc || im.src);
                 });
@@ -404,7 +442,7 @@
                     });
                 }
                 item.appendChild(
-                    buildAuthorRow(r.bindingId, r.avatarUrl, r.createdAt, replyDelBtn, r.authorLabel)
+                    buildAuthorRow(r.bindingId, r.avatarUrl, r.createdAt, replyDelBtn, r.authorLabel, r.rsiAvatarUrl)
                 );
                 var replyBody = document.createElement('div');
                 replyBody.className = 'community-reply-body';

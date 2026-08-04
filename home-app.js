@@ -1405,7 +1405,14 @@
                         img.src = communityAvatarFallbackDataUri('全');
                     } else {
                         const src = communityAvatarSrc(it.avatarUrl);
-                        img.src = src || communityAvatarFallbackDataUri(communityAuthorInitial(it.bindingId));
+                        img.src =
+                            src && !communityIsGenericDefaultAvatarUrl(src)
+                                ? src
+                                : communityAvatarFallbackDataUri(communityAuthorInitial(it.bindingId));
+                        img.onerror = function () {
+                            img.onerror = null;
+                            img.src = communityAvatarFallbackDataUri(communityAuthorInitial(it.bindingId));
+                        };
                     }
                     av.appendChild(img);
                     const lab = document.createElement('span');
@@ -2270,7 +2277,9 @@
                 const url = window.UssAuthApi.resolveAssetUrl(avatarUrl);
                 if (url) return url;
             }
-            return window.USS_DEFAULT_AVATAR || 'default-avatar.png';
+            if (avatarUrl && /^https?:\/\//i.test(String(avatarUrl))) return String(avatarUrl);
+            if (avatarUrl && String(avatarUrl).charAt(0) === '/') return String(avatarUrl);
+            return '';
         }
 
         function communityResolveAvatarUrl(bindingId, avatarUrl) {
@@ -2296,15 +2305,52 @@
             );
         }
 
-        function communityPrepareAvatarImg(img, bindingId, avatarUrl, authorLabel, eager) {
+        function communityIsGenericDefaultAvatarUrl(url) {
+            const s = String(url || '');
+            if (!s) return true;
+            const def = String(window.USS_DEFAULT_AVATAR || 'default-avatar.png');
+            if (s === def) return true;
+            return /(?:^|\/)default-avatar\.png(?:$|\?)/i.test(s);
+        }
+
+        function communityPrepareAvatarImg(img, bindingId, avatarUrl, authorLabel, eager, rsiFallbackUrl) {
             img.decoding = 'async';
-            img.loading = 'lazy';
+            img.loading = eager ? 'eager' : 'lazy';
+            if (eager) {
+                try {
+                    img.fetchPriority = 'high';
+                } catch (ignore) {}
+            }
             const fallback = communityAvatarFallbackDataUri(
                 communityAuthorInitial(bindingId, authorLabel)
             );
-            const remote = communityAvatarSrc(communityResolveAvatarUrl(bindingId, avatarUrl));
+            const resolved = communityResolveAvatarUrl(bindingId, avatarUrl);
+            let remote = resolved ? communityAvatarSrc(resolved) : '';
+            if ((!remote || communityIsGenericDefaultAvatarUrl(remote)) && rsiFallbackUrl) {
+                remote = communityAvatarSrc(rsiFallbackUrl) || String(rsiFallbackUrl);
+            }
             img.src = fallback;
-            if (!remote || remote === fallback) return;
+            const rsiFb =
+                rsiFallbackUrl && String(rsiFallbackUrl).trim() && String(rsiFallbackUrl) !== String(resolved || '')
+                    ? communityAvatarSrc(rsiFallbackUrl) || String(rsiFallbackUrl).trim()
+                    : '';
+            if (rsiFb && !communityIsGenericDefaultAvatarUrl(rsiFb)) {
+                img.dataset.rsiFallback = rsiFb;
+            }
+            img.onerror = function () {
+                if (img.dataset.rsiFallback) {
+                    const next = img.dataset.rsiFallback;
+                    delete img.dataset.rsiFallback;
+                    img.src = next;
+                    return;
+                }
+                img.onerror = null;
+                img.src = fallback;
+                delete img.dataset.src;
+                delete img.dataset.loadedSrc;
+            };
+            /* 真实头像优先；仅在无 RSI/本站头像时暂用字母，等待登录抓取回填 */
+            if (!remote || remote === fallback || communityIsGenericDefaultAvatarUrl(remote)) return;
             if (eager || !window.UssLazyMedia) {
                 img.src = remote;
                 img.dataset.loadedSrc = remote;
@@ -2387,7 +2433,8 @@
             trailingEl,
             avatarRsiHref,
             authorLabel,
-            eagerAvatar
+            eagerAvatar,
+            rsiAvatarUrl
         ) {
             const row = document.createElement('div');
             row.className = 'community-author-row';
@@ -2403,7 +2450,14 @@
             const img = document.createElement('img');
             img.className = 'community-author-avatar-img';
             img.alt = displayName + ' 头像';
-            communityPrepareAvatarImg(img, bindingId, avatarUrl, authorLabel, !!eagerAvatar);
+            communityPrepareAvatarImg(
+                img,
+                bindingId,
+                avatarUrl,
+                authorLabel,
+                !!eagerAvatar,
+                rsiAvatarUrl
+            );
             const rsi =
                 authorLabel || String(bindingId || '').trim().toLowerCase() === '__honghou__'
                     ? ''
@@ -2773,7 +2827,8 @@
                     null,
                     avatarRsiHref,
                     m.authorLabel,
-                    false
+                    false,
+                    m.rsiAvatarUrl
                 )
             );
             const bubble = document.createElement('div');
@@ -2829,6 +2884,7 @@
             );
             if (startIdx > 0) ensureCommunityChatHistorySentinel(log);
             bindCommunityChatAvatars(log, { eagerLast: initialCount });
+            if (communityChatNearBottom) armCommunityChatBottomPinObserver();
         }
 
         function syncCommunityFeedLayout(hasPosts) {
@@ -2845,12 +2901,12 @@
                 .trim();
         }
 
-        /** 同时使用查询参数与 hash，避免部分宿主环境丢弃 ?id= */
+        /** 根路径 + 查询参数 + hash，避免相对路径/宿主丢弃 ?id= */
         function communityPostDetailHref(postId) {
             const id = String(postId != null ? postId : '').trim();
-            if (!id) return 'community-post.html';
+            if (!id) return '/community-post.html';
             const enc = encodeURIComponent(id);
-            return 'community-post.html?id=' + enc + '#id=' + enc;
+            return '/community-post.html?id=' + enc + '#id=' + enc;
         }
 
         function truncateCommunityPostExcerpt(text, maxLen) {
@@ -2897,7 +2953,19 @@
 
                 const card = document.createElement('a');
                 card.className = 'community-post-card community-post-card--compact';
-                card.href = communityPostDetailHref(pid);
+                const postHref = communityPostDetailHref(pid);
+                card.href = postHref;
+                card.setAttribute('data-post-id', pid);
+                /* 强制同页跳转，避免外层监听/遮罩导致 <a> 默认行为被吞掉 */
+                card.addEventListener('click', function (ev) {
+                    if (ev.defaultPrevented) return;
+                    if (ev.button != null && ev.button !== 0) return;
+                    if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+                    const t = ev.target;
+                    if (t && t.closest && t.closest('a.community-author-avatar-link')) return;
+                    ev.preventDefault();
+                    window.location.assign(postHref);
+                });
 
                 const inner = document.createElement('div');
                 inner.className = 'community-post-compact-inner';
@@ -2910,7 +2978,8 @@
                         null,
                         null,
                         p.authorLabel,
-                        true
+                        true,
+                        p.rsiAvatarUrl
                     )
                 );
 
@@ -3037,9 +3106,66 @@
         function scrollCommunityChatToBottom(force) {
             const sc = getCommunityChatScrollEl();
             if (!sc) return;
-            if (force || communityChatNearBottom) {
+            if (!(force || communityChatNearBottom)) return;
+            communityChatNearBottom = true;
+            function pin() {
                 sc.scrollTop = sc.scrollHeight;
             }
+            pin();
+            /* display:none → 显示后 / 图片解码后 scrollHeight 会变；多次钉底 */
+            requestAnimationFrame(function () {
+                pin();
+                requestAnimationFrame(pin);
+            });
+            [50, 120, 280, 600, 1200, 2200].forEach(function (ms) {
+                setTimeout(pin, ms);
+            });
+            armCommunityChatBottomPinObserver();
+        }
+
+        function armCommunityChatBottomPinObserver() {
+            const sc = getCommunityChatScrollEl();
+            const log = document.getElementById('communityChatLog');
+            if (!sc || !log) return;
+            if (!window.ResizeObserver) return;
+            if (sc._ussChatPinRo) {
+                try {
+                    sc._ussChatPinRo.disconnect();
+                } catch (ignore) {}
+            }
+            let ticks = 0;
+            const ro = new ResizeObserver(function () {
+                if (!communityChatNearBottom) return;
+                sc.scrollTop = sc.scrollHeight;
+                ticks += 1;
+                if (ticks > 40) {
+                    try {
+                        ro.disconnect();
+                    } catch (ignore2) {}
+                    sc._ussChatPinRo = null;
+                }
+            });
+            sc._ussChatPinRo = ro;
+            ro.observe(log);
+            setTimeout(function () {
+                if (sc._ussChatPinRo === ro) {
+                    try {
+                        ro.disconnect();
+                    } catch (ignore3) {}
+                    sc._ussChatPinRo = null;
+                }
+            }, 4000);
+            /* 聊天图片懒加载完成后高度会变，再钉一次 */
+            log.querySelectorAll('img').forEach(function (img) {
+                if (img.dataset.ussPinBound === '1') return;
+                img.dataset.ussPinBound = '1';
+                const rePin = function () {
+                    if (!communityChatNearBottom) return;
+                    sc.scrollTop = sc.scrollHeight;
+                };
+                img.addEventListener('load', rePin);
+                img.addEventListener('error', rePin);
+            });
         }
 
         function installCommunityChatScrollGuard() {
@@ -3048,7 +3174,37 @@
             sc.dataset.communityGuard = '1';
             sc.addEventListener('scroll', function () {
                 const rest = sc.scrollHeight - sc.clientHeight - sc.scrollTop;
-                communityChatNearBottom = rest < 48;
+                communityChatNearBottom = rest < 80;
+            });
+        }
+
+        function installCommunityChatRescrollOnVisible() {
+            if (window.__ussCommunityChatRescrollInstalled) return;
+            window.__ussCommunityChatRescrollInstalled = true;
+            function rescroll() {
+                if (!isLoggedIn()) return;
+                if (communityChatKind !== 'fleet' && communityChatKind !== 'dm') return;
+                communityChatNearBottom = true;
+                scrollCommunityChatToBottom(true);
+                /* 会员区从 display:none 恢复后补绑懒加载头像 */
+                bindCommunityAuthorAvatars(document.getElementById('communityChatRosterInner'), {
+                    eager: true,
+                });
+                bindCommunityChatAvatars(document.getElementById('communityChatLog'), { eagerLast: 16 });
+            }
+            window.addEventListener('uss:hero-live', rescroll);
+            if (document.documentElement.classList.contains('hero-video-live')) {
+                setTimeout(rescroll, 0);
+            } else {
+                const mo = new MutationObserver(function () {
+                    if (!document.documentElement.classList.contains('hero-video-live')) return;
+                    mo.disconnect();
+                    rescroll();
+                });
+                mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+            }
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState === 'visible') rescroll();
             });
         }
 
@@ -3316,7 +3472,8 @@
                 const img = document.createElement('img');
                 img.className = 'community-chat-roster-avatar-img';
                 img.alt = bid;
-                communityPrepareAvatarImg(img, bid, mem.avatarUrl, null, false);
+                /* 优先本站 /avatars；失败再试 RSI 原图；无图才字母（等登录抓取回填） */
+                communityPrepareAvatarImg(img, bid, mem.avatarUrl, null, true, mem.rsiAvatarUrl);
                 av.appendChild(img);
                 const lab = document.createElement('span');
                 lab.className = 'community-chat-roster-label';
@@ -3333,13 +3490,6 @@
             applyCommunityRosterSearchFilter(communityRosterSearchQuery);
             syncCommunityChatRosterActive();
             updateCommunityUnreadBadges();
-            if (window.UssLazyMedia) {
-                window.UssLazyMedia.observeAll(
-                    '.community-chat-roster-avatar-img[data-src]',
-                    { root: inner, rootMargin: '160px 0px' },
-                    inner
-                );
-            }
         }
 
         async function loadCommunityRoster() {
@@ -3351,19 +3501,41 @@
                 return;
             }
             inner.hidden = false;
+            /* 先用缓存立刻画出用户名，避免刷新后左侧空白 */
+            const cached = readCommunityUiCache('roster');
+            if (
+                cached &&
+                Array.isArray(cached.members) &&
+                cached.members.length &&
+                !inner.querySelector('.community-chat-roster-peer')
+            ) {
+                renderCommunityChatRosterFromMembers(cached.members);
+            } else if (!inner.querySelector('.community-chat-roster-item') && !inner.querySelector('.community-chat-roster-error')) {
+                const loading = document.createElement('div');
+                loading.className = 'community-chat-roster-sub';
+                loading.setAttribute('data-roster-loading', '1');
+                loading.textContent = '成员加载中…';
+                inner.appendChild(loading);
+            }
             try {
                 const sess = loadAuthSession();
                 if (!sess || !sess.token) throw new Error('未登录');
-                await refreshCommunityInboxSnapshot();
+                /* inbox 与 roster 并行，不再串行等待 */
+                const inboxP = refreshCommunityInboxSnapshot();
                 const data = await window.UssAuthApi.communityRoster(sess.token);
-                renderCommunityChatRosterFromMembers(data.members || []);
+                const members = data.members || [];
+                renderCommunityChatRosterFromMembers(members);
+                writeCommunityUiCache('roster', { members: members });
+                await inboxP;
             } catch (e) {
-                communityChatRosterMembersList = [];
-                inner.innerHTML = '';
-                const err = document.createElement('div');
-                err.className = 'community-chat-roster-error';
-                err.textContent = safeUserFacingMessage(e);
-                inner.appendChild(err);
+                if (!inner.querySelector('.community-chat-roster-peer')) {
+                    communityChatRosterMembersList = [];
+                    inner.innerHTML = '';
+                    const err = document.createElement('div');
+                    err.className = 'community-chat-roster-error';
+                    err.textContent = safeUserFacingMessage(e);
+                    inner.appendChild(err);
+                }
                 inner.hidden = false;
             }
         }
@@ -3769,11 +3941,7 @@
                 }
                 updateCommunityChatInputPlaceholder();
                 if (!deferNetwork) {
-                    if (window.UssLazyMedia) {
-                        window.UssLazyMedia.runWhenIdle(loadCommunityRoster, 700);
-                    } else {
-                        setTimeout(loadCommunityRoster, 700);
-                    }
+                    loadCommunityRoster();
                 }
             }
 
@@ -4022,6 +4190,7 @@
             installCommunityChatEmojiPicker();
 
             installCommunityChatScrollGuard();
+            installCommunityChatRescrollOnVisible();
             installCommunityChatContextMenu();
             installCommunityChatPinBar();
             wireCommunityChatRoster();
@@ -4091,8 +4260,10 @@
             markPageReadyOnce();
             if (!isLoggedIn()) return;
             loadCommunityChatFull().catch(function () {});
+            loadCommunityRoster().catch(function () {});
             startCommunityChatPoll();
-            refreshCommunitySessionUi();
+            /* 名单/聊天已在上面拉起，这里只刷新输入框态，避免再延迟排一次 roster */
+            refreshCommunitySessionUi({ deferNetwork: true });
             ensureUserProfileWithRetry({ reason: 'boot', skipServerRefresh: true })
                 .catch(function () {
                     return null;
@@ -4111,7 +4282,6 @@
                         };
             scheduleIdle(function () {
                 loadCommunityPosts();
-                loadCommunityRoster();
             }, 300);
         }
 
