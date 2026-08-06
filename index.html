@@ -605,6 +605,9 @@
                         <span class="community-panel-title">贴子</span>
                     </div>
                     <div class="community-forum-body">
+                    <div class="community-feed community-scroller community-scroller-feed" id="communityFeed">
+                        <div class="community-feed-loading" id="communityFeedLoading" hidden>正在加载帖子…</div>
+                    </div>
                     <div class="community-composer community-composer-inline community-dropzone">
                         <div id="communityAuthHint" class="community-auth-hint" hidden>请先登录后再发帖与回复（右上角登录/注册）。</div>
                         <div class="community-post-compose-row">
@@ -645,9 +648,6 @@
                         <input type="file" id="communityFileInput" accept="image/*" multiple hidden disabled />
                         <div id="communityPreviewRow" class="community-preview-row" aria-live="polite"></div>
                         <p id="communityFormHint" class="community-form-hint" role="status"></p>
-                    </div>
-                    <div class="community-feed community-scroller community-scroller-feed" id="communityFeed">
-                        <div class="community-feed-loading" id="communityFeedLoading" hidden>正在加载帖子…</div>
                     </div>
                     <div id="communityForumGuestLock" class="community-chat-guest-lock" hidden>
                         <div class="community-chat-guest-lock-inner">

@@ -28,7 +28,7 @@
         <div id="checkinUnitMissingParam" class="checkin-gate-hint checkin-unit-missing" hidden>
             <p>未指定分部，请从下面选一项进入：</p>
             <p class="checkin-unit-missing-links">
-                <a class="checkin-nav-back" href="checkin-unit.html#unit=hq">总部</a>
+                <a class="checkin-nav-back" href="checkin-unit.html#unit=hq">USS总部</a>
                 <span class="checkin-nav-inline-sep" aria-hidden="true">·</span>
                 <a class="checkin-nav-back" href="checkin-unit.html#unit=squad1">一中队</a>
                 <span class="checkin-nav-inline-sep" aria-hidden="true">·</span>
@@ -107,8 +107,21 @@
             </section>
 
             <section class="checkin-unit-rank-section checkin-panel" aria-labelledby="checkinRankSectionTitle">
-                <h2 id="checkinRankSectionTitle" class="checkin-panel-title checkin-rank-block-title">分部成员总积分排行</h2>
-                <p class="checkin-stats-title">共 <span id="checkinTodayCount">0</span> 人</p>
+                <div class="checkin-rank-head">
+                    <div class="checkin-rank-head-main">
+                        <h2 id="checkinRankSectionTitle" class="checkin-panel-title checkin-rank-block-title">积分排行</h2>
+                        <p class="checkin-stats-title">共 <span id="checkinTodayCount">0</span> 人</p>
+                    </div>
+                    <button
+                        type="button"
+                        id="checkinMyPointsBtn"
+                        class="checkin-my-points-btn"
+                        hidden
+                        title="定位到我在排行中的位置"
+                    >
+                        我积分 <strong id="checkinMyPointsVal">0</strong>
+                    </button>
+                </div>
                 <ul id="checkinTodayList" class="checkin-today-list"></ul>
             </section>
         </div>

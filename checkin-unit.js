@@ -7,7 +7,7 @@
     var AUTH_SESSION_KEY = 'ussHangzhouAuthSession';
     var VALID_UNITS = { hq: true, squad1: true, uss: true, ussprod: true };
     var UNIT_TITLES = {
-        hq: '总部',
+        hq: 'USS总部',
         squad1: '一中队',
         uss: 'USS创伤舰队',
         ussprod: 'USS生产队',
@@ -42,7 +42,8 @@
     /** 每次进入页由 init 赋值；支持 ?unit= 与 #unit= */
     var UNIT = '';
 
-    var myHistoryDatesCache = [];
+    /** @type {{ date: string, pointsAwarded: number|null }[]} */
+    var myHistoryCache = [];
     var myHistoryEmptyMsg = '';
     var historyViewYM = null;
     var historyMonthDropdownDocListeners = false;
@@ -397,25 +398,107 @@
         );
     }
 
-    function renderTodayList(list) {
+    function sessionBindingIdNorm() {
+        var sess = loadAuthSession();
+        return sess && sess.bindingId != null
+            ? String(sess.bindingId).trim().toLowerCase()
+            : '';
+    }
+
+    function findMyRankIndex(list) {
+        var me = sessionBindingIdNorm();
+        if (!me || !Array.isArray(list)) return -1;
+        for (var i = 0; i < list.length; i++) {
+            var bid = memberBindingId(list[i]);
+            if (bid && String(bid).trim().toLowerCase() === me) return i;
+        }
+        return -1;
+    }
+
+    function clearMyRankSummary() {
+        var btn = document.getElementById('checkinMyPointsBtn');
+        var valEl = document.getElementById('checkinMyPointsVal');
+        if (btn) btn.hidden = true;
+        if (valEl) valEl.textContent = '0';
+    }
+
+    /** 积分排行标题旁：单按钮「我积分 N」 */
+    function renderMyRankSummary(list, fallbackPoints) {
+        var btn = document.getElementById('checkinMyPointsBtn');
+        var valEl = document.getElementById('checkinMyPointsVal');
+        if (!btn || !valEl) return;
+
+        var idx = findMyRankIndex(list);
+        var pts = null;
+        if (idx >= 0) {
+            var row = list[idx];
+            pts =
+                typeof row.branchPoints === 'number' && !isNaN(row.branchPoints)
+                    ? row.branchPoints
+                    : 0;
+        } else if (typeof fallbackPoints === 'number' && !isNaN(fallbackPoints)) {
+            pts = fallbackPoints;
+        }
+
+        if (pts == null) {
+            btn.hidden = true;
+            valEl.textContent = '0';
+            return;
+        }
+
+        valEl.textContent = String(pts);
+        btn.hidden = false;
+    }
+
+    function bindMyPointsBtnOnce() {
+        var btn = document.getElementById('checkinMyPointsBtn');
+        if (!btn || btn.dataset.bound === '1') return;
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', function () {
+            var me = document.querySelector('#checkinTodayList .checkin-rank-row.is-me');
+            if (me && typeof me.scrollIntoView === 'function') {
+                me.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        });
+    }
+
+    function renderTodayList(list, fallbackPoints) {
         var ul = document.getElementById('checkinTodayList');
         var cnt = document.getElementById('checkinTodayCount');
         if (cnt) cnt.textContent = String(Array.isArray(list) ? list.length : 0);
         if (!ul) return;
-        if (!list || !list.length) {
+
+        var ranked = Array.isArray(list) ? list : [];
+        renderMyRankSummary(ranked, fallbackPoints);
+
+        if (!ranked.length) {
             ul.innerHTML = '<li class="checkin-today-empty">暂无在本分部签到的成员</li>';
             return;
         }
-        ul.innerHTML = list
-            .map(function (row) {
+        var myIdx = findMyRankIndex(ranked);
+        ul.innerHTML = ranked
+            .map(function (row, i) {
                 var bid = memberBindingId(row);
                 var role = memberRoleLabel(row);
                 var pts =
                     typeof row.branchPoints === 'number' && !isNaN(row.branchPoints)
                         ? row.branchPoints
                         : 0;
+                var meClass = i === myIdx ? ' is-me' : '';
+                var rankN = i + 1;
+                var rankTop =
+                    rankN === 1 ? ' is-top1' : rankN === 2 ? ' is-top2' : rankN === 3 ? ' is-top3' : '';
                 return (
-                    '<li class="checkin-today-row checkin-member-row checkin-rank-row">' +
+                    '<li class="checkin-today-row checkin-member-row checkin-rank-row' +
+                    meClass +
+                    '">' +
+                    '<span class="checkin-rank-place' +
+                    rankTop +
+                    '" aria-label="第 ' +
+                    rankN +
+                    ' 名">' +
+                    esc(String(rankN)) +
+                    '</span>' +
                     memberAvatarImgHtml(row) +
                     '<div class="checkin-member-main">' +
                     '<span class="checkin-today-id">' +
@@ -509,8 +592,8 @@
     function historyDropdownRange() {
         var nowSh = shanghaiYearMonthClient();
         var oldest = shiftHistoryMonth(nowSh.year, nowSh.month, -60);
-        for (var i = 0; i < myHistoryDatesCache.length; i++) {
-            var p = parseHistoryDateYm(myHistoryDatesCache[i]);
+        for (var i = 0; i < myHistoryCache.length; i++) {
+            var p = parseHistoryDateYm(myHistoryCache[i] && myHistoryCache[i].date);
             if (p) oldest = ymMin(p, oldest);
         }
         if (ymCompare(oldest, nowSh) > 0) oldest = { year: nowSh.year, month: nowSh.month };
@@ -735,7 +818,7 @@
             label.textContent = ym.year + '年' + ym.month + '月';
         }
 
-        if (!myHistoryDatesCache.length) {
+        if (!myHistoryCache.length) {
             ul.innerHTML =
                 '<li class="checkin-today-empty">' +
                 esc(myHistoryEmptyMsg || '暂无记录') +
@@ -743,25 +826,67 @@
             return;
         }
 
-        var filtered = myHistoryDatesCache.filter(function (d) {
-            return String(d).indexOf(key + '-') === 0;
+        var filtered = myHistoryCache.filter(function (row) {
+            return String(row && row.date).indexOf(key + '-') === 0;
         });
         filtered.sort(function (a, b) {
-            return a < b ? 1 : a > b ? -1 : 0;
+            var da = String(a && a.date);
+            var db = String(b && b.date);
+            return da < db ? 1 : da > db ? -1 : 0;
         });
         if (!filtered.length) {
             ul.innerHTML = '<li class="checkin-today-empty">本月无签到记录</li>';
             return;
         }
         ul.innerHTML = filtered
-            .map(function (d) {
-                return '<li class="checkin-my-history-row">' + esc(String(d)) + '</li>';
+            .map(function (row) {
+                var d = String(row && row.date ? row.date : '');
+                var pts =
+                    typeof row.pointsAwarded === 'number' && !isNaN(row.pointsAwarded)
+                        ? row.pointsAwarded
+                        : null;
+                var ptsHtml =
+                    pts != null
+                        ? '<span class="checkin-my-history-points">+' +
+                          esc(String(pts)) +
+                          ' 分</span>'
+                        : '';
+                return (
+                    '<li class="checkin-my-history-row">' +
+                    '<span class="checkin-my-history-date">' +
+                    esc(d) +
+                    '</span>' +
+                    ptsHtml +
+                    '</li>'
+                );
             })
             .join('');
     }
 
-    function renderMyHistory(dates, emptyMsg) {
-        myHistoryDatesCache = Array.isArray(dates) ? dates.slice() : [];
+    /**
+     * @param {Array<{date?:string,pointsAwarded?:number}|string>|undefined} entries
+     *        优先传 myHistory；也可传旧版 myHistoryDates 字符串数组
+     */
+    function renderMyHistory(entries, emptyMsg) {
+        var list = [];
+        if (Array.isArray(entries)) {
+            for (var i = 0; i < entries.length; i++) {
+                var item = entries[i];
+                if (item == null) continue;
+                if (typeof item === 'string') {
+                    list.push({ date: item, pointsAwarded: null });
+                    continue;
+                }
+                var date = String(item.date || '').trim();
+                if (!date) continue;
+                var pts =
+                    typeof item.pointsAwarded === 'number' && !isNaN(item.pointsAwarded)
+                        ? item.pointsAwarded
+                        : null;
+                list.push({ date: date, pointsAwarded: pts });
+            }
+        }
+        myHistoryCache = list;
         myHistoryEmptyMsg = emptyMsg != null ? String(emptyMsg) : '';
 
         var msg = myHistoryEmptyMsg;
@@ -794,6 +919,7 @@
         var cntSignedSk = document.getElementById('checkinTodaySignedCount');
         if (cntSignedSk) cntSignedSk.textContent = '0';
         if (ulSignedSk) ulSignedSk.innerHTML = '<li class="checkin-today-empty">加载中…</li>';
+        clearMyRankSummary();
         renderMyHistory([], '加载中…');
         updateUnitStats(null);
     }
@@ -815,6 +941,7 @@
             var cntSigned0 = document.getElementById('checkinTodaySignedCount');
             if (cntSigned0) cntSigned0.textContent = '0';
             if (ulSigned0) ulSigned0.innerHTML = '<li class="checkin-today-empty">请刷新页面。</li>';
+            clearMyRankSummary();
             renderMyHistory([], '请刷新页面。');
             updateUnitStats(null);
             applyPrimaryBtnFromSummary(null);
@@ -835,12 +962,21 @@
             var mo = data.month != null ? Number(data.month) : ym.month;
             renderCalendar(y, mo, signed, data.today || today);
             var rankList = data.memberRanking || data.todayList || [];
-            renderTodayList(sortTodayList(rankList));
+            renderTodayList(
+                sortTodayList(rankList),
+                data.points != null ? Number(data.points) : null
+            );
             renderTodaySignedList(
                 Array.isArray(data.todaySignedMembers) ? data.todaySignedMembers : []
             );
             updateUnitStats(data);
-            renderMyHistory(Array.isArray(data.myHistoryDates) ? data.myHistoryDates : []);
+            renderMyHistory(
+                Array.isArray(data.myHistory) && data.myHistory.length
+                    ? data.myHistory
+                    : Array.isArray(data.myHistoryDates)
+                      ? data.myHistoryDates
+                      : []
+            );
             applyPrimaryBtnFromSummary(data);
         } catch (e) {
             if (window.UssAuthApi && window.UssAuthApi.isAuthSessionError(e)) {
@@ -868,6 +1004,7 @@
                     (isLikelyNetworkError(e && e.message) ? '连不上服务' : '加载失败') +
                     '</li>';
             }
+            clearMyRankSummary();
             updateUnitStats(null);
             renderMyHistory([], isLikelyNetworkError(e && e.message) ? '连不上服务' : '加载失败');
             applyPrimaryBtnFromSummary(null, true);
@@ -1052,6 +1189,7 @@
         paintSkeleton();
 
         setupMyHistoryMonthNav();
+        bindMyPointsBtnOnce();
 
         var btn = document.getElementById('checkinPrimaryBtn');
         if (btn) btn.addEventListener('click', onPrimaryClick);

@@ -1724,6 +1724,7 @@
                     </summary>
                     <div class="branch-help-body">
                         <p class="hint"><strong>自动签到：</strong>已绑定 OOPZ 的成员，在 OOPZ 语音频道内按实际停留时长累计（机器人约每 60 秒上报一次）。达到分钟数后自动写入对应分部签到。「仅在签到时段内」勾选时，须该分部在上方开放窗口内才会自动签；时段签到下在线时长仅计开放窗口内。启用某分部自动签到时，若上方未配置该分部开放窗口，系统将自动设为「全天开放」。</p>
+                        <p class="hint"><strong>语音主分类：</strong>每个分部可单独选择 OOPZ <strong>频道分组</strong>（如「主力舰一中队」「创伤舰队」）。默认「全局」=任意分组内语音均计时。需 OOPZ 机器人在线；若下拉为空请重启机器人或运行 <code>oopz-bot/sync_channel_groups.py</code> 后刷新本页。</p>
                         <p class="hint"><strong>手动签到：</strong>控制分部页「今日签到」按钮的额外条件。须绑定 OOPZ 时未绑定将引导去首页绑定；勾选「须在线时长」时，全天签到计今日总在线，时段签到仅计该分部开放窗口内在线（与自动签到共用统计）。</p>
                     </div>
                 </details>
@@ -1732,13 +1733,14 @@
                         <thead>
                             <tr>
                                 <th rowspan="2">分部</th>
-                                <th colspan="3">自动签到</th>
+                                <th colspan="4">自动签到</th>
                                 <th colspan="3">手动签到</th>
                             </tr>
                             <tr>
                                 <th>启用</th>
                                 <th>在线 ≥（分）</th>
                                 <th>仅时段内</th>
+                                <th>语音主分类</th>
                                 <th>须绑定</th>
                                 <th>须在线时长</th>
                                 <th>在线 ≥（分）</th>
@@ -1885,7 +1887,7 @@
                 <div class="branch-sticky-toolbar">
                 <div class="branch-toolbar">
                     <label>分部 <select id="branchSel">
-                        <option value="hq">总部</option>
+                        <option value="hq">USS总部</option>
                         <option value="squad1">一中队</option>
                         <option value="uss">USS创伤舰队</option>
                         <option value="ussprod">USS生产队</option>
@@ -3387,7 +3389,7 @@
 
             var SCHED_DUR_FALLBACK = 60;
             var SCHED_BRANCH_LABELS = {
-                hq: '总部',
+                hq: 'USS总部',
                 squad1: '一中队',
                 uss: 'USS创伤舰队',
                 ussprod: 'USS生产队',
@@ -3571,7 +3573,7 @@
 
             function renderScheduleGrid() {
                 var branches = [
-                    { id: 'hq', label: '总部' },
+                    { id: 'hq', label: 'USS总部' },
                     { id: 'squad1', label: '一中队' },
                     { id: 'uss', label: 'USS创伤舰队' },
                     { id: 'ussprod', label: 'USS生产队' },
@@ -3816,11 +3818,85 @@
             }
 
             var OOPZ_AUTO_BRANCHES = [
-                { id: 'hq', label: '总部' },
+                { id: 'hq', label: 'USS总部' },
                 { id: 'squad1', label: '一中队' },
                 { id: 'uss', label: 'USS创伤舰队' },
                 { id: 'ussprod', label: 'USS生产队' },
             ];
+
+            var OOPZ_AREA_OPTIONS_CACHE = [];
+
+            function buildOopzAreaOptionsHtml(selectedId, selectedName) {
+                var cur = String(selectedId || '').trim();
+                var curName = String(selectedName || '').trim();
+                var html = '<option value="">全局（全部分组）</option>';
+                var seen = {};
+                (Array.isArray(OOPZ_AREA_OPTIONS_CACHE) ? OOPZ_AREA_OPTIONS_CACHE : []).forEach(function (a) {
+                    var id = String((a && a.areaId) || '').trim();
+                    if (!id || seen[id]) return;
+                    seen[id] = true;
+                    var name = String((a && a.areaName) || id).trim() || id;
+                    html +=
+                        '<option value="' +
+                        String(id).replace(/"/g, '&quot;') +
+                        '"' +
+                        (id === cur ? ' selected' : '') +
+                        '>' +
+                        name.replace(/</g, '&lt;') +
+                        '</option>';
+                });
+                if (cur && !seen[cur]) {
+                    var label = curName || cur;
+                    html +=
+                        '<option value="' +
+                        String(cur).replace(/"/g, '&quot;') +
+                        '" selected>' +
+                        label.replace(/</g, '&lt;') +
+                        '（已保存）</option>';
+                }
+                return html;
+            }
+
+            function mergeOopzAreaOptions(areas, autoBranches, channelGroups) {
+                var map = {};
+                function add(id, name) {
+                    id = String(id || '').trim();
+                    if (!id) return;
+                    map[id] = {
+                        areaId: id,
+                        areaName: String(name || id).trim() || id,
+                    };
+                }
+                (Array.isArray(channelGroups) ? channelGroups : []).forEach(function (g) {
+                    add(g && g.groupId, g && g.groupName);
+                });
+                (Array.isArray(areas) ? areas : []).forEach(function (a) {
+                    var groups = (a && a.channelGroups) || [];
+                    groups.forEach(function (g) {
+                        add(g && g.groupId, g && g.groupName);
+                    });
+                    var channels = (a && a.channels) || [];
+                    channels.forEach(function (ch) {
+                        add(ch && ch.groupId, ch && ch.groupName);
+                    });
+                });
+                var bag = autoBranches && typeof autoBranches === 'object' ? autoBranches : {};
+                Object.keys(bag).forEach(function (bid) {
+                    var b = bag[bid] || {};
+                    var id = String(b.countAreaId || '').trim();
+                    if (!id) return;
+                    if (!map[id]) {
+                        add(id, b.countAreaName || id);
+                    }
+                });
+                OOPZ_AREA_OPTIONS_CACHE = Object.keys(map)
+                    .sort(function (a, b) {
+                        return String(map[a].areaName).localeCompare(String(map[b].areaName), 'zh');
+                    })
+                    .map(function (k) {
+                        return map[k];
+                    });
+            }
 
             function renderOopzCheckinBranchTable(autoBranches, manualBranches) {
                 var tbody = document.getElementById('oopzCheckinBranchTbody');
@@ -3836,6 +3912,7 @@
                     var requireWin = auto.requireScheduleWindow !== false;
                     var requireBind = manual.requireOopzBind === true;
                     var requireOnline = manual.requireOopzOnlineMinutes === true;
+                    var areaOpts = buildOopzAreaOptionsHtml(auto.countAreaId || '', auto.countAreaName || '');
                     return (
                         '<tr data-branch="' +
                         b.id +
@@ -3854,6 +3931,11 @@
                         '<td><label class="oopz-auto-check"><input type="checkbox" class="oopz-auto-branch-window" ' +
                         (requireWin ? 'checked' : '') +
                         ' /> 是</label></td>' +
+                        '<td><select class="oopz-auto-branch-area sched-num-inp" aria-label="' +
+                        b.label +
+                        ' 语音主分类" style="min-width:140px;max-width:220px;">' +
+                        areaOpts +
+                        '</select></td>' +
                         '<td><label class="oopz-auto-check"><input type="checkbox" class="manual-oopz-branch-bind" ' +
                         (requireBind ? 'checked' : '') +
                         ' /> 是</label></td>' +
@@ -3880,13 +3962,23 @@
                     var enabledEl = tr.querySelector('.oopz-auto-branch-enabled');
                     var minEl = tr.querySelector('.oopz-auto-branch-min');
                     var windowEl = tr.querySelector('.oopz-auto-branch-window');
+                    var areaEl = tr.querySelector('.oopz-auto-branch-area');
                     var minRaw = minEl ? Number(minEl.value) : 60;
                     var minMinutes =
                         Number.isFinite(minRaw) && minRaw > 0 ? Math.min(1440, Math.floor(minRaw)) : 60;
+                    var countAreaId = areaEl ? String(areaEl.value || '').trim() : '';
+                    var countAreaName = '';
+                    if (countAreaId && areaEl && areaEl.selectedOptions && areaEl.selectedOptions[0]) {
+                        countAreaName = String(areaEl.selectedOptions[0].textContent || '')
+                            .replace(/（已保存）$/, '')
+                            .trim();
+                    }
                     out[bid] = {
                         enabled: !!(enabledEl && enabledEl.checked),
                         minOnlineMinutes: minMinutes,
                         requireScheduleWindow: !!(windowEl && windowEl.checked),
+                        countAreaId: countAreaId,
+                        countAreaName: countAreaId ? countAreaName : '',
                     };
                 });
                 return out;
@@ -3914,6 +4006,27 @@
                 return out;
             }
 
+            async function loadOopzBridgeAreasForAdmin() {
+                try {
+                    var base =
+                        (window.UssAuthApi && window.UssAuthApi.base) ||
+                        (typeof window !== 'undefined' && window.USS_AUTH_API_BASE) ||
+                        '';
+                    var url = String(base || '').replace(/\/$/, '') + '/api/oopz-bridge/state';
+                    var r = await fetch(url, { credentials: 'omit', cache: 'no-store' });
+                    if (!r.ok) return { areas: [], channelGroups: [] };
+                    var data = await r.json();
+                    return {
+                        areas: Array.isArray(data && data.areas) ? data.areas : [],
+                        channelGroups: Array.isArray(data && data.channelGroups)
+                            ? data.channelGroups
+                            : [],
+                    };
+                } catch (e) {
+                    return { areas: [], channelGroups: [] };
+                }
+            }
+
             async function loadOopzCheckinUi() {
                 var errEl = document.getElementById('oopzAutoErr');
                 var okEl = document.getElementById('oopzAutoOk');
@@ -3924,9 +4037,16 @@
                     var results = await Promise.all([
                         window.UssAuthApi.adminGetOopzAutoCheckin(s.token),
                         window.UssAuthApi.adminGetManualCheckinOopz(s.token),
+                        loadOopzBridgeAreasForAdmin(),
                     ]);
                     var autoCfg = (results[0] && results[0].oopzAutoCheckin) || {};
                     var manualCfg = (results[1] && results[1].manualCheckinOopz) || {};
+                    var bridge = results[2] || {};
+                    mergeOopzAreaOptions(
+                        bridge.areas || [],
+                        autoCfg.branches || {},
+                        bridge.channelGroups || []
+                    );
                     renderOopzCheckinBranchTable(autoCfg.branches || {}, manualCfg.branches || {});
                 } catch (eLoad) {
                     showErr('oopzAutoErr', (eLoad && eLoad.message) || '加载 OOPZ 签到配置失败');
@@ -3944,6 +4064,9 @@
                 var enabledCount = Object.keys(autoBranches).filter(function (bid) {
                     return autoBranches[bid] && autoBranches[bid].enabled;
                 }).length;
+                var areaSetCount = Object.keys(autoBranches).filter(function (bid) {
+                    return autoBranches[bid] && autoBranches[bid].countAreaId;
+                }).length;
                 try {
                     await Promise.all([
                         window.UssAuthApi.adminPutOopzAutoCheckin(s.token, { branches: autoBranches }),
@@ -3951,7 +4074,11 @@
                     ]);
                     if (okEl) {
                         okEl.textContent =
-                            '已保存 OOPZ 签到配置（自动签到 ' + enabledCount + ' 个分部已启用）';
+                            '已保存 OOPZ 签到配置（自动签到 ' +
+                            enabledCount +
+                            ' 个分部已启用；' +
+                            areaSetCount +
+                            ' 个分部已指定语音主分类）';
                         okEl.hidden = false;
                     }
                     await loadOopzCheckinUi();
@@ -3959,6 +4086,7 @@
                     showErr('oopzAutoErr', (eSave && eSave.message) || '保存失败');
                 }
             }
+
 
             var oopzTtsVoiceOptions = [];
             var OOPZ_CLONE_VOICE_FALLBACK = [

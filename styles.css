@@ -5216,6 +5216,7 @@ body.oopz-bind-open {
 .community-panel-forum .community-composer {
  flex-shrink: 0;
  padding: 10px 12px;
+ border-top: 1px solid rgba(95, 184, 255, 0.14);
 }
 
 .community-auth-hint {

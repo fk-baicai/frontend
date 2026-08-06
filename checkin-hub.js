@@ -7,7 +7,7 @@
     var AUTH_SESSION_KEY = 'ussHangzhouAuthSession';
 
     var FALLBACK_UNITS = [
-        { branch: 'hq', branchLabel: '总部', points: 0, streak: 0, todaySigned: false },
+        { branch: 'hq', branchLabel: 'USS总部', points: 0, streak: 0, todaySigned: false },
         { branch: 'squad1', branchLabel: '一中队', points: 0, streak: 0, todaySigned: false },
         { branch: 'uss', branchLabel: 'USS创伤舰队', points: 0, streak: 0, todaySigned: false },
         { branch: 'ussprod', branchLabel: 'USS生产队', points: 0, streak: 0, todaySigned: false },

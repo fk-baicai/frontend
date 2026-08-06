@@ -55,13 +55,31 @@
         var line = '语音在线：' + formatMinutes(mins);
         if (data && data.inVoiceNow && data.voicePresence) {
             var ch = stripCornerQuotes(data.voicePresence.channelName);
+            var area = stripCornerQuotes(data.voicePresence.areaName);
             if (ch) {
-                line += ' · 当前在「' + ch + '」';
+                line += ' · 当前在「' + (area ? area + ' / ' : '') + ch + '」';
             } else {
                 line += ' · 当前在语音频道中';
             }
         }
         return line;
+    }
+
+    function buildBranchProgressText(b, data) {
+        var label = b.label || b.id;
+        var mins = branchEffectiveMins(b, data);
+        if (b.checkedInToday) {
+            return label + '（已签）';
+        }
+        var suffix = b.windowScoped && b.scheduleOpen ? '（时段内）' : '';
+        var areaHint = '';
+        if (b.countAreaId) {
+            areaHint = ' · 域「' + (stripCornerQuotes(b.countAreaName) || b.countAreaId) + '」';
+            if (data && data.inVoiceNow && b.inBranchCountArea === false) {
+                areaHint += '未计时';
+            }
+        }
+        return label + ' ' + mins + '/' + (b.minOnlineMinutes || 60) + ' 分' + suffix + areaHint;
     }
 
     function buildBranchRemainLine(b, data) {
@@ -87,16 +105,6 @@
             return Math.max(0, Math.floor(Number(b.onlineMinutesEffective) || 0));
         }
         return data && data.onlineMinutesToday != null ? data.onlineMinutesToday : 0;
-    }
-
-    function buildBranchProgressText(b, data) {
-        var label = b.label || b.id;
-        var mins = branchEffectiveMins(b, data);
-        if (b.checkedInToday) {
-            return label + '（已签）';
-        }
-        var suffix = b.windowScoped && b.scheduleOpen ? '（时段内）' : '';
-        return label + ' ' + mins + '/' + (b.minOnlineMinutes || 60) + ' 分' + suffix;
     }
 
     function buildRemainLine(data) {

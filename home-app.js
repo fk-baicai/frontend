@@ -3107,12 +3107,13 @@
             const sc = getCommunityChatScrollEl();
             if (!sc) return;
             if (!(force || communityChatNearBottom)) return;
-            communityChatNearBottom = true;
+            if (force) communityChatNearBottom = true;
             function pin() {
+                if (!communityChatNearBottom) return;
                 sc.scrollTop = sc.scrollHeight;
             }
             pin();
-            /* display:none → 显示后 / 图片解码后 scrollHeight 会变；多次钉底 */
+            /* display:none → 显示后 / 图片解码后 scrollHeight 会变；多次钉底（用户上滑后不再钉） */
             requestAnimationFrame(function () {
                 pin();
                 requestAnimationFrame(pin);
@@ -3181,30 +3182,28 @@
         function installCommunityChatRescrollOnVisible() {
             if (window.__ussCommunityChatRescrollInstalled) return;
             window.__ussCommunityChatRescrollInstalled = true;
-            function rescroll() {
+            function rebindAvatars() {
                 if (!isLoggedIn()) return;
                 if (communityChatKind !== 'fleet' && communityChatKind !== 'dm') return;
-                communityChatNearBottom = true;
-                scrollCommunityChatToBottom(true);
-                /* 会员区从 display:none 恢复后补绑懒加载头像 */
+                /* 会员区从 display:none 恢复后补绑懒加载头像（不强制滚到底） */
                 bindCommunityAuthorAvatars(document.getElementById('communityChatRosterInner'), {
                     eager: true,
                 });
                 bindCommunityChatAvatars(document.getElementById('communityChatLog'), { eagerLast: 16 });
             }
-            window.addEventListener('uss:hero-live', rescroll);
+            window.addEventListener('uss:hero-live', rebindAvatars);
             if (document.documentElement.classList.contains('hero-video-live')) {
-                setTimeout(rescroll, 0);
+                setTimeout(rebindAvatars, 0);
             } else {
                 const mo = new MutationObserver(function () {
                     if (!document.documentElement.classList.contains('hero-video-live')) return;
                     mo.disconnect();
-                    rescroll();
+                    rebindAvatars();
                 });
                 mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
             }
             document.addEventListener('visibilitychange', function () {
-                if (document.visibilityState === 'visible') rescroll();
+                if (document.visibilityState === 'visible') rebindAvatars();
             });
         }
 
@@ -3227,7 +3226,7 @@
                             : 0;
                     renderCommunityChatMessagesToLog(log, cached.messages, 'fleet');
                     renderCommunityChatPinBar(cached.pinned || null);
-                    scrollCommunityChatToBottom(true);
+                    if (opts.scrollToBottom) scrollCommunityChatToBottom(true);
                 }
             }
             try {
@@ -3259,7 +3258,7 @@
                     } else {
                         renderCommunityChatMessagesToLog(log, list, 'fleet');
                     }
-                    scrollCommunityChatToBottom(true);
+                    if (opts.scrollToBottom) scrollCommunityChatToBottom(true);
                 }
                 if (typeof data.maxSeq === 'number' && data.maxSeq > 0) {
                     communityChatMaxSeq = data.maxSeq;
@@ -3287,7 +3286,8 @@
             }
         }
 
-        async function loadCommunityDmFull() {
+        async function loadCommunityDmFull(opts) {
+            opts = opts || {};
             const log = document.getElementById('communityChatLog');
             if (!log || !window.UssAuthApi) return;
             clearCommunityChatHint();
@@ -3316,7 +3316,7 @@
                 } else {
                     renderCommunityChatMessagesToLog(log, list, 'dm');
                 }
-                scrollCommunityChatToBottom(true);
+                if (opts.scrollToBottom) scrollCommunityChatToBottom(true);
                 if (communityChatDmPeer) {
                     markCommunityDmPeerRead(communityChatDmPeer, communityDmMaxSeq);
                 }
@@ -4259,7 +4259,7 @@
             refreshLoginDrawerView();
             markPageReadyOnce();
             if (!isLoggedIn()) return;
-            loadCommunityChatFull().catch(function () {});
+            loadCommunityChatFull({ scrollToBottom: true }).catch(function () {});
             loadCommunityRoster().catch(function () {});
             startCommunityChatPoll();
             /* 名单/聊天已在上面拉起，这里只刷新输入框态，避免再延迟排一次 roster */
@@ -4875,7 +4875,7 @@
                     }
                 );
                 refreshNavLoginState();
-                loadCommunityChatFull();
+                loadCommunityChatFull({ scrollToBottom: true });
                 loadCommunityPosts();
                 ensureUserProfileWithRetry({ reason: 'boot' }).then(function () {
                     refreshLoginDrawerView();
