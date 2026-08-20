@@ -3454,7 +3454,7 @@
                     (enabled ? ' checked' : '') +
                     ' title="启用后下方日期格锁定，统一沿用本规则" />' +
                     '<span>启用长期默认</span></div>' +
-                    '<div class="sch-template-hint">启用后下方日期不可单独修改；需逐日配置时请先取消勾选。留空开始时间且未勾选全天视为未启用。</div>' +
+                    '<div class="sch-template-hint">启用后下方日期不可单独修改；需逐日配置时请先取消勾选并点「保存本分部」。取消勾选后不会被自动签到再改回全天。留空开始时间且未勾选全天视为未启用。</div>' +
                     buildSchedSlotHtml(tplDay, defM, { locked: false })
                 );
             }
@@ -4068,10 +4068,8 @@
                     return autoBranches[bid] && autoBranches[bid].countAreaId;
                 }).length;
                 try {
-                    await Promise.all([
-                        window.UssAuthApi.adminPutOopzAutoCheckin(s.token, { branches: autoBranches }),
-                        window.UssAuthApi.adminPutManualCheckinOopz(s.token, { branches: manualBranches }),
-                    ]);
+                    await window.UssAuthApi.adminPutOopzAutoCheckin(s.token, { branches: autoBranches });
+                    await window.UssAuthApi.adminPutManualCheckinOopz(s.token, { branches: manualBranches });
                     if (okEl) {
                         okEl.textContent =
                             '已保存 OOPZ 签到配置（自动签到 ' +
