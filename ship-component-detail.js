@@ -641,6 +641,9 @@
     }
 
     function formatManufacturerLabel(item) {
+        if (typeof window.ussFormatManufacturerLabel === 'function') {
+            return window.ussFormatManufacturerLabel(item);
+        }
         var m = (item && (item.manufacturer_zh || item.manufacturer)) || '';
         if (/^<=\s*PLACEHOLDER\s*=>$/i.test(m) || /placeholder/i.test(m)) return '—';
         m = String(m || '').trim();

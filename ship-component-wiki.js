@@ -769,6 +769,65 @@
         return out;
     }
 
+    function formatPowerSegmentCount(n) {
+        if (!Number.isFinite(n)) return null;
+        if (Math.abs(n - Math.round(n)) < 1e-6) return String(Math.round(n));
+        return String(Number(n.toFixed(2)));
+    }
+
+    function getResourcePowerSegments(item) {
+        var net = item && item.wiki_fields && item.wiki_fields.resource_network;
+        if (!net) return null;
+        var states = Array.isArray(net.states) ? net.states : [];
+        var conversionRate = null;
+        var highStart = null;
+        for (var si = 0; si < states.length; si++) {
+            var st = states[si];
+            if (!st) continue;
+            var deltas = st.deltas || [];
+            for (var di = 0; di < deltas.length; di++) {
+                var d = deltas[di];
+                if (!d || d.resource !== 'Power') continue;
+                if (String(d.type || '') === 'Generation') continue;
+                var rate = Number(d.rate);
+                if (Number.isFinite(rate) && rate > 0) conversionRate = rate;
+            }
+            var ranges = st.power_ranges || [];
+            for (var ri = 0; ri < ranges.length; ri++) {
+                var pr = ranges[ri];
+                var start = pr && Number(pr.start);
+                if (!Number.isFinite(start) || start <= 0) continue;
+                if (Number(pr.modifier) === 1 || ri === ranges.length - 1) highStart = start;
+            }
+        }
+        if (conversionRate != null) return conversionRate;
+        if (highStart != null) return highStart;
+        var u = net.usage && net.usage.power;
+        var max = u ? Number(u.max != null ? u.max : u.maximum) : NaN;
+        return Number.isFinite(max) ? max : null;
+    }
+
+    function formatResourcePowerUsageDisplay(item) {
+        return formatPowerSegmentCount(getResourcePowerSegments(item));
+    }
+
+    function rowsFromPowerUsage(item) {
+        var text = formatResourcePowerUsageDisplay(item);
+        if (!text) return [];
+        return [{ label: '满功率', value: text }];
+    }
+
+    var POWER_USAGE_COLUMN = {
+        key: 'wiki_pwr_use',
+        label: '占用电力段',
+        get: function (item) {
+            return formatResourcePowerUsageDisplay(item);
+        },
+        sortGet: function (item) {
+            return getResourcePowerSegments(item);
+        },
+    };
+
     function getItemDurabilityHealth(item) {
         var d = item && item.wiki_fields && item.wiki_fields.durability;
         if (d && d.health != null) return d.health;
@@ -798,6 +857,7 @@
 
     var TYPE_DETAIL_SECTIONS = {
         shield: [
+            { title: '占用电力段', custom: 'power_usage' },
             {
                 title: '护盾性能',
                 fields: [
@@ -814,6 +874,7 @@
             },
         ],
         cooling: [
+            { title: '占用电力段', custom: 'power_usage' },
             {
                 title: '散热性能',
                 fields: ['coolant_segment_generation', 'cooling_rate', 'suppression_ir_factor', 'suppression_heat_factor'],
@@ -826,6 +887,7 @@
             },
         ],
         jump: [
+            { title: '占用电力段', custom: 'power_usage' },
             {
                 title: '跳跃调校',
                 fields: [
@@ -838,6 +900,7 @@
             },
         ],
         radar: [
+            { title: '占用电力段', custom: 'power_usage' },
             {
                 title: '探测性能',
                 fields: [
@@ -859,6 +922,7 @@
             },
         ],
         quantum: [
+            { title: '占用电力段', custom: 'power_usage' },
             {
                 title: '跃迁与燃料',
                 fields: [
@@ -2135,6 +2199,7 @@
 
     var WIKI_TABLE_COLUMNS = {
         shield: [
+            POWER_USAGE_COLUMN,
             {
                 key: 'wiki_sh_hp',
                 label: '护盾容量',
@@ -2161,6 +2226,7 @@
             },
         ],
         cooling: [
+            POWER_USAGE_COLUMN,
             {
                 key: 'wiki_cool_seg',
                 label: '冷却段',
@@ -2181,6 +2247,7 @@
             },
         ],
         quantum: [
+            POWER_USAGE_COLUMN,
             {
                 key: 'wiki_q_speed',
                 label: '驱动速度',
@@ -2213,6 +2280,7 @@
             },
         ],
         jump: [
+            POWER_USAGE_COLUMN,
             {
                 key: 'wiki_j_align',
                 label: '对齐速率',
@@ -2231,6 +2299,7 @@
             },
         ],
         radar: [
+            POWER_USAGE_COLUMN,
             {
                 key: 'wiki_r_cd',
                 label: '冷却',
@@ -3009,6 +3078,8 @@
                 rows = rowsFromMeleeAttackModes(block);
             } else if (def.custom === 'grenade_params') {
                 rows = rowsFromGrenadeParams(item);
+            } else if (def.custom === 'power_usage') {
+                rows = rowsFromPowerUsage(item);
             } else if (def.nested) {
                 var nestedObj = block[def.nested];
                 if (!nestedObj && item.type === 'magazine' && def.nested === 'ammunition') {

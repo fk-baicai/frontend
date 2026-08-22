@@ -67,10 +67,13 @@
 
     function buildBranchProgressText(b, data) {
         var label = b.label || b.id;
-        var mins = branchEffectiveMins(b, data);
         if (b.checkedInToday) {
             return label + '（已签）';
         }
+        if (!b.scheduleOpen) {
+            return label + '（今日未开放）';
+        }
+        var mins = branchEffectiveMins(b, data);
         var suffix = b.windowScoped && b.scheduleOpen ? '（时段内）' : '';
         var areaHint = '';
         if (b.countAreaId) {
@@ -86,11 +89,11 @@
         if (b.checkedInToday) {
             return '今日已签到';
         }
+        if (!b.scheduleOpen) {
+            return '今日未开放签到';
+        }
         if (b.readyByTime && b.scheduleOpen) {
             return '即将自动签到';
-        }
-        if (b.readyByTime && !b.scheduleOpen) {
-            return '须签到时段内';
         }
         var remain =
             b.remainingMinutes != null
@@ -125,8 +128,8 @@
         if (status === 'pending_auto') {
             return '在线已达标，即将自动签到';
         }
-        if (status === 'waiting_window') {
-            return '在线已达标，须签到时段内生效';
+        if (status === 'waiting_window' || status === 'not_open') {
+            return '今日未开放签到';
         }
         var remain = data.autoCheckinRemainingMinutes;
         if (remain == null) {

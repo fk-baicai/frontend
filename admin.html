@@ -3452,9 +3452,9 @@
                     '<div class="sch-template-enable-wrap">' +
                     '<input type="checkbox" class="sch-template-enabled"' +
                     (enabled ? ' checked' : '') +
-                    ' title="启用后下方日期格锁定，统一沿用本规则" />' +
+                    ' title="勾选后每天都按同一规则签到" />' +
                     '<span>启用长期默认</span></div>' +
-                    '<div class="sch-template-hint">启用后下方日期不可单独修改；需逐日配置时请先取消勾选并点「保存本分部」。取消勾选后不会被自动签到再改回全天。留空开始时间且未勾选全天视为未启用。</div>' +
+                    '<div class="sch-template-hint">勾选：每天都按右边规则签到（全天或指定时段）。不勾选：默认不开放，除非给某一天单独设置。改完请点「保存本分部」。</div>' +
                     buildSchedSlotHtml(tplDay, defM, { locked: false })
                 );
             }

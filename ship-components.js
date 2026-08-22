@@ -1053,6 +1053,7 @@
             'grade',
             'size',
             'wiki_cool_seg',
+            'wiki_pwr_use',
             'mfg',
             'mass',
             'volume',
@@ -1083,6 +1084,7 @@
             'wiki_sh_hp',
             'wiki_sh_regen',
             'wiki_sh_time',
+            'wiki_pwr_use',
             'mfg',
             'mass',
             'volume',
@@ -1098,6 +1100,7 @@
             'size',
             'wiki_q_speed',
             'wiki_q_engage',
+            'wiki_pwr_use',
             'mfg',
             'mass',
             'volume',
@@ -1114,6 +1117,7 @@
             'speed',
             'wiki_j_align',
             'wiki_j_tune',
+            'wiki_pwr_use',
             'mfg',
             'mass',
             'volume',
@@ -1132,6 +1136,7 @@
             'wiki_r_em',
             'wiki_r_dist_min',
             'wiki_r_dist_max',
+            'wiki_pwr_use',
             'mfg',
             'price',
             'loc',
@@ -1977,13 +1982,24 @@
         return String(a).localeCompare(String(b), 'zh-CN', { numeric: true, sensitivity: 'base' }) * dir;
     }
 
+    function weaponDamageSortKey() {
+        if (state.type === 'ship_weapon') return 'wiki_w_dmg';
+        if (state.type === 'ship_missile') return 'wiki_m_dmg';
+        return '';
+    }
+
     function sortItems(items) {
         if (!state.sortKey || !state.sortDir) return items;
         var getter = getSortGetter(state.sortKey);
         if (!getter) return items;
         var dir = state.sortDir === 'desc' ? -1 : 1;
+        var dmgKey = weaponDamageSortKey();
+        var dmgGetter = dmgKey && state.sortKey === 'size' ? getSortGetter(dmgKey) : null;
         return items.slice().sort(function (a, b) {
-            return compareSortValues(getter(a), getter(b), dir);
+            var primary = compareSortValues(getter(a), getter(b), dir);
+            if (primary !== 0) return primary;
+            if (dmgGetter) return compareSortValues(dmgGetter(a), dmgGetter(b), -1);
+            return 0;
         });
     }
 
@@ -2440,6 +2456,9 @@
     }
 
     function itemManufacturerLabel(item) {
+        if (typeof window.ussFormatManufacturerLabel === 'function') {
+            return window.ussFormatManufacturerLabel(item);
+        }
         var m = (item && (item.manufacturer_zh || item.manufacturer)) || '';
         if (isPlaceholderManufacturerText(m)) return '—';
         m = stripBilingualManufacturerLabel(m);
