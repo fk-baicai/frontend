@@ -42,6 +42,7 @@
         } catch (e) {
             /* ignore */
         }
+        syncHtmlMemberGateClasses(null);
     }
 
     function isAuthSessionExpired(sess) {
@@ -72,6 +73,27 @@
         return sess;
     }
 
+    function sessionHasFleetUiAccess(sess) {
+        if (!sess || !sess.token) return false;
+        if (sess.isSuperAdmin || sess.isAdmin) return true;
+        if (sess.hasFleetPrivilege === true || sess.hasFleetPrivilege === 1) return true;
+        if (sess.hasFleetPrivilege === false || sess.hasFleetPrivilege === 0) return false;
+        if (String(sess.memberKind || '').toLowerCase() === 'civilian') return false;
+        return true;
+    }
+
+    function syncHtmlMemberGateClasses(sess) {
+        if (typeof document === 'undefined' || !document.documentElement) return;
+        var root = document.documentElement;
+        if (!sess || !sess.token) {
+            root.classList.remove('auth-session-cached', 'auth-fleet-member');
+            return;
+        }
+        root.classList.add('auth-session-cached');
+        if (sessionHasFleetUiAccess(sess)) root.classList.add('auth-fleet-member');
+        else root.classList.remove('auth-fleet-member');
+    }
+
     function saveAuthSession(payload, remember) {
         if (!payload) return;
         var json = JSON.stringify(payload);
@@ -86,6 +108,7 @@
         } catch (e) {
             /* ignore */
         }
+        syncHtmlMemberGateClasses(payload);
     }
 
     function sessionUsesRemember() {
@@ -112,10 +135,18 @@
 
     var PROFILE_CACHE_KEY = 'ussHangzhouProfileCache';
 
-    function loadProfileCache(bindingId) {
+    function resolveProfileCacheKey(bindingId, rsiProfileHandle) {
         var bid = String(bindingId || '')
             .trim()
             .toLowerCase();
+        if (bid) return bid;
+        return String(rsiProfileHandle || '')
+            .trim()
+            .toLowerCase();
+    }
+
+    function loadProfileCache(bindingId, rsiProfileHandle) {
+        var bid = resolveProfileCacheKey(bindingId, rsiProfileHandle);
         if (!bid) return null;
         try {
             var raw = localStorage.getItem(PROFILE_CACHE_KEY);
@@ -128,10 +159,11 @@
         }
     }
 
-    function saveProfileCache(bindingId, profile) {
-        var bid = String(bindingId || '')
-            .trim()
-            .toLowerCase();
+    function saveProfileCache(bindingId, profile, rsiProfileHandle) {
+        var bid = resolveProfileCacheKey(
+            bindingId || (profile && profile.bindingId),
+            rsiProfileHandle || (profile && profile.rsiProfileHandle)
+        );
         if (!bid || !profile || typeof profile !== 'object') return;
         try {
             var raw = localStorage.getItem(PROFILE_CACHE_KEY);
@@ -162,6 +194,7 @@
             rsiOrgLogoUrl: sess.rsiOrgLogoUrl,
             rsiOrgRoleLabel: sess.rsiOrgRoleLabel,
             rsiOrgRankSlots: sess.rsiOrgRankSlots,
+            rsiProfileSyncedAt: sess.rsiProfileSyncedAt,
             rsiAssetsPending: sess.rsiAssetsPending,
         };
     }
@@ -181,7 +214,10 @@
     function mergeUserIntoSession(token, user, prev) {
         prev = prev || {};
         user = user || {};
-        var cached = loadProfileCache(user.bindingId || prev.bindingId);
+        var cached = loadProfileCache(
+            user.bindingId || prev.bindingId,
+            user.rsiProfileHandle || prev.rsiProfileHandle
+        );
         if (cached) {
             prev = Object.assign({}, cached, prev);
         }
@@ -189,9 +225,15 @@
             global.UssAuthApi && typeof global.UssAuthApi.getTokenExpiresAt === 'function'
                 ? global.UssAuthApi.getTokenExpiresAt(token)
                 : null;
+        var nextBindingId =
+            user.bindingId != null && String(user.bindingId).trim() !== ''
+                ? String(user.bindingId).trim()
+                : user.bindingId === null || user.bindingId === ''
+                  ? ''
+                  : prev.bindingId;
         var merged = {
             token: token,
-            bindingId: user.bindingId != null ? user.bindingId : prev.bindingId,
+            bindingId: nextBindingId,
             email: user.email != null ? user.email : prev.email,
             loginAt: prev.loginAt || new Date().toISOString(),
             sessionDays: prev.sessionDays !== undefined ? prev.sessionDays : undefined,
@@ -222,12 +264,35 @@
                 user.rsiOrgRankSlots !== undefined && user.rsiOrgRankSlots !== null
                     ? user.rsiOrgRankSlots
                     : prev.rsiOrgRankSlots,
+            rsiProfileSyncedAt: mergeProfileField(user.rsiProfileSyncedAt, prev.rsiProfileSyncedAt),
+            rsiBindLocked:
+                user.rsiBindLocked !== undefined ? !!user.rsiBindLocked : !!prev.rsiBindLocked,
             rsiAssetsPending:
                 user.rsiAssetsPending !== undefined
                     ? !!user.rsiAssetsPending
                     : prev.rsiAssetsPending,
             isAdmin: user.isAdmin !== undefined ? !!user.isAdmin : !!prev.isAdmin,
             isSuperAdmin: user.isSuperAdmin !== undefined ? !!user.isSuperAdmin : !!prev.isSuperAdmin,
+            memberKind:
+                user.memberKind !== undefined && user.memberKind !== null
+                    ? user.memberKind
+                    : prev.memberKind,
+            hasFleetPrivilege:
+                user.hasFleetPrivilege !== undefined
+                    ? !!user.hasFleetPrivilege
+                    : prev.hasFleetPrivilege,
+            marketCompletedTradeCount:
+                user.marketCompletedTradeCount !== undefined && user.marketCompletedTradeCount !== null
+                    ? user.marketCompletedTradeCount
+                    : prev.marketCompletedTradeCount,
+            marketAverageRating:
+                user.marketAverageRating !== undefined && user.marketAverageRating !== null
+                    ? user.marketAverageRating
+                    : prev.marketAverageRating,
+            marketReviewCount:
+                user.marketReviewCount !== undefined && user.marketReviewCount !== null
+                    ? user.marketReviewCount
+                    : prev.marketReviewCount,
             oopzId: user.oopzId !== undefined ? user.oopzId : prev.oopzId,
             oopzUid: user.oopzUid !== undefined ? user.oopzUid : prev.oopzUid,
             oopzName: user.oopzName !== undefined ? user.oopzName : prev.oopzName,
@@ -238,7 +303,7 @@
             oopzCanChangeAt: user.oopzCanChangeAt !== undefined ? user.oopzCanChangeAt : prev.oopzCanChangeAt,
         };
         if (profileCacheHasContent(snapshotProfileFields(merged))) {
-            saveProfileCache(merged.bindingId, snapshotProfileFields(merged));
+            saveProfileCache(merged.bindingId, snapshotProfileFields(merged), merged.rsiProfileHandle);
         }
         return merged;
     }
@@ -315,6 +380,8 @@
         isAuthSessionExpired: isAuthSessionExpired,
         loadAuthSession: loadAuthSession,
         saveAuthSession: saveAuthSession,
+        sessionHasFleetUiAccess: sessionHasFleetUiAccess,
+        syncHtmlMemberGateClasses: syncHtmlMemberGateClasses,
         mergeUserIntoSession: mergeUserIntoSession,
         mergeProfileField: mergeProfileField,
         snapshotProfileFields: snapshotProfileFields,

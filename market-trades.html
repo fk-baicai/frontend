@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商城管理 · USSXC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"></noscript>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="market.css?v=70">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <script src="auth-config.js"></script>
+    <script>
+        (function () {
+            try {
+                var KEY = 'ussHangzhouAuthSession';
+                var raw = sessionStorage.getItem(KEY) || localStorage.getItem(KEY);
+                if (!raw) return;
+                var sess = JSON.parse(raw);
+                if (!sess || !sess.token) return;
+                document.documentElement.classList.add('auth-session-cached');
+            } catch (e) { /* ignore */ }
+        })();
+    </script>
+</head>
+<body class="home-page-body market-body market-trades-body">
+    <header class="site-header">
+    <div class="navbar-top" role="banner" aria-label="舰队标识">
+        <span class="navbar-top-brand">UMBRELLA FLEET</span>
+    </div>
+    <nav class="navbar">
+        <div class="navbar-start">
+        <div class="logo">
+            <a href="index.html" aria-label="首页"><img src="fleet-logo.jpg" alt="舰队 LOGO" decoding="async"></a>
+        </div>
+        <div class="nav-links" role="navigation" aria-label="站点导航">
+            <div class="nav-dropdown">
+                <button type="button" class="nav-dropdown-toggle is-current-page" aria-expanded="false" aria-haspopup="true" data-mega-target="navMegaMarket" aria-controls="navMegaMarket">
+                    商城
+                    <span class="nav-dropdown-caret" aria-hidden="true"></span>
+                </button>
+            </div>
+            <div class="nav-dropdown">
+                <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true" data-mega-target="navMegaBlueprint" aria-controls="navMegaBlueprint">
+                    蓝图
+                    <span class="nav-dropdown-caret" aria-hidden="true"></span>
+                </button>
+            </div>
+            <div class="nav-dropdown">
+                <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true" data-mega-target="navMegaShip" aria-controls="navMegaShip">
+                    舰船
+                    <span class="nav-dropdown-caret" aria-hidden="true"></span>
+                </button>
+            </div>
+            <div class="nav-dropdown">
+                <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true" data-mega-target="navMegaEquipment" aria-controls="navMegaEquipment">
+                    装备
+                    <span class="nav-dropdown-caret" aria-hidden="true"></span>
+                </button>
+            </div>
+            <div class="nav-dropdown nav-tools-gated" id="navToolsWrap">
+                <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true" data-mega-target="navMegaTools" aria-controls="navMegaTools">
+                    工具
+                    <span class="nav-dropdown-caret" aria-hidden="true"></span>
+                </button>
+            </div>
+        </div>
+        </div>
+        <div class="nav-right">
+            <button type="button" class="nav-login-trigger" id="navLoginBtn" onclick="openLoginDrawer()" aria-label="登录或注册">
+                <span id="navLoginGuestWrap" class="nav-login-guest-inner">
+                    <span class="nav-login-label">登录/注册</span>
+                </span>
+                <span id="navLoginAvatarWrap" class="nav-login-avatar-inner is-hidden">
+                    <img id="navUserAvatarImg" class="nav-user-avatar" src="" alt="">
+                </span>
+            </button>
+        </div>
+    </nav>
+    <div id="navMegaMarket" class="nav-mega-panel" role="region" aria-label="商城" hidden>
+        <div class="nav-mega-inner">
+            <div class="nav-mega-col">
+                <ul class="nav-mega-list">
+                    <li><a href="market.html" class="nav-mega-link" data-nav-market-page><span class="nav-mega-link-title">星巢贸易</span><span class="nav-mega-link-desc">出货 · 收货 · 换货</span></a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div id="navMegaShip" class="nav-mega-panel" role="region" aria-label="舰船" hidden>
+        <div class="nav-mega-inner">
+            <div class="nav-mega-col">
+                <ul class="nav-mega-list">
+                    <li class="nav-mega-link-row"><a href="ship-components?group=component" class="nav-mega-link" data-nav-ship-group="component"><span class="nav-mega-link-title">舰船组件</span><span class="nav-mega-link-desc">散热 · 电源 · 护盾 · 量子驱动器 · 跳跃驱动器 · 雷达</span></a><a href="ship-components?group=weapon" class="nav-mega-link" data-nav-ship-group="weapon"><span class="nav-mega-link-title">舰船武器</span><span class="nav-mega-link-desc">舰炮 · 导弹 · 导弹架 · 舰船炮台</span></a><a href="ship-components?group=fuel_nozzle" class="nav-mega-link" data-nav-ship-group="fuel_nozzle"><span class="nav-mega-link-title">燃料喷嘴</span><span class="nav-mega-link-desc">氢燃料 · 量子燃料</span></a></li>
+                    <li class="nav-mega-link-row"><a href="ship-components?group=mining" class="nav-mega-link" data-nav-ship-group="mining"><span class="nav-mega-link-title">舰船矿头</span><span class="nav-mega-link-desc">矿头 · 模组</span></a><a href="ship-components?group=salvage" class="nav-mega-link" data-nav-ship-group="salvage"><span class="nav-mega-link-title">打捞模组</span><span class="nav-mega-link-desc">刮削模块</span></a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div id="navMegaEquipment" class="nav-mega-panel" role="region" aria-label="装备" hidden>
+        <div class="nav-mega-inner">
+            <div class="nav-mega-col">
+                <ul class="nav-mega-list">
+                    <li class="nav-mega-link-row"><a href="personal-equipment?group=fps_weapon" class="nav-mega-link" data-nav-equipment-group="fps_weapon"><span class="nav-mega-link-title">个人武器</span><span class="nav-mega-link-desc">手枪 · 冲锋枪 · 突击步枪 · 狙击枪 · 霰弹枪 · 机枪 · ...</span></a><a href="personal-equipment?group=fps_magazine" class="nav-mega-link" data-nav-equipment-group="fps_magazine"><span class="nav-mega-link-title">武器配件</span><span class="nav-mega-link-desc">弹匣 · 瞄具 · 枪口 · 下挂 · 实用配件 · 发射器导弹</span></a></li>
+                    <li><a href="personal-equipment?group=fps_armor" class="nav-mega-link" data-nav-equipment-group="fps_armor"><span class="nav-mega-link-title">个人护甲</span><span class="nav-mega-link-desc">头盔 · 胸甲 · 腿甲 · 臂甲 · 背包 · 基底服</span></a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div id="navMegaBlueprint" class="nav-mega-panel" role="region" aria-label="蓝图" hidden>
+        <div class="nav-mega-inner">
+            <div class="nav-mega-col">
+                <ul class="nav-mega-list">
+                    <li><a href="blueprint-crafting.html" class="nav-mega-link" data-nav-blueprint-page><span class="nav-mega-link-title">蓝图制造</span><span class="nav-mega-link-desc">选择蓝图 · 配置材料品质 · 模拟成品属性</span></a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div id="navMegaTools" class="nav-mega-panel" role="region" aria-label="工具" hidden>
+        <div class="nav-mega-inner">
+            <div class="nav-mega-col">
+                <ul class="nav-mega-list">
+                    <li class="nav-mega-tools-row">
+                        <a href="executive-hangar.html" class="nav-mega-link"><span class="nav-mega-link-title">行政机库</span><span class="nav-mega-link-desc">Pyro 行政机库周期与插卡窗口</span></a>
+                        <a href="server-ip.html" class="nav-mega-link"><span class="nav-mega-link-title">服务器 IP</span><span class="nav-mega-link-desc">服务器运行状态/IP地址</span></a>
+                    </li>
+                    <li><a href="rsi-funding.html" class="nav-mega-link"><span class="nav-mega-link-title">资金统计</span><span class="nav-mega-link-desc">RSI 众筹资金与玩家数量</span></a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    </header>
+    <script>
+        (function () {
+            if (!document.documentElement.classList.contains('auth-session-cached')) return;
+            var btn = document.getElementById('navLoginBtn');
+            var guestWrap = document.getElementById('navLoginGuestWrap');
+            var avatarWrap = document.getElementById('navLoginAvatarWrap');
+            var img = document.getElementById('navUserAvatarImg');
+            if (!btn || !guestWrap || !avatarWrap || !img) return;
+            guestWrap.classList.add('is-hidden');
+            avatarWrap.classList.remove('is-hidden');
+            btn.classList.add('is-logged-in');
+            btn.setAttribute('aria-label', '账户');
+            try {
+                var KEY = 'ussHangzhouAuthSession';
+                var raw = sessionStorage.getItem(KEY) || localStorage.getItem(KEY);
+                var sess = raw ? JSON.parse(raw) : null;
+                var rel = sess && sess.avatarUrl;
+                var base = (typeof window !== 'undefined' && window.USS_AUTH_API_BASE) || 'http://127.0.0.1:3789';
+                base = String(base).replace(/\/$/, '');
+                var src = '';
+                if (rel && typeof rel === 'string') {
+                    if (/^https?:\/\//i.test(rel)) src = rel;
+                    else src = base + (rel.charAt(0) === '/' ? rel : '/' + rel);
+                }
+                img.src = src || (window.USS_DEFAULT_AVATAR || 'default-avatar.png');
+                img.alt = '用户头像';
+            } catch (e) { /* ignore */ }
+        })();
+    </script>
+
+    <main class="market-main market-trades-main">
+        <div id="marketTradesGate" class="market-gate is-hidden" role="alert"></div>
+        <div id="marketTradesContent" hidden>
+            <header class="market-trades-head">
+                <div>
+                    <h1 class="market-head__title">商城管理</h1>
+                    <p class="market-head__sub">管理出售 / 求购挂单与购买记录</p>
+                    <p class="market-trades-user-stat" id="marketTradesUserStat">交易：<strong id="marketTradesUserTradeCount">—</strong><span id="marketTradesUserRating" hidden></span></p>
+                </div>
+                <a href="market.html" class="market-btn">返回星巢贸易</a>
+            </header>
+
+            <div class="market-trades-tabs" role="tablist">
+                <button type="button" class="market-trades-tab is-active" data-tab="sell" role="tab">出售挂单</button>
+                <button type="button" class="market-trades-tab" data-tab="buy" role="tab">求购挂单</button>
+                <button type="button" class="market-trades-tab" data-tab="purchases" role="tab">我的购买</button>
+                <button type="button" class="market-trades-tab" data-tab="incoming" role="tab">收到订单</button>
+            </div>
+
+            <div class="market-trades-panel market-trades-grid" id="marketTradesPanel" role="tabpanel"></div>
+            <p class="market-empty" id="marketTradesEmpty" hidden>暂无记录</p>
+        </div>
+    </main>
+
+    <div id="marketModalBackdrop" class="market-modal-backdrop" hidden>
+        <div class="market-modal" role="dialog" aria-modal="true" aria-labelledby="marketModalTitle">
+            <header class="market-modal__head">
+                <h2 class="market-modal__title" id="marketModalTitle">编辑挂单</h2>
+                <button type="button" class="market-modal__close" id="marketModalClose" aria-label="关闭">&times;</button>
+            </header>
+            <div class="market-modal__body">
+                <div class="market-form">
+                    <div class="market-form__cols">
+                        <div class="market-form__col market-form__col--media">
+                            <div class="market-field market-suggest-wrap">
+                                <span class="market-field__label" id="marketOfferLabel">商品名称</span>
+                                <input type="search" id="marketItemInput" placeholder="搜索选择物品" autocomplete="off" aria-autocomplete="list" aria-controls="marketItemSuggest" aria-expanded="false">
+                                <div id="marketItemSuggest" class="market-suggest market-item-suggest" hidden role="listbox" aria-label="物品匹配结果"></div>
+                            </div>
+
+                            <div class="market-product-media">
+                                <div class="market-product-media__frame" id="marketImagePreview">
+                                    <img id="marketImagePreviewImg" alt="" hidden>
+                                    <span class="market-product-media__placeholder" id="marketImagePlaceholder">暂无图片</span>
+                                    <span class="market-product-media__badge" id="marketItemPreviewType" hidden></span>
+                                </div>
+                                <div class="market-product-media__actions">
+                                    <label class="market-product-media__upload">
+                                        <input type="file" id="marketImageInput" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                                        上传替换
+                                    </label>
+                                    <button type="button" class="market-product-media__reset" id="marketImageRemove" hidden>恢复默认图</button>
+                                </div>
+                            </div>
+
+                            <div class="market-field">
+                                <label class="market-inline-field" for="marketItemInfoInput">
+                                    <span class="market-field__label">商品信息 <span class="market-field__opt">选填</span></span>
+                                    <textarea id="marketItemInfoInput" rows="3" maxlength="500" placeholder="成色、改装、备注…"></textarea>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="market-form__col market-form__col--details">
+                            <div class="market-form__row market-form__row--seg">
+                                <div class="market-field market-field--inline" id="marketTradeTypeField">
+                                    <span class="market-field__label">交易类别</span>
+                                    <div class="market-seg market-seg--duo" id="marketSegTradeType">
+                                        <button type="button" class="is-active" data-trade-type="currency">资金置换</button>
+                                        <button type="button" data-trade-type="barter">物品互换</button>
+                                    </div>
+                                </div>
+                                <div class="market-field market-field--inline" id="marketOrderTypeField">
+                                    <span class="market-field__label">单据方向</span>
+                                    <div class="market-seg market-seg--duo" id="marketSegOrderType">
+                                        <button type="button" class="is-active" data-order-type="sell">挂牌出让</button>
+                                        <button type="button" data-order-type="buy">求购收购</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="market-field market-suggest-wrap">
+                                <span class="market-field__label">交易位置</span>
+                                <input type="search" id="marketLocInput" placeholder="搜索空间站或自行输入" autocomplete="off">
+                                <div id="marketLocSuggest" class="market-suggest" hidden></div>
+                            </div>
+
+                            <div class="market-field">
+                                <label class="market-inline-field" for="marketCategorySelect">
+                                    <span class="market-field__label">物品分类</span>
+                                    <select id="marketCategorySelect">
+                                        <option value="">请选择分类</option>
+                                        <option value="component">舰船组件</option>
+                                        <option value="weapon">舰船武器</option>
+                                        <option value="fps_weapon">个人武器</option>
+                                        <option value="fps_magazine">武器配件</option>
+                                        <option value="fps_armor">个人护甲</option>
+                                        <option value="other">其他</option>
+                                    </select>
+                                </label>
+                            </div>
+
+                            <div class="market-field">
+                                <label class="market-inline-field" for="marketQualityInput">
+                                    <span class="market-field__label">品质</span>
+                                    <input type="number" id="marketQualityInput" class="market-control" min="0" max="1000" step="1" value="500">
+                                </label>
+                                <p class="market-field__hint">0 – 1000，默认 500</p>
+                            </div>
+
+                            <div class="market-row-2 market-row-2--controls" id="marketQtyPriceRow">
+                                <label class="market-inline-field" id="marketPriceField">
+                                    <span class="market-field__label">报价 (aUEC)</span>
+                                    <input type="number" id="marketPriceInput" class="market-control" min="0" step="1" placeholder="120">
+                                </label>
+                                <label class="market-inline-field">
+                                    <span class="market-field__label">数量</span>
+                                    <input type="number" id="marketQtyInput" class="market-control" min="1" step="1" value="1">
+                                </label>
+                            </div>
+
+                            <div class="market-field">
+                                <span class="market-field__label">每日交易时段</span>
+                                <div class="market-time-range">
+                                    <input type="time" id="marketTradeTimeStart" value="20:00" step="900">
+                                    <span class="market-time-range__sep">至</span>
+                                    <input type="time" id="marketTradeTimeEnd" value="21:00" step="900">
+                                </div>
+                                <p class="market-field__hint">挂单有效期内，每天在此时间段内可约定交易</p>
+                            </div>
+
+                            <div class="market-field market-field--inline">
+                                <span class="market-field__label">有效期</span>
+                                <div class="market-seg market-seg--trio" id="marketSegExpireDays">
+                                    <button type="button" class="is-active" data-expire-days="7">7天</button>
+                                    <button type="button" data-expire-days="30">30天</button>
+                                    <button type="button" data-expire-days="0">无限</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="marketBarterWantSection" class="market-form__col market-form__col--want market-barter-want" hidden>
+                            <h3 class="market-form__subhead">期望换取</h3>
+                            <div class="market-field market-suggest-wrap">
+                                <span class="market-field__label">换取物品名称</span>
+                                <input type="search" id="marketWantItemInput" placeholder="搜索选择物品" autocomplete="off" aria-autocomplete="list" aria-controls="marketWantItemSuggest" aria-expanded="false">
+                                <div id="marketWantItemSuggest" class="market-suggest market-item-suggest" hidden role="listbox" aria-label="换取物品匹配结果"></div>
+                            </div>
+                            <div class="market-product-media">
+                                <div class="market-product-media__frame" id="marketWantImagePreview">
+                                    <img id="marketWantImagePreviewImg" alt="" hidden>
+                                    <span class="market-product-media__placeholder" id="marketWantImagePlaceholder">暂无图片</span>
+                                    <span class="market-product-media__badge" id="marketWantItemPreviewType" hidden></span>
+                                </div>
+                                <div class="market-product-media__actions">
+                                    <label class="market-product-media__upload">
+                                        <input type="file" id="marketWantImageInput" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                                        上传替换
+                                    </label>
+                                    <button type="button" class="market-product-media__reset" id="marketWantImageRemove" hidden>恢复默认图</button>
+                                </div>
+                            </div>
+                            <div class="market-field">
+                                <label class="market-inline-field" for="marketWantCategorySelect">
+                                    <span class="market-field__label">换取物品分类</span>
+                                    <select id="marketWantCategorySelect">
+                                        <option value="">请选择分类</option>
+                                        <option value="component">舰船组件</option>
+                                        <option value="weapon">舰船武器</option>
+                                        <option value="fps_weapon">个人武器</option>
+                                        <option value="fps_magazine">武器配件</option>
+                                        <option value="fps_armor">个人护甲</option>
+                                        <option value="other">其他</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div class="market-row-2 market-row-2--controls">
+                                <label class="market-inline-field" for="marketWantQualityInput">
+                                    <span class="market-field__label">换取品质</span>
+                                    <input type="number" id="marketWantQualityInput" class="market-control" min="0" max="1000" step="1" value="500">
+                                </label>
+                                <label class="market-inline-field" for="marketWantQtyInput">
+                                    <span class="market-field__label">换取数量</span>
+                                    <input type="number" id="marketWantQtyInput" class="market-control" min="1" step="1" value="1">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="market-form-error" id="marketFormError" hidden></p>
+            </div>
+            <footer class="market-modal__foot">
+                <button type="button" class="market-btn" id="marketModalCancel">取消</button>
+                <button type="button" class="market-btn market-btn--accent" id="marketBtnSubmit">保存修改</button>
+            </footer>
+        </div>
+    </div>
+
+    <div id="marketTradesCompleteBackdrop" class="market-modal-backdrop" hidden>
+        <div class="market-modal market-trades-edit" role="dialog" aria-modal="true" aria-labelledby="marketTradesCompleteTitle">
+            <header class="market-modal__head">
+                <h2 class="market-modal__title" id="marketTradesCompleteTitle">确认完成交易</h2>
+                <button type="button" class="market-modal__close" id="marketTradesCompleteClose" aria-label="关闭">&times;</button>
+            </header>
+            <div class="market-modal__body market-trades-complete-form">
+                <p class="market-field__hint">请在游戏内完成物品交割，并确认已上传转账截图与卖家交易凭证后，为卖家评分。凭证图片单张不超过 1M。</p>
+                <div class="market-field">
+                    <span class="market-field__label">评价（1-5 星）</span>
+                    <div class="market-trades-stars" id="marketTradesStars" role="radiogroup" aria-label="评分">
+                        <button type="button" data-star="1" aria-label="1星">★</button>
+                        <button type="button" data-star="2" aria-label="2星">★</button>
+                        <button type="button" data-star="3" aria-label="3星">★</button>
+                        <button type="button" data-star="4" aria-label="4星">★</button>
+                        <button type="button" data-star="5" aria-label="5星">★</button>
+                    </div>
+                </div>
+                <div class="market-field">
+                    <span class="market-field__label">评价内容（选填）</span>
+                    <textarea id="marketTradesReviewText" class="market-control" rows="3" maxlength="500" placeholder="描述交易体验…"></textarea>
+                </div>
+                <p class="market-form-error" id="marketTradesCompleteError" hidden></p>
+            </div>
+            <footer class="market-modal__foot">
+                <button type="button" class="market-btn" id="marketTradesCompleteCancel">取消</button>
+                <button type="button" class="market-btn market-btn--accent" id="marketTradesCompleteSave">提交并完成</button>
+            </footer>
+        </div>
+    </div>
+
+    <div id="marketConfirmBackdrop" class="market-modal-backdrop market-confirm-backdrop" hidden>
+        <div class="market-modal market-confirm" role="dialog" aria-modal="true" aria-labelledby="marketConfirmTitle" aria-describedby="marketConfirmMessage">
+            <header class="market-modal__head">
+                <h2 class="market-modal__title" id="marketConfirmTitle">请确认</h2>
+                <button type="button" class="market-modal__close" id="marketConfirmClose" aria-label="关闭">&times;</button>
+            </header>
+            <div class="market-confirm__body">
+                <p class="market-confirm__message" id="marketConfirmMessage"></p>
+            </div>
+            <footer class="market-modal__foot market-confirm__foot">
+                <button type="button" class="market-btn" id="marketConfirmCancel">再想想</button>
+                <button type="button" class="market-btn market-btn--accent" id="marketConfirmOk">确认</button>
+            </footer>
+        </div>
+    </div>
+
+    <script src="login-drawer-mount.js"></script>
+    <script src="home-boot.js"></script>
+    <script defer src="pw-toggle-icons.js"></script>
+    <script src="api-error.js" defer></script>
+    <script src="auth-api.js" defer></script>
+    <script src="auth-session-sync.js" defer></script>
+    <script defer src="rsi-client.js"></script>
+    <script defer src="rsi-sync.js"></script>
+    <script defer src="home-app.js?v=20260723b"></script>
+    <script src="nav-dropdown.js" defer></script>
+    <script src="nav-auth-tools.js" defer></script>
+    <script src="site-footer.js" defer></script>
+    <script src="market-notify.js" defer></script>
+    <script src="market.js?v=44" defer></script>
+    <script src="market-trades.js?v=14" defer></script>
+</body>
+</html>

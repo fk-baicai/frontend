@@ -1392,6 +1392,7 @@
             state.total = cached.total;
             if (!preserveScroll && el.listWrap) el.listWrap.scrollTop = 0;
             state.listVirt.measured = false;
+            hideGate();
             renderBlueprintList();
             enrichArmorClassForListItems();
             return pickInitialBlueprint();
@@ -1417,6 +1418,7 @@
                     items: state.items.slice(),
                     total: state.total,
                 };
+                hideGate();
                 renderBlueprintList();
                 enrichArmorClassForListItems();
                 return pickInitialBlueprint();

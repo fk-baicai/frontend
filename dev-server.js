@@ -16,7 +16,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const API_TARGET = String(process.env.USS_API_TARGET || 'http://127.0.0.1:3789').replace(/\/$/, '');
 
 /** 与生产 Netlify 反代一致：头像、社区图、验证码等由 backend 提供 */
-const BACKEND_PROXY_PREFIXES = ['/api/', '/avatars/', '/community-uploads/', '/captcha/'];
+const BACKEND_PROXY_PREFIXES = ['/api/', '/avatars/', '/community-uploads/', '/captcha/', '/market-uploads/'];
 
 function shouldProxyToBackend(url) {
     if (!url) return false;
@@ -140,5 +140,5 @@ const server = http.createServer(function (req, res) {
 
 server.listen(PORT, HOST, function () {
     console.log('[dev-server] frontend  http://127.0.0.1:' + PORT);
-    console.log('[dev-server] 反代 → ' + API_TARGET + '（/api、/avatars、/community-uploads、/captcha）');
+    console.log('[dev-server] 反代 → ' + API_TARGET + '（/api、/avatars、/community-uploads、/captcha、/market-uploads）');
 });

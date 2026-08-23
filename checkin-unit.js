@@ -98,6 +98,19 @@
         return !!(s && s.token);
     }
 
+    function canAccessFleetMemberAreas() {
+        var s = loadAuthSession();
+        if (window.UssAuthSessionSync && typeof window.UssAuthSessionSync.sessionHasFleetUiAccess === 'function') {
+            return window.UssAuthSessionSync.sessionHasFleetUiAccess(s);
+        }
+        if (!s || !s.token) return false;
+        if (s.isSuperAdmin || s.isAdmin) return true;
+        if (s.hasFleetPrivilege === true || s.hasFleetPrivilege === 1) return true;
+        if (s.hasFleetPrivilege === false || s.hasFleetPrivilege === 0) return false;
+        if (String(s.memberKind || '').toLowerCase() === 'civilian') return false;
+        return true;
+    }
+
     function authSessionExpiredMessage() {
         if (window.UssAuthApi && typeof window.UssAuthApi.authSessionExpiredMessage === 'function') {
             return window.UssAuthApi.authSessionExpiredMessage();
@@ -1178,6 +1191,13 @@
         if (title) title.textContent = UNIT_TITLES[UNIT] || '分部';
 
         if (!isLoggedIn()) {
+            setPanelHidden(gate, false);
+            setPanelHidden(main, true);
+            return;
+        }
+
+        if (!canAccessFleetMemberAreas()) {
+            if (gate) gate.textContent = '需要舰队成员权限才能使用签到功能。';
             setPanelHidden(gate, false);
             setPanelHidden(main, true);
             return;

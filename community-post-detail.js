@@ -20,6 +20,19 @@
         return null;
     }
 
+    function canAccessFleetMemberAreas() {
+        var s = loadSession();
+        if (window.UssAuthSessionSync && typeof window.UssAuthSessionSync.sessionHasFleetUiAccess === 'function') {
+            return window.UssAuthSessionSync.sessionHasFleetUiAccess(s);
+        }
+        if (!s || !s.token) return false;
+        if (s.isSuperAdmin || s.isAdmin) return true;
+        if (s.hasFleetPrivilege === true || s.hasFleetPrivilege === 1) return true;
+        if (s.hasFleetPrivilege === false || s.hasFleetPrivilege === 0) return false;
+        if (String(s.memberKind || '').toLowerCase() === 'civilian') return false;
+        return true;
+    }
+
     function isLoggedIn() {
         var s = loadSession();
         return !!(s && s.token);
@@ -521,8 +534,17 @@
             showError('未加载 API 模块');
             return;
         }
+        if (!canAccessFleetMemberAreas()) {
+            showError('需要舰队成员权限才能查看贴子');
+            return;
+        }
+        var sess = loadSession();
+        if (!sess || !sess.token) {
+            showError('请先登录后再查看贴子');
+            return;
+        }
         try {
-            var data = await window.UssAuthApi.communityGetPost(postId);
+            var data = await window.UssAuthApi.communityGetPost(sess.token, postId);
             if (!data || !data.post) {
                 showError('帖子不存在');
                 return;

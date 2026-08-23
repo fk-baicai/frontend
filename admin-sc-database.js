@@ -24,6 +24,13 @@
         return null;
     }
 
+    function adminAuthHeaders(token, extra) {
+        if (window.UssAdminStepUp && window.UssAdminStepUp.getAuthHeaders) {
+            return window.UssAdminStepUp.getAuthHeaders(token, extra);
+        }
+        return Object.assign({}, extra || {}, { Authorization: 'Bearer ' + token });
+    }
+
     function scApiBase() {
         return (typeof window !== 'undefined' && window.USS_AUTH_API_BASE) || 'http://127.0.0.1:3789';
     }
@@ -205,7 +212,7 @@
         var s = loadSess();
         if (!s || !s.token) return Promise.resolve(null);
         return fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/sync-progress', {
-            headers: { Authorization: 'Bearer ' + s.token },
+            headers: adminAuthHeaders(s.token),
         })
             .then(function (r) {
                 return r.json();
@@ -296,7 +303,7 @@
         var el = document.getElementById('scLocalizationStatus');
         try {
             var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/localization-status', {
-                headers: { Authorization: 'Bearer ' + s.token },
+                headers: adminAuthHeaders(s.token),
             });
             var data = await r.json();
             if (!r.ok || !data.ok) throw new Error((data && data.message) || '读取失败');
@@ -319,7 +326,7 @@
         try {
             var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/sync-localization', {
                 method: 'POST',
-                headers: { Authorization: 'Bearer ' + s.token, 'Content-Type': 'application/json' },
+                headers: adminAuthHeaders(s.token, { 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ force: !!force }),
             });
             var data = await r.json();
@@ -369,7 +376,7 @@
         var el = document.getElementById('scBlueprintsStatus');
         try {
             var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/blueprints-status', {
-                headers: { Authorization: 'Bearer ' + s.token },
+                headers: adminAuthHeaders(s.token),
             });
             var data = await r.json();
             if (!r.ok || !data.ok) throw new Error((data && data.message) || '读取失败');
@@ -392,7 +399,7 @@
         try {
             var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/sync-blueprints', {
                 method: 'POST',
-                headers: { Authorization: 'Bearer ' + s.token, 'Content-Type': 'application/json' },
+                headers: adminAuthHeaders(s.token, { 'Content-Type': 'application/json' }),
                 body: JSON.stringify({}),
             });
             var data = await r.json();
@@ -493,7 +500,7 @@
         if (summaryEl) summaryEl.textContent = '检查中…';
         try {
             var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/update-checklist', {
-                headers: { Authorization: 'Bearer ' + s.token },
+                headers: adminAuthHeaders(s.token),
             });
             var data = await r.json();
             if (!r.ok || !data.ok) throw new Error((data && data.message) || '读取失败');
@@ -557,7 +564,7 @@
         if (errEl) errEl.hidden = true;
         try {
             var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/sources', {
-                headers: { Authorization: 'Bearer ' + s.token },
+                headers: adminAuthHeaders(s.token),
             });
             var data = await r.json();
             if (!r.ok || !data.ok) throw new Error((data && data.message) || '读取失败');
@@ -583,7 +590,7 @@
         try {
             var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/data-source', {
                 method: 'PUT',
-                headers: { Authorization: 'Bearer ' + s.token, 'Content-Type': 'application/json' },
+                headers: adminAuthHeaders(s.token, { 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ source: sel.value }),
             });
             var data = await r.json();
@@ -669,7 +676,7 @@
         try {
             var r = await fetch(
                 scApiBase().replace(/\/$/, '') + '/api/admin/sc/component-image-status?source=wiki',
-                { headers: { Authorization: 'Bearer ' + s.token } }
+                { headers: adminAuthHeaders(s.token) }
             );
             var data = await r.json();
             if (!r.ok || !data.ok) throw new Error((data && data.message) || '读取失败');
@@ -690,7 +697,7 @@
         try {
             var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/sync-component-images', {
                 method: 'POST',
-                headers: { Authorization: 'Bearer ' + s.token, 'Content-Type': 'application/json' },
+                headers: adminAuthHeaders(s.token, { 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ source: 'wiki', mode: mode }),
             });
             var data = await r.json();
@@ -1060,7 +1067,7 @@
         try {
             var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/manual-loc', {
                 method: 'POST',
-                headers: { Authorization: 'Bearer ' + s.token, 'Content-Type': 'application/json' },
+                headers: adminAuthHeaders(s.token, { 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ key: rowKey, name_zh: nameZh, note: note || '' }),
             });
             var data = await r.json();
@@ -1082,7 +1089,7 @@
         if (errEl) errEl.hidden = true;
         var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/manual-loc/delete', {
             method: 'POST',
-            headers: { Authorization: 'Bearer ' + s.token, 'Content-Type': 'application/json' },
+            headers: adminAuthHeaders(s.token, { 'Content-Type': 'application/json' }),
             body: JSON.stringify({ key: rowKey }),
         });
         var data = await r.json();
@@ -1120,7 +1127,7 @@
         if (savedBody) savedBody.innerHTML = '<tr><td colspan="6" class="hint">加载中…</td></tr>';
         try {
             var typesRes = await fetch(scApiBase().replace(/\/$/, '') + '/api/sc/components/types', {
-                headers: { Authorization: 'Bearer ' + s.token },
+                headers: adminAuthHeaders(s.token),
             });
             var typesData = await typesRes.json();
             if (typesData.ok && typesData.types) {
@@ -1130,7 +1137,7 @@
                 });
             }
             var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/manual-loc', {
-                headers: { Authorization: 'Bearer ' + s.token },
+                headers: adminAuthHeaders(s.token),
             });
             var data = await r.json();
             if (!r.ok || !data.ok) throw new Error((data && data.message) || '读取失败');
@@ -1151,7 +1158,7 @@
         if (!hint) return;
         try {
             var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/status', {
-                headers: { Authorization: 'Bearer ' + s.token },
+                headers: adminAuthHeaders(s.token),
             });
             var data = await r.json();
             if (!r.ok || !data.ok) throw new Error('读取失败');
@@ -1180,7 +1187,7 @@
         try {
             var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/sync-ship-components', {
                 method: 'POST',
-                headers: { Authorization: 'Bearer ' + s.token, 'Content-Type': 'application/json' },
+                headers: adminAuthHeaders(s.token, { 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ source: src }),
             });
             var data = await r.json();
@@ -1214,7 +1221,7 @@
         listEl.innerHTML = '<li class="hint">加载中…</li>';
         try {
             var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/sync-log?limit=5', {
-                headers: { Authorization: 'Bearer ' + s.token },
+                headers: adminAuthHeaders(s.token),
             });
             var data = await r.json();
             if (!r.ok || !data.ok) throw new Error('读取失败');
@@ -1272,6 +1279,14 @@
             }
         } catch (e) {
             gate.textContent = (e && e.message) || '会话无效，请重新登录。';
+            return;
+        }
+        try {
+            await window.UssAdminStepUp.ensureVerified(s.token, {
+                gateEl: document.getElementById('adminStepUpGate'),
+            });
+        } catch (eStep) {
+            gate.textContent = (eStep && eStep.message) || '二次验证失败，请刷新重试。';
             return;
         }
         gate.textContent = '';

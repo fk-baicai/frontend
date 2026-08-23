@@ -248,11 +248,42 @@
         return false;
     }
 
+    function isRsiDefaultAvatarUrl(url) {
+        return /avatar_default/i.test(String(url || ''));
+    }
+
+    function isRsiRankBadgeAssetUrl(url, rankIconUrl) {
+        var u = String(url || '').trim();
+        if (!u) return false;
+        if (rankIconUrl && u === String(rankIconUrl).trim()) return true;
+        if (/\/9qvh53v4nyx8d\/heap_thumb\.png/i.test(u)) return true;
+        return false;
+    }
+
+    function isUnusableCitizenAvatarUrl(url, rankIconUrl) {
+        if (!url) return true;
+        if (isRsiDefaultAvatarUrl(url)) return true;
+        if (isRsiRankBadgeAssetUrl(url, rankIconUrl)) return true;
+        return false;
+    }
+
+    function extractRankIconUrl(doc) {
+        var info = doc.querySelector('.profile.left-col .info');
+        if (!info) return null;
+        var entries = info.querySelectorAll('p.entry');
+        for (var i = 0; i < entries.length; i++) {
+            var iconImg = entries[i].querySelector('span.icon img');
+            if (!iconImg) continue;
+            return resolveRsiUrl(iconImg.getAttribute('src'));
+        }
+        return null;
+    }
+
     function scoreCitizenAvatarUrl(url) {
         if (isOrgLogoAssetUrl(url)) return 0;
         var u = String(url || '').toLowerCase();
-        if (/heap_thumb/.test(u)) return 100;
         if (/heap_infobox/.test(u)) return 95;
+        if (/heap_thumb/.test(u)) return 35;
         if (/\.thumb\.|\/thumb\/|\/thumb\./.test(u)) return 90;
         if (/avatar|profile/.test(u)) return 70;
         if (/\.(jpe?g|png|webp|gif|avif)(\?|#|$)/.test(u)) return 50;
@@ -298,12 +329,16 @@
     }
 
     function collectCitizenAvatarCandidates(doc, normalizedHandle) {
-        var primary = extractProfileThumbAvatarUrl(doc);
+        var rankIconUrl = extractRankIconUrl(doc);
+        var primaryRaw = extractProfileThumbAvatarUrl(doc);
+        var primary =
+            primaryRaw && !isUnusableCitizenAvatarUrl(primaryRaw, rankIconUrl) ? primaryRaw : null;
         var seen = {};
         var out = [];
         function push(raw, force) {
             var url = resolveRsiUrl(raw);
             if (!url || seen[url]) return;
+            if (isUnusableCitizenAvatarUrl(url, rankIconUrl)) return;
             if (!force && !isLikelyCitizenAvatarUrl(url)) return;
             seen[url] = true;
             out.push(url);
@@ -315,7 +350,6 @@
             '.profile .thumb img',
             '.citizen-profile .thumb img',
             '#citizen-profile .thumb img',
-            '.profile.left-col img',
         ];
         for (var ti = 0; ti < thumbSels.length; ti++) {
             pushImgAttrs(function (raw) {

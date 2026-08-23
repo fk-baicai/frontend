@@ -1,0 +1,255 @@
+    <div class="overlay" id="overlay"></div>
+
+    <!-- 提示框 -->
+    <div class="alert-modal" id="alertModal" style="display: none;">
+        <div class="message" id="alertMessage"></div>
+        <button class="confirm-btn" onclick="closeAlert()">确定</button>
+    </div>
+
+    <!-- 侧边弹出框 -->
+    <div class="sidebar-modal" id="sidebarModal">
+        <button class="modal-close" onclick="closeModal()">×</button>
+        <div class="modal-content">
+            <h2 class="modal-title">填写你的信息</h2>
+            <p class="modal-subtitle" id="modalTicketType">18禁门票</p>
+            
+            <input type="text" class="form-input" placeholder="QQ号" id="qqNumber">
+            <input type="text" class="form-input" placeholder="游戏ID" id="gameId">
+            <input type="text" class="form-input" placeholder="公民身份证信息" id="idNumber">
+            
+            <button class="sign-in-btn" onclick="verifyAndProceed()">SIGN IN</button>
+        </div>
+    </div>
+
+    <!-- 登录 / 注册 右侧抽屉（UI 参考 RSI 深色登录面板） -->
+    <div class="sidebar-modal login-drawer" id="loginDrawer">
+        <button type="button" class="modal-close login-drawer-close" onclick="closeLoginDrawer()" aria-label="关闭">×</button>
+        <div class="modal-content login-drawer-content">
+            <div id="loginDrawerGuest">
+                <div class="rsi-auth-card">
+                    <p class="login-drawer-kicker">Account</p>
+                    <h2 class="modal-title login-drawer-title">账户</h2>
+                    <div id="rsiAuthHeadLogin" class="rsi-auth-head">
+                        <h3 class="rsi-auth-title">登录你的账户</h3>
+                        <p class="rsi-auth-sub">没有账号？<button type="button" class="rsi-auth-link" onclick="switchAuthTab('register')">立即注册</button></p>
+                    </div>
+                    <div id="rsiAuthHeadRegister" class="rsi-auth-head" style="display: none;">
+                        <h3 class="rsi-auth-title">创建账户</h3>
+                        <p class="rsi-auth-sub">已有账号？<button type="button" class="rsi-auth-link" onclick="switchAuthTab('login')">去登录</button></p>
+                    </div>
+
+                    <div id="authPanelLogin" class="rsi-auth-panels">
+                        <div class="rsi-field rsi-field--float">
+                            <input type="email" class="rsi-input" id="loginEmail" autocomplete="username" placeholder=" " oninput="syncAuthFloatField(this); clearLoginFormHint()">
+                            <label for="loginEmail">邮箱</label>
+                        </div>
+                        <div class="rsi-field rsi-field--float rsi-field--password">
+                            <input type="password" class="rsi-input" id="loginPassword" autocomplete="current-password" placeholder=" " oninput="syncAuthFloatField(this); clearLoginFormHint()">
+                            <label for="loginPassword">密码</label>
+                            <button type="button" class="rsi-pw-toggle" id="loginPwToggle" onclick="togglePasswordField('loginPassword', 'loginPwToggle')" aria-label="显示或隐藏密码">
+                                <span class="rsi-pw-toggle-icon" aria-hidden="true"><svg class="rsi-pw-icon rsi-pw-icon--show" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12m0-4C6.5 2 1.73 7.11 1 12c.73 4.89 5.5 10 11 10s10.27-5.11 11-10C21.27 7.11 17.5 2 12 2m0 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><svg class="rsi-pw-icon rsi-pw-icon--hide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" hidden aria-hidden="true"><path d="M2.28 3.51 1 4.79l4.37 4.37C3.61 10.28 2.12 11.09 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l2.92 2.92L21 20.73 22.27 19.5 3.51 2.28M12 17c-2.76 0-5-2.24-5-5 0-.65.13-1.26.36-1.83l1.63 1.63c.17.58.68 1 1.31 1 1.1 0 2-.9 2-2 0-.63-.42-1.14-1-1.31l1.63 1.63c.57-.23 1.18-.36 1.83-.36 2.76 0 5 2.24 5 5 0 .79-.2 1.53-.53 2.2l1.46 1.46A9.9 9.9 0 0 0 12 17m6.24-3.59-1.88-1.88a2.98 2.98 0 0 0 .05-.41 3 3 0 0 0-3-3c-.14 0-.28.02-.41.05L11.41 7.3A4.98 4.98 0 0 1 12 7c2.76 0 5 2.24 5 5 0 .7-.15 1.36-.41 1.97z"/></svg></span>
+                            </button>
+                        </div>
+                        <div class="rsi-field rsi-field--session" id="loginSessionDaysField">
+                            <div class="rsi-custom-select" id="loginSessionDaysWrap">
+                                <input type="hidden" id="loginSessionDays" value="7">
+                                <button
+                                    type="button"
+                                    class="rsi-input rsi-custom-select-trigger"
+                                    id="loginSessionDaysTrigger"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="false"
+                                    aria-labelledby="loginSessionDaysValue"
+                                >
+                                    <span class="rsi-custom-select-value" id="loginSessionDaysValue">保持登录 - 7 Sky</span>
+                                    <span class="rsi-custom-select-caret" aria-hidden="true"></span>
+                                </button>
+                                <ul
+                                    class="rsi-custom-select-menu"
+                                    id="loginSessionDaysMenu"
+                                    role="listbox"
+                                    aria-label="保持登录时长"
+                                    hidden
+                                >
+                                    <li class="rsi-custom-select-option" role="option" data-value="0" tabindex="-1">24 hour</li>
+                                    <li class="rsi-custom-select-option is-selected" role="option" data-value="7" aria-selected="true" tabindex="-1">7 Sky</li>
+                                    <li class="rsi-custom-select-option" role="option" data-value="30" tabindex="-1">30 Sky</li>
+                                    <li class="rsi-custom-select-option" role="option" data-value="365" tabindex="-1">1Year</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <p id="loginFormHint" class="rsi-form-hint rsi-form-hint--error" hidden></p>
+                        <div class="rsi-auth-row rsi-auth-row--end">
+                            <button type="button" class="rsi-auth-link rsi-auth-link--small" onclick="openForgotPasswordDialog()">忘记密码？</button>
+                        </div>
+                        <button type="button" id="loginSubmitBtn" class="rsi-submit-btn" onclick="submitLogin()">登录</button>
+                    </div>
+
+                    <div id="authPanelRegister" class="rsi-auth-panels" style="display: none;">
+                        <div class="rsi-field rsi-field--float">
+                            <input type="text" class="rsi-input" id="regBindingId" autocomplete="off" placeholder=" " oninput="syncAuthFloatField(this); clearRegisterFormHint()">
+                            <label for="regBindingId">绑定 ID</label>
+                        </div>
+                        <div class="rsi-field rsi-field--float">
+                            <input type="email" class="rsi-input" id="regEmail" autocomplete="email" placeholder=" " oninput="syncAuthFloatField(this); clearRegisterFormHint()">
+                            <label for="regEmail">邮箱</label>
+                        </div>
+                        <div class="rsi-field rsi-field--float rsi-field--password">
+                            <input type="password" class="rsi-input" id="regPassword" autocomplete="new-password" placeholder=" " oninput="syncAuthFloatField(this); clearRegisterFormHint()">
+                            <label for="regPassword">密码</label>
+                            <button type="button" class="rsi-pw-toggle" id="regPwToggle" onclick="togglePasswordField('regPassword', 'regPwToggle')" aria-label="显示或隐藏密码">
+                                <span class="rsi-pw-toggle-icon" aria-hidden="true"><svg class="rsi-pw-icon rsi-pw-icon--show" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12m0-4C6.5 2 1.73 7.11 1 12c.73 4.89 5.5 10 11 10s10.27-5.11 11-10C21.27 7.11 17.5 2 12 2m0 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><svg class="rsi-pw-icon rsi-pw-icon--hide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" hidden aria-hidden="true"><path d="M2.28 3.51 1 4.79l4.37 4.37C3.61 10.28 2.12 11.09 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l2.92 2.92L21 20.73 22.27 19.5 3.51 2.28M12 17c-2.76 0-5-2.24-5-5 0-.65.13-1.26.36-1.83l1.63 1.63c.17.58.68 1 1.31 1 1.1 0 2-.9 2-2 0-.63-.42-1.14-1-1.31l1.63 1.63c.57-.23 1.18-.36 1.83-.36 2.76 0 5 2.24 5 5 0 .79-.2 1.53-.53 2.2l1.46 1.46A9.9 9.9 0 0 0 12 17m6.24-3.59-1.88-1.88a2.98 2.98 0 0 0 .05-.41 3 3 0 0 0-3-3c-.14 0-.28.02-.41.05L11.41 7.3A4.98 4.98 0 0 1 12 7c2.76 0 5 2.24 5 5 0 .7-.15 1.36-.41 1.97z"/></svg></span>
+                            </button>
+                        </div>
+                        <p id="registerFormHint" class="rsi-form-hint rsi-form-hint--error" hidden></p>
+                        <button type="button" id="registerSubmitBtn" class="rsi-submit-btn" onclick="submitRegister()">注册</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loginDrawerAuthed" class="login-drawer-authed" style="display: none;">
+                <div class="rsi-auth-card rsi-auth-card--profile">
+                    <div class="drawer-profile-row">
+                        <img id="drawerUserAvatarImg" class="drawer-user-avatar" src="" alt="" width="48" height="48" decoding="async">
+                        <div class="drawer-profile-name-stack">
+                            <p class="entry" title="与注册时「绑定 ID」为同一 RSI Handle，用于服务端身份校验与账号绑定。">
+                                <strong class="value" id="loggedInBindingId"></strong>
+                            </p>
+                            <p class="drawer-rsi-handle-line" id="loggedInRsiHandleWrap" hidden>
+                                <span id="loggedInRsiHandle"></span>
+                            </p>
+                        </div>
+                        <div class="drawer-profile-body">
+                            <div class="drawer-rsi-rank-row" id="loggedInRsiRankRow" hidden>
+                                <img id="loggedInRsiRankIcon" class="drawer-rsi-rank-icon" src="" alt="" width="28" height="28" referrerpolicy="no-referrer" decoding="async" />
+                                <span id="loggedInRsiRankLabel" class="drawer-rsi-rank-label"></span>
+                            </div>
+                            <div class="drawer-rsi-meta" id="loggedInRsiMeta" hidden>
+                                <div class="drawer-rsi-meta-row" id="loggedInRsiMetaRowEnlisted" hidden>
+                                    <span class="drawer-rsi-meta-label">时间</span>
+                                    <span class="drawer-rsi-meta-value" id="loggedInRsiEnlisted"></span>
+                                </div>
+                                <div class="drawer-rsi-meta-row" id="loggedInRsiMetaRowLocation" hidden>
+                                    <span class="drawer-rsi-meta-label">地址</span>
+                                    <span class="drawer-rsi-meta-value" id="loggedInRsiLocation"></span>
+                                </div>
+                                <div class="drawer-rsi-meta-row" id="loggedInRsiMetaRowFluency" hidden>
+                                    <span class="drawer-rsi-meta-label">语言</span>
+                                    <span class="drawer-rsi-meta-value" id="loggedInRsiFluency"></span>
+                                </div>
+                            </div>
+                            <div id="loggedInOrgFleet" class="drawer-org-fleet" hidden>
+                                <img id="loggedInOrgLogo" class="drawer-org-logo" src="" alt="" width="56" height="56" decoding="async" hidden referrerpolicy="no-referrer" />
+                                <a id="loggedInOrgName" class="drawer-org-name value data6" href="#" target="_blank" rel="noopener noreferrer"></a>
+                                <p class="drawer-org-sid-row">
+                                    <span class="drawer-org-sid-label">Spectrum Identification (SID)</span>
+                                    <strong id="loggedInOrgSid" class="value data11 drawer-org-sid-num"></strong>
+                                </p>
+                                <p class="drawer-org-role-row" id="loggedInOrgRoleRow" hidden>
+                                    <span class="drawer-org-role-label">Organization rank</span>
+                                    <strong id="loggedInOrgRole" class="value data11 drawer-org-role-value"></strong>
+                                </p>
+                                <div id="loggedInOrgRanking" class="ranking data1 drawer-org-ranking" aria-hidden="true"></div>
+                            </div>
+                            <nav class="drawer-profile-nav" aria-label="账户快捷入口">
+                            <a class='drawer-checkin-textlink' href='market-trades.html' id='drawerMarketTradesLink'>商城管理</a>
+                            <a class='drawer-checkin-textlink' href='/checkin' id='drawerCheckinLink'>签到</a>
+                            <a class='drawer-checkin-textlink' href='/admin' id='drawerAdminLink' style='display: none;'>管理系统</a>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+                <div class="drawer-footer-actions">
+                    <button type="button" id="logoutSubmitBtn" class="drawer-footer-icon-btn drawer-logout-btn" onclick="logoutUser()" aria-label="退出登录" title="退出登录">
+                        <svg class="drawer-footer-icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M113.778 56.889h56.889v910.222H113.778z" fill="currentColor"></path>
+                            <path d="M739.556 56.889h56.889v170.667h-56.889V56.889zm0 796.444h56.889v170.667h-56.889V853.333z" fill="currentColor"></path>
+                            <path d="M113.778 56.889h625.778v56.889H113.778V56.889zm0 910.222h625.778v56.889H113.778v-56.889z" fill="currentColor"></path>
+                            <path d="M284.444 512h568.889v56.889H284.444V512z" fill="currentColor"></path>
+                            <path d="M904.533 563.2l17.067-22.756L722.489 341.333l-39.822 39.822 159.289 159.289-159.289 164.978 39.822 39.822z" fill="currentColor"></path>
+                        </svg>
+                    </button>
+                    <button type="button" id="drawerSettingsBtn" class="drawer-footer-icon-btn drawer-settings-btn" onclick="openAccountSettings()" aria-label="账户设置" title="账户设置">
+                        <svg class="drawer-footer-icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M919.6 405.6l-57.2-8c-12.7-1.8-23-10.4-28-22.1-11.3-26.7-25.7-51.7-42.9-74.5-7.7-10.2-10-23.5-5.2-35.3l21.7-53.5c6.7-16.4 0.2-35.3-15.2-44.1L669.1 96.6c-15.4-8.9-34.9-5.1-45.8 8.9l-35.4 45.3c-7.9 10.2-20.7 14.9-33.5 13.3-14-1.8-28.3-2.8-42.8-2.8-14.5 0-28.8 1-42.8 2.8-12.8 1.6-25.6-3.1-33.5-13.3l-35.4-45.3c-10.9-14-30.4-17.8-45.8-8.9L230.4 168c-15.4 8.9-21.8 27.7-15.2 44.1l21.7 53.5c4.8 11.9 2.5 25.1-5.2 35.3-17.2 22.8-31.7 47.8-42.9 74.5-5 11.8-15.3 20.4-28 22.1l-57.2 8C86 408 72.9 423 72.9 440.8v142.9c0 17.7 13.1 32.7 30.6 35.2l57.2 8c12.7 1.8 23 10.4 28 22.1 11.3 26.7 25.7 51.7 42.9 74.5 7.7 10.2 10 23.5 5.2 35.3l-21.7 53.5c-6.7 16.4-0.2 35.3 15.2 44.1L354 927.8c15.4 8.9 34.9 5.1 45.8-8.9l35.4-45.3c7.9-10.2 20.7-14.9 33.5-13.3 14 1.8 28.3 2.8 42.8 2.8 14.5 0 28.8-1 42.8-2.8 12.8-1.6 25.6 3.1 33.5 13.3l35.4 45.3c10.9 14 30.4 17.8 45.8 8.9l123.7-71.4c15.4-8.9 21.8-27.7 15.2-44.1l-21.7-53.5c-4.8-11.8-2.5-25.1 5.2-35.3 17.2-22.8 31.7-47.8 42.9-74.5 5-11.8 15.3-20.4 28-22.1l57.2-8c17.6-2.5 30.6-17.5 30.6-35.2V440.8c0.2-17.8-12.9-32.8-30.5-35.2z m-408 245.5c-76.7 0-138.9-62.2-138.9-138.9s62.2-138.9 138.9-138.9 138.9 62.2 138.9 138.9-62.2 138.9-138.9 138.9z" fill="currentColor"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="accountSettingsBackdrop" class="account-settings-backdrop" hidden>
+        <div class="account-settings-panel rsi-auth-card" role="dialog" aria-modal="true" aria-labelledby="accountSettingsTitle">
+            <div class="account-settings-head">
+                <h3 id="accountSettingsTitle" class="rsi-auth-title">修改密码</h3>
+                <button type="button" class="account-settings-close" onclick="closeAccountSettings()" aria-label="关闭">×</button>
+            </div>
+            <p class="rsi-auth-sub account-settings-sub">请先输入当前密码，再设置新密码（需输入两次确认）。</p>
+            <div class="rsi-field rsi-field--float rsi-field--password">
+                <input type="password" class="rsi-input" id="settingsCurrentPassword" autocomplete="current-password" placeholder=" " oninput="syncAuthFloatField(this); clearAccountSettingsHint()">
+                <label for="settingsCurrentPassword">当前密码</label>
+                <button type="button" class="rsi-pw-toggle" id="settingsCurrentPwToggle" onclick="togglePasswordField('settingsCurrentPassword', 'settingsCurrentPwToggle')" aria-label="显示或隐藏密码">
+                    <span class="rsi-pw-toggle-icon" aria-hidden="true"><svg class="rsi-pw-icon rsi-pw-icon--show" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12m0-4C6.5 2 1.73 7.11 1 12c.73 4.89 5.5 10 11 10s10.27-5.11 11-10C21.27 7.11 17.5 2 12 2m0 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><svg class="rsi-pw-icon rsi-pw-icon--hide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" hidden aria-hidden="true"><path d="M2.28 3.51 1 4.79l4.37 4.37C3.61 10.28 2.12 11.09 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l2.92 2.92L21 20.73 22.27 19.5 3.51 2.28M12 17c-2.76 0-5-2.24-5-5 0-.65.13-1.26.36-1.83l1.63 1.63c.17.58.68 1 1.31 1 1.1 0 2-.9 2-2 0-.63-.42-1.14-1-1.31l1.63 1.63c.57-.23 1.18-.36 1.83-.36 2.76 0 5 2.24 5 5 0 .79-.2 1.53-.53 2.2l1.46 1.46A9.9 9.9 0 0 0 12 17m6.24-3.59-1.88-1.88a2.98 2.98 0 0 0 .05-.41 3 3 0 0 0-3-3c-.14 0-.28.02-.41.05L11.41 7.3A4.98 4.98 0 0 1 12 7c2.76 0 5 2.24 5 5 0 .7-.15 1.36-.41 1.97z"/></svg></span>
+                </button>
+            </div>
+            <div class="rsi-field rsi-field--float rsi-field--password">
+                <input type="password" class="rsi-input" id="settingsNewPassword" autocomplete="new-password" placeholder=" " oninput="syncAuthFloatField(this); clearAccountSettingsHint()">
+                <label for="settingsNewPassword">新密码</label>
+                <button type="button" class="rsi-pw-toggle" id="settingsNewPwToggle" onclick="togglePasswordField('settingsNewPassword', 'settingsNewPwToggle')" aria-label="显示或隐藏密码">
+                    <span class="rsi-pw-toggle-icon" aria-hidden="true"><svg class="rsi-pw-icon rsi-pw-icon--show" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12m0-4C6.5 2 1.73 7.11 1 12c.73 4.89 5.5 10 11 10s10.27-5.11 11-10C21.27 7.11 17.5 2 12 2m0 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><svg class="rsi-pw-icon rsi-pw-icon--hide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" hidden aria-hidden="true"><path d="M2.28 3.51 1 4.79l4.37 4.37C3.61 10.28 2.12 11.09 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l2.92 2.92L21 20.73 22.27 19.5 3.51 2.28M12 17c-2.76 0-5-2.24-5-5 0-.65.13-1.26.36-1.83l1.63 1.63c.17.58.68 1 1.31 1 1.1 0 2-.9 2-2 0-.63-.42-1.14-1-1.31l1.63 1.63c.57-.23 1.18-.36 1.83-.36 2.76 0 5 2.24 5 5 0 .79-.2 1.53-.53 2.2l1.46 1.46A9.9 9.9 0 0 0 12 17m6.24-3.59-1.88-1.88a2.98 2.98 0 0 0 .05-.41 3 3 0 0 0-3-3c-.14 0-.28.02-.41.05L11.41 7.3A4.98 4.98 0 0 1 12 7c2.76 0 5 2.24 5 5 0 .7-.15 1.36-.41 1.97z"/></svg></span>
+                </button>
+            </div>
+            <div class="rsi-field rsi-field--float rsi-field--password">
+                <input type="password" class="rsi-input" id="settingsConfirmPassword" autocomplete="new-password" placeholder=" " oninput="syncAuthFloatField(this); clearAccountSettingsHint()">
+                <label for="settingsConfirmPassword">确认新密码</label>
+                <button type="button" class="rsi-pw-toggle" id="settingsConfirmPwToggle" onclick="togglePasswordField('settingsConfirmPassword', 'settingsConfirmPwToggle')" aria-label="显示或隐藏密码">
+                    <span class="rsi-pw-toggle-icon" aria-hidden="true"><svg class="rsi-pw-icon rsi-pw-icon--show" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12m0-4C6.5 2 1.73 7.11 1 12c.73 4.89 5.5 10 11 10s10.27-5.11 11-10C21.27 7.11 17.5 2 12 2m0 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><svg class="rsi-pw-icon rsi-pw-icon--hide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" hidden aria-hidden="true"><path d="M2.28 3.51 1 4.79l4.37 4.37C3.61 10.28 2.12 11.09 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l2.92 2.92L21 20.73 22.27 19.5 3.51 2.28M12 17c-2.76 0-5-2.24-5-5 0-.65.13-1.26.36-1.83l1.63 1.63c.17.58.68 1 1.31 1 1.1 0 2-.9 2-2 0-.63-.42-1.14-1-1.31l1.63 1.63c.57-.23 1.18-.36 1.83-.36 2.76 0 5 2.24 5 5 0 .79-.2 1.53-.53 2.2l1.46 1.46A9.9 9.9 0 0 0 12 17m6.24-3.59-1.88-1.88a2.98 2.98 0 0 0 .05-.41 3 3 0 0 0-3-3c-.14 0-.28.02-.41.05L11.41 7.3A4.98 4.98 0 0 1 12 7c2.76 0 5 2.24 5 5 0 .7-.15 1.36-.41 1.97z"/></svg></span>
+                </button>
+            </div>
+            <p id="accountSettingsHint" class="rsi-form-hint rsi-form-hint--error" hidden></p>
+            <div class="account-settings-actions">
+                <button type="button" class="rsi-btn-ghost" onclick="closeAccountSettings()">取消</button>
+                <button type="button" id="settingsPasswordSubmitBtn" class="rsi-submit-btn" onclick="submitChangePassword()">确认修改</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="forgotPasswordBackdrop" class="account-settings-backdrop" hidden>
+        <div class="account-settings-panel forgot-password-panel rsi-auth-card" role="dialog" aria-modal="true" aria-labelledby="forgotPasswordTitle">
+            <div class="account-settings-head forgot-password-head">
+                <h3 id="forgotPasswordTitle" class="rsi-auth-title">忘记密码</h3>
+                <button type="button" class="account-settings-close" onclick="closeForgotPasswordDialog()" aria-label="关闭">×</button>
+            </div>
+            <p class="rsi-auth-sub forgot-password-sub">输入注册邮箱获取验证码，验证通过后设置新密码。</p>
+            <div class="rsi-field rsi-field--float">
+                <input type="email" class="rsi-input" id="forgotPwEmail" autocomplete="email" placeholder=" " oninput="syncAuthFloatField(this); clearForgotPasswordHint()">
+                <label for="forgotPwEmail">注册邮箱</label>
+            </div>
+            <div class="rsi-field rsi-field--float forgot-pw-code-row">
+                <div class="forgot-pw-code-inner">
+                    <input type="text" class="rsi-input" id="forgotPwCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder=" " oninput="syncAuthFloatField(this); clearForgotPasswordHint()">
+                    <button type="button" id="forgotPwSendCodeBtn" class="forgot-pw-send-btn" onclick="submitForgotPasswordSendCode()">发送验证码</button>
+                </div>
+                <label for="forgotPwCode">验证码</label>
+            </div>
+            <div class="rsi-field rsi-field--float rsi-field--password">
+                <input type="password" class="rsi-input" id="forgotPwNewPassword" autocomplete="new-password" placeholder=" " oninput="syncAuthFloatField(this); clearForgotPasswordHint()">
+                <label for="forgotPwNewPassword">新密码</label>
+                <button type="button" class="rsi-pw-toggle" id="forgotPwNewToggle" onclick="togglePasswordField('forgotPwNewPassword', 'forgotPwNewToggle')" aria-label="显示或隐藏密码">
+                    <span class="rsi-pw-toggle-icon" aria-hidden="true"><svg class="rsi-pw-icon rsi-pw-icon--show" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12m0-4C6.5 2 1.73 7.11 1 12c.73 4.89 5.5 10 11 10s10.27-5.11 11-10C21.27 7.11 17.5 2 12 2m0 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><svg class="rsi-pw-icon rsi-pw-icon--hide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" hidden aria-hidden="true"><path d="M2.28 3.51 1 4.79l4.37 4.37C3.61 10.28 2.12 11.09 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l2.92 2.92L21 20.73 22.27 19.5 3.51 2.28M12 17c-2.76 0-5-2.24-5-5 0-.65.13-1.26.36-1.83l1.63 1.63c.17.58.68 1 1.31 1 1.1 0 2-.9 2-2 0-.63-.42-1.14-1-1.31l1.63 1.63c.57-.23 1.18-.36 1.83-.36 2.76 0 5 2.24 5 5 0 .79-.2 1.53-.53 2.2l1.46 1.46A9.9 9.9 0 0 0 12 17m6.24-3.59-1.88-1.88a2.98 2.98 0 0 0 .05-.41 3 3 0 0 0-3-3c-.14 0-.28.02-.41.05L11.41 7.3A4.98 4.98 0 0 1 12 7c2.76 0 5 2.24 5 5 0 .7-.15 1.36-.41 1.97z"/></svg></span>
+                </button>
+            </div>
+            <div class="rsi-field rsi-field--float rsi-field--password">
+                <input type="password" class="rsi-input" id="forgotPwConfirmPassword" autocomplete="new-password" placeholder=" " oninput="syncAuthFloatField(this); clearForgotPasswordHint()">
+                <label for="forgotPwConfirmPassword">确认新密码</label>
+                <button type="button" class="rsi-pw-toggle" id="forgotPwConfirmToggle" onclick="togglePasswordField('forgotPwConfirmPassword', 'forgotPwConfirmToggle')" aria-label="显示或隐藏密码">
+                    <span class="rsi-pw-toggle-icon" aria-hidden="true"><svg class="rsi-pw-icon rsi-pw-icon--show" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12m0-4C6.5 2 1.73 7.11 1 12c.73 4.89 5.5 10 11 10s10.27-5.11 11-10C21.27 7.11 17.5 2 12 2m0 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><svg class="rsi-pw-icon rsi-pw-icon--hide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" hidden aria-hidden="true"><path d="M2.28 3.51 1 4.79l4.37 4.37C3.61 10.28 2.12 11.09 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l2.92 2.92L21 20.73 22.27 19.5 3.51 2.28M12 17c-2.76 0-5-2.24-5-5 0-.65.13-1.26.36-1.83l1.63 1.63c.17.58.68 1 1.31 1 1.1 0 2-.9 2-2 0-.63-.42-1.14-1-1.31l1.63 1.63c.57-.23 1.18-.36 1.83-.36 2.76 0 5 2.24 5 5 0 .79-.2 1.53-.53 2.2l1.46 1.46A9.9 9.9 0 0 0 12 17m6.24-3.59-1.88-1.88a2.98 2.98 0 0 0 .05-.41 3 3 0 0 0-3-3c-.14 0-.28.02-.41.05L11.41 7.3A4.98 4.98 0 0 1 12 7c2.76 0 5 2.24 5 5 0 .7-.15 1.36-.41 1.97z"/></svg></span>
+                </button>
+            </div>
+            <p id="forgotPasswordHint" class="rsi-form-hint rsi-form-hint--error" hidden></p>
+            <div class="forgot-password-actions">
+                <button type="button" class="rsi-auth-link rsi-auth-link--small" onclick="closeForgotPasswordDialog()">取消</button>
+                <button type="button" id="forgotPwSubmitBtn" class="rsi-submit-btn" onclick="submitForgotPasswordReset()">重置密码</button>
+            </div>
+        </div>

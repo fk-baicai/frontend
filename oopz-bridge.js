@@ -18,6 +18,35 @@
 
     var bridgePollTimer = null;
 
+    function loadSession() {
+        try {
+            var key = 'ussHangzhouAuthSession';
+            var raw = sessionStorage.getItem(key) || localStorage.getItem(key);
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function loadSessionToken() {
+        var s = loadSession();
+        return s && s.token ? s.token : '';
+    }
+
+    function canAccessFleetMemberAreas() {
+        var s = loadSession();
+        if (window.UssAuthSessionSync && typeof window.UssAuthSessionSync.sessionHasFleetUiAccess === 'function') {
+            return window.UssAuthSessionSync.sessionHasFleetUiAccess(s);
+        }
+        if (!s || !s.token) return false;
+        if (s.isSuperAdmin || s.isAdmin) return true;
+        if (s.hasFleetPrivilege === true || s.hasFleetPrivilege === 1) return true;
+        if (s.hasFleetPrivilege === false || s.hasFleetPrivilege === 0) return false;
+        if (String(s.memberKind || '').toLowerCase() === 'civilian') return false;
+        return true;
+    }
+
     function isLoggedIn() {
         try {
             var key = 'ussHangzhouAuthSession';
@@ -591,8 +620,13 @@
     }
 
     function fetchState() {
-        if (!isLoggedIn()) return;
-        fetch(apiBase() + '/api/oopz-bridge/state', { cache: 'no-store' })
+        if (!canAccessFleetMemberAreas()) return;
+        var token = loadSessionToken();
+        if (!token) return;
+        fetch(apiBase() + '/api/oopz-bridge/state', {
+            cache: 'no-store',
+            headers: { Authorization: 'Bearer ' + token },
+        })
             .then(function (r) {
                 return r.json().then(function (j) {
                     return { ok: r.ok, data: j };
@@ -615,14 +649,14 @@
     setupMemberIdCopy();
 
     function startPolling() {
-        if (!isLoggedIn() || bridgePollTimer != null) return;
+        if (!canAccessFleetMemberAreas() || bridgePollTimer != null) return;
         fetchState();
         bridgePollTimer = setInterval(fetchState, POLL_MS);
     }
 
     function scheduleBridgeInit() {
         var run = function () {
-            if (!isLoggedIn()) return;
+            if (!canAccessFleetMemberAreas()) return;
             if (window.UssHomeBoot && typeof window.UssHomeBoot.scheduleIdle === 'function') {
                 window.UssHomeBoot.scheduleIdle(startPolling, 900);
             } else if (window.UssLazyMedia && typeof window.UssLazyMedia.runWhenIdle === 'function') {
@@ -651,7 +685,7 @@
 
     try {
         var authObs = new MutationObserver(function () {
-            if (isLoggedIn()) startPolling();
+            if (canAccessFleetMemberAreas()) startPolling();
         });
         authObs.observe(document.documentElement, {
             attributes: true,

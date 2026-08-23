@@ -1,5 +1,5 @@
 /**
- * 服务器 IP / 状态页面（未登录可访问，IP 以 ****** 代替）
+ * 服务器 IP / 状态页面（人人可访问；真实 IP 仅舰队成员/白名单可见，其余显示 ******）
  */
 (function () {
     if (typeof document === 'undefined') return;
@@ -27,6 +27,22 @@
     function isLoggedIn() {
         var sess = loadSession();
         return !!(sess && sess.token);
+    }
+
+    /** 与 home-app 一致：舰队成员或白名单可见真实 IP */
+    function hasFleetPrivilege() {
+        var sess = loadSession();
+        if (!sess) return false;
+        if (sess.hasFleetPrivilege === true || sess.hasFleetPrivilege === 1) return true;
+        if (sess.hasFleetPrivilege === false || sess.hasFleetPrivilege === 0) return false;
+        if (sess.memberKind === 'civilian') return false;
+        return true;
+    }
+
+    function maskIpHint(opts) {
+        opts = opts || {};
+        if (opts.civilianLoggedIn) return '仅舰队成员可见真实 IP';
+        return '登录后可见真实 IP';
     }
 
     function showError(msg) {
@@ -166,7 +182,7 @@
                 var parts = [];
                 var updated = formatUpdatedAt(data.updatedAt);
                 if (updated) parts.push(updated);
-                if (opts.maskIp) parts.push('登录后可见真实 IP');
+                if (opts.maskIp) parts.push(maskIpHint(opts));
                 metaEl.textContent = parts.join(' · ') || '已上报';
             }
             renderDetails(data);
@@ -181,7 +197,7 @@
                 typeof UssApiError !== 'undefined'
                     ? UssApiError.formatUserError(waitCode)
                     : '服务器 IP 尚未上报。';
-            metaEl.textContent = opts.maskIp ? '登录后可见真实 IP · ' + waitMsg : waitMsg;
+            metaEl.textContent = opts.maskIp ? maskIpHint(opts) + ' · ' + waitMsg : waitMsg;
         }
         renderDetails(null);
         hideError();
@@ -203,12 +219,33 @@
         var sess = loadSession();
         if (!sess || !sess.token) return Promise.resolve();
 
-        return window.UssAuthApi.getClientPublicIp(sess.token)
+        var fleet = hasFleetPrivilege();
+        var req = fleet
+            ? window.UssAuthApi.getClientPublicIp(sess.token)
+            : window.UssAuthApi.getClientPublicIpStatus();
+
+        return req
             .then(function (data) {
-                render(data, { maskIp: false });
+                render(data, { maskIp: !fleet, civilianLoggedIn: !fleet && isLoggedIn() });
             })
             .catch(function (e) {
-                render({ ok: false, code: (e && e.code) || 'SRV_001' }, { maskIp: false });
+                if (fleet && e && e.code === 'AUTH_F001') {
+                    return window.UssAuthApi.getClientPublicIpStatus()
+                        .then(function (data) {
+                            render(data, { maskIp: true, civilianLoggedIn: true });
+                        })
+                        .catch(function (e2) {
+                            render({ ok: false, code: (e2 && e2.code) || 'SRV_001' }, {
+                                maskIp: true,
+                                civilianLoggedIn: true,
+                            });
+                            showError(apiErrText(null, e2));
+                        });
+                }
+                render(
+                    { ok: false, code: (e && e.code) || 'SRV_001' },
+                    { maskIp: !fleet, civilianLoggedIn: !fleet && isLoggedIn() }
+                );
                 showError(apiErrText(null, e));
             });
     }
@@ -222,10 +259,10 @@
 
         return window.UssAuthApi.getClientPublicIpStatus()
             .then(function (data) {
-                render(data, { maskIp: true });
+                render(data, { maskIp: true, civilianLoggedIn: false });
             })
             .catch(function (e) {
-                render({ ok: false, code: (e && e.code) || 'SRV_001' }, { maskIp: true });
+                render({ ok: false, code: (e && e.code) || 'SRV_001' }, { maskIp: true, civilianLoggedIn: false });
                 showError(apiErrText(null, e));
             });
     }

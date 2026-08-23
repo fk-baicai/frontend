@@ -109,8 +109,27 @@
     async function adminJson(token, path, init) {
         init = init || {};
         var headers = Object.assign({}, init.headers || {}, { Authorization: 'Bearer ' + token });
+        var stepUp = '';
+        try {
+            stepUp =
+                (window.UssAdminStepUp && window.UssAdminStepUp.getToken && window.UssAdminStepUp.getToken()) ||
+                sessionStorage.getItem('ussAdminStepUpToken') ||
+                '';
+        } catch (ignore) {}
+        if (stepUp) headers['X-Admin-Step-Up'] = stepUp;
         var r = await fetch(joinUrl(path), Object.assign({}, init, { headers: headers }));
         var data = await parseJson(r);
+        if (!r.ok) {
+            if (
+                r.status === 403 &&
+                data &&
+                (data.code === 'ADM_011' || data.code === 'ADM_012') &&
+                window.UssAdminStepUp &&
+                window.UssAdminStepUp.clearSession
+            ) {
+                window.UssAdminStepUp.clearSession();
+            }
+        }
         throwIfNotOk(r, data, 'ADM_001');
         return data;
     }
@@ -140,12 +159,19 @@
         communityImageThumbUrl: function (rel) {
             if (!rel || typeof rel !== 'string') return '';
             if (/^https?:\/\//i.test(rel)) return rel;
-            var pathRel = rel.charAt(0) === '/' ? rel : '/' + rel;
-            if (pathRel.indexOf('/community-uploads/') !== 0) return joinUrl(pathRel);
+            var qs = '';
+            var pathRel = rel;
+            var qIdx = rel.indexOf('?');
+            if (qIdx >= 0) {
+                pathRel = rel.slice(0, qIdx);
+                qs = rel.slice(qIdx);
+            }
+            if (pathRel.charAt(0) !== '/') pathRel = '/' + pathRel;
+            if (pathRel.indexOf('/community-uploads/') !== 0) return joinUrl(pathRel + qs);
             var base = pathRel.split('/').pop() || '';
             var m = /^(.+)\.(jpe?g|png|gif|webp)$/i.exec(base);
-            if (!m) return joinUrl(pathRel);
-            return joinUrl('/community-uploads/' + m[1] + '-thumb.jpg');
+            if (!m) return joinUrl(pathRel + qs);
+            return joinUrl('/community-uploads/' + m[1] + '-thumb.jpg' + qs);
         },
 
         async register(body, opts) {
@@ -355,6 +381,74 @@
             });
             var data = await parseJson(r);
             throwIfNotOk(r, data, 'AUTH_C001');
+            return data;
+        },
+
+        async sendPasswordChangeCode(token) {
+            var r = await fetch(joinUrl('/api/account/password/send-code'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + token,
+                },
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'AUTH_C007');
+            return data;
+        },
+
+        async issueRsiBindCode(token, handle) {
+            var r = await fetch(joinUrl('/api/account/rsi-bind/code'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + token,
+                },
+                body: JSON.stringify({ handle: handle }),
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'AUTH_H011');
+            return data;
+        },
+
+        async confirmRsiBind(token, handle) {
+            var r = await fetch(joinUrl('/api/account/rsi-bind/confirm'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + token,
+                },
+                body: JSON.stringify({ handle: handle }),
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'AUTH_H002');
+            return data;
+        },
+
+        async sendEmailChangeCode(token) {
+            var r = await fetch(joinUrl('/api/account/email/send-code'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + token,
+                },
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'AUTH_E007');
+            return data;
+        },
+
+        async confirmEmailChange(token, body) {
+            var r = await fetch(joinUrl('/api/account/email/confirm'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + token,
+                },
+                body: JSON.stringify(body || {}),
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'AUTH_E006');
             return data;
         },
 
@@ -606,23 +700,27 @@
             return data;
         },
 
-        /** 首页舰员交流区：帖子列表（无需登录） */
-        async communityListPosts(limit) {
+        /** 首页舰员交流区：帖子列表（需舰队成员登录） */
+        async communityListPosts(token, limit) {
             var q = limit != null && limit !== '' ? '?limit=' + encodeURIComponent(limit) : '';
             var sep = q ? '&' : '?';
             var r = await fetch(joinUrl('/api/community/posts') + q + sep + '_=' + Date.now(), {
                 cache: 'no-store',
+                headers: { Authorization: 'Bearer ' + token },
             });
             var data = await parseJson(r);
             throwIfNotOk(r, data, 'COMM_P002');
             return data;
         },
 
-        /** 单帖详情（无需登录；禁缓存以便回复后立刻刷新） */
-        async communityGetPost(postId) {
+        /** 单帖详情（需舰队成员登录） */
+        async communityGetPost(token, postId) {
             var r = await fetch(
                 joinUrl('/api/community/posts/' + encodeURIComponent(postId)) + '?_=' + Date.now(),
-                { cache: 'no-store' }
+                {
+                    cache: 'no-store',
+                    headers: { Authorization: 'Bearer ' + token },
+                }
             );
             var data = await parseJson(r);
             if (r.status === 404) throwIfNotOk(r, data, 'COMM_P002');
@@ -687,12 +785,14 @@
             return data;
         },
 
-        async communityChatFetch(afterSeq) {
+        async communityChatFetch(token, afterSeq) {
             var q = '';
             if (afterSeq != null && Number(afterSeq) > 0) {
                 q = '?afterSeq=' + encodeURIComponent(afterSeq);
             }
-            var r = await fetch(joinUrl('/api/community/chat') + q);
+            var r = await fetch(joinUrl('/api/community/chat') + q, {
+                headers: { Authorization: 'Bearer ' + token },
+            });
             var data = await parseJson(r);
             throwIfNotOk(r, data, 'SRV_001');
             return data;

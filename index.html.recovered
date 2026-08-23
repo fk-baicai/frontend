@@ -12,6 +12,7 @@
         document.documentElement.classList.add('hero-video-pending');
     </script>
     <style id="home-critical-css">
+        /* 首屏：深色底 + boot cover，视频就绪前不展示 */
         .hero {
             position: relative;
             height: 90vh;
@@ -20,46 +21,49 @@
             overflow: hidden;
             background: #081625;
         }
-        .hero-media {
-            position: absolute;
-            inset: 0;
+        .video-container {
+            position: relative;
+            height: 100%;
+            width: 100%;
             overflow: hidden;
             background: #081625;
         }
-        .hero-media__layer {
+        #heroBootCover {
             position: absolute;
             inset: 0;
-            will-change: transform;
+            z-index: 100;
+            background: #081625;
+            pointer-events: none;
         }
-        .hero-media__img {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center center;
-            display: block;
+        html:not(.hero-video-live) #heroBootCover {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        html.hero-video-live #heroBootCover {
             opacity: 0;
-            transition: opacity 1.2s ease;
+            visibility: hidden;
+            transition: opacity 0.4s ease;
         }
-        .hero-media__img.is-active {
-            opacity: 1;
+        html:not(.hero-video-live) .hero-video-stage,
+        html:not(.hero-video-live) .video-player {
+            display: none !important;
         }
-        @media (max-width: 600px) {
-            .hero {
-                height: auto;
-                min-height: 0;
-            }
-            .hero-visual {
-                aspect-ratio: 1920 / 890;
-            }
-            .hero-media__img {
-                object-fit: contain;
-            }
+        #heroVideoParking {
+            position: fixed;
+            left: -120vw;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+            z-index: -1;
+        }
+        html.auth-session-cached:not(.hero-video-live) .auth-member-gated {
+            display: none !important;
         }
     </style>
     <link rel="canonical" href="https://ussxc.org/">
-    <link rel="stylesheet" href="styles.css?v=20260822w">
+    <link rel="stylesheet" href="styles.css?v=20260708m">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
@@ -101,6 +105,7 @@
     </script>
     <script src="auth-config.js"></script>
     <script src="home-status-loader.js?v=20260708a"></script>
+    <script src="hero-video-cache.js?v=20260708k"></script>
     <script src="nav-dropdown.js" defer></script>
     <script src="nav-auth-tools.js" defer></script>
     <script>
@@ -130,14 +135,7 @@
         <div class="logo">
             <a aria-label='首页' href='/'><img src="fleet-logo.jpg" alt="舰队 LOGO" decoding="async" fetchpriority="high"></a>
         </div>
-        <div class="nav-links" role="navigation" aria-label="站点导航">
-            <div class="nav-dropdown">
-                <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true" data-mega-target="navMegaMarket" aria-controls="navMegaMarket">
-                    商城
-                    <span class="nav-dropdown-caret" aria-hidden="true"></span>
-                </button>
-            </div>
-            <div class="nav-dropdown">
+        <div class="nav-links" role="navigation" aria-label="站点导航"><div class="nav-dropdown">
                 <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true" data-mega-target="navMegaBlueprint" aria-controls="navMegaBlueprint">
                     蓝图
                     <span class="nav-dropdown-caret" aria-hidden="true"></span>
@@ -216,15 +214,6 @@
             </div>
         </div>
     </div>
-    <div id="navMegaMarket" class="nav-mega-panel" role="region" aria-label="商城" hidden>
-        <div class="nav-mega-inner">
-            <div class="nav-mega-col">
-                <ul class="nav-mega-list">
-                    <li><a href="market.html" class="nav-mega-link" data-nav-market-page><span class="nav-mega-link-title">星巢贸易</span><span class="nav-mega-link-desc">出售 · 求购 · 以物易物</span></a></li>
-                </ul>
-            </div>
-        </div>
-    </div>
             <div id="navMegaBlueprint" class="nav-mega-panel" role="region" aria-label="蓝图" hidden>
         <div class="nav-mega-inner">
             <div class="nav-mega-col">
@@ -288,23 +277,23 @@
         })();
     </script>
 
-    <div class="hero" id="homeHero">
-        <div class="hero-visual">
-        <div class="hero-media" id="heroMedia" aria-hidden="true">
-            <div class="hero-media__layer" id="heroMediaLayer">
-                <img
-                    class="hero-media__img is-active"
-                    src="images/hero/A1.webp"
-                    alt=""
-                    decoding="async"
-                    fetchpriority="high"
-                >
-                <img
-                    class="hero-media__img"
-                    src="images/hero/A2.webp"
-                    alt=""
-                    decoding="async"
-                >
+    <div class="hero">
+        <div class="video-container">
+            <div id="heroVideoStage" class="hero-video-stage" aria-hidden="true"></div>
+            <div id="heroBootCover" class="hero-boot-cover" aria-hidden="false"></div>
+            <div class="progress-container">
+                <div class="progress-controls-row">
+                    <div class="progress-bar-wrap" aria-hidden="true">
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                    </div>
+                    <button type="button" class="next-video" aria-label="切换舰船宣传视频" title="下一段视频">
+                        <svg class="next-video-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                            <path fill="currentColor" d="M6 18l8.5-6L6 6v12zm10-12v12h2V6h-2z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -336,44 +325,23 @@
                 </form>
             </div>
         </div>
-        </div>
-
-        <div class="hero-bottom-bar">
-            <div class="hero-bottom-bar-inner">
-            <div class="ship-info">
-                <div class="ship-info-inner">
-                    <div class="ship-details">
-                        <p class="ship-hero-copy">
-                            <span class="ship-hero-title" aria-label="USS 星巢">
-                                <span class="ship-hero-uss">USS</span>
-                                <span class="ship-hero-title-vrule" aria-hidden="true"></span>
-                                <strong class="ship-hero-name">星巢</strong>
-                            </span>
-                            <span class="ship-hero-tagline">
-                                <span class="ship-hero-tagline-hrule" aria-hidden="true"></span>
-                                <span class="ship-hero-tagline-text">欢迎舰长登舰！</span>
-                            </span>
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="hero-slide-picker" id="heroSlidePicker" aria-label="背景画面">
-                <div class="hero-slide-picker-inner">
-                    <button type="button" class="hero-slide-card is-active" data-slide="0" aria-label="背景 1" aria-current="true">
-                        <span class="hero-slide-card__thumb">
-                            <img src="images/hero/A1.webp" alt="" loading="lazy" decoding="async">
+        
+        <!-- 添加左下角信息 -->
+        <div class="ship-info">
+            <div class="ship-info-inner">
+                <div class="ship-details">
+                    <p class="ship-hero-copy">
+                        <span class="ship-hero-title" aria-label="USS 星巢">
+                            <span class="ship-hero-uss">USS</span>
+                            <span class="ship-hero-title-vrule" aria-hidden="true"></span>
+                            <strong class="ship-hero-name">星巢</strong>
                         </span>
-                        <span class="hero-slide-card__charge" aria-hidden="true"><span class="hero-slide-card__charge-fill"></span></span>
-                    </button>
-                    <button type="button" class="hero-slide-card" data-slide="1" aria-label="背景 2">
-                        <span class="hero-slide-card__thumb">
-                            <img src="images/hero/A2.webp" alt="" loading="lazy" decoding="async">
+                        <span class="ship-hero-tagline">
+                            <span class="ship-hero-tagline-hrule" aria-hidden="true"></span>
+                            <span class="ship-hero-tagline-text">欢迎舰长登舰！</span>
                         </span>
-                        <span class="hero-slide-card__charge" aria-hidden="true"><span class="hero-slide-card__charge-fill"></span></span>
-                    </button>
+                    </p>
                 </div>
-            </div>
             </div>
         </div>
     </div>
@@ -883,11 +851,8 @@
                                 </p>
                                 <div id="loggedInOrgRanking" class="ranking data1 drawer-org-ranking" aria-hidden="true"></div>
                             </div>
-                            <nav class="drawer-profile-nav" aria-label="账户快捷入口">
-                            <a class='drawer-checkin-textlink' href='market-trades.html' id='drawerMarketTradesLink'>商城管理</a>
                             <a class='drawer-checkin-textlink' href='/checkin' id='drawerCheckinLink'>签到</a>
                             <a class='drawer-checkin-textlink' href='/admin' id='drawerAdminLink' style='display: none;'>管理系统</a>
-                            </nav>
                         </div>
                     </div>
                 </div>
@@ -992,7 +957,7 @@
     <script src="home-boot.js"></script>
     <script defer src="material-icons-svg.js"></script>
     <script defer src="pw-toggle-icons.js"></script>
-    <script defer src="hero-image.js?v=20260822h"></script>
+    <script defer src="bilibili-hero.js?v=20260708m"></script>
     <script defer src="hero-sc-search.js?v=20260708k"></script>
     <script defer src="script.js"></script>
     <script defer src="rsi-client.js"></script>

@@ -33,9 +33,12 @@
         let savedPageScrollY = 0;
 
         function isPageScrollLockNeeded() {
-            const loginOpen = document.getElementById('loginDrawer').classList.contains('active');
-            const ticketOpen = document.getElementById('sidebarModal').classList.contains('active');
-            const alertOpen = document.getElementById('alertModal').style.display === 'block';
+            const loginDrawer = document.getElementById('loginDrawer');
+            const loginOpen = loginDrawer && loginDrawer.classList.contains('active');
+            const sidebarModal = document.getElementById('sidebarModal');
+            const ticketOpen = sidebarModal && sidebarModal.classList.contains('active');
+            const alertModal = document.getElementById('alertModal');
+            const alertOpen = alertModal && alertModal.style.display === 'block';
             const settingsBackdrop = document.getElementById('accountSettingsBackdrop');
             const settingsOpen = settingsBackdrop && !settingsBackdrop.hidden;
             const forgotBackdrop = document.getElementById('forgotPasswordBackdrop');
@@ -65,9 +68,13 @@
 
         function syncOverlay() {
             const overlay = document.getElementById('overlay');
-            const ticketOpen = document.getElementById('sidebarModal').classList.contains('active');
-            const loginOpen = document.getElementById('loginDrawer').classList.contains('active');
-            const alertOpen = document.getElementById('alertModal').style.display === 'block';
+            if (!overlay) return;
+            const sidebarModal = document.getElementById('sidebarModal');
+            const loginDrawer = document.getElementById('loginDrawer');
+            const alertModal = document.getElementById('alertModal');
+            const ticketOpen = sidebarModal && sidebarModal.classList.contains('active');
+            const loginOpen = loginDrawer && loginDrawer.classList.contains('active');
+            const alertOpen = alertModal && alertModal.style.display === 'block';
             if (ticketOpen || loginOpen || alertOpen) {
                 overlay.classList.add('active');
                 /* 仅账户侧栏：透明遮罩，避免礼品区等主内容被压暗变色 */
@@ -79,13 +86,17 @@
         }
 
         function closeModal() {
-            document.getElementById('sidebarModal').classList.remove('active');
+            const sidebarModal = document.getElementById('sidebarModal');
+            if (sidebarModal) sidebarModal.classList.remove('active');
             syncOverlay();
         }
 
         function openLoginDrawer() {
-            document.getElementById('sidebarModal').classList.remove('active');
-            document.getElementById('loginDrawer').classList.add('active');
+            const sidebarModal = document.getElementById('sidebarModal');
+            const loginDrawer = document.getElementById('loginDrawer');
+            if (!loginDrawer) return;
+            if (sidebarModal) sidebarModal.classList.remove('active');
+            loginDrawer.classList.add('active');
             clearLoginFormHint();
             clearRegisterFormHint();
             refreshLoginDrawerView();
@@ -103,7 +114,9 @@
         }
 
         function closeLoginDrawer() {
-            document.getElementById('loginDrawer').classList.remove('active');
+            const loginDrawer = document.getElementById('loginDrawer');
+            if (!loginDrawer) return;
+            loginDrawer.classList.remove('active');
             clearLoginFormHint();
             clearRegisterFormHint();
             syncOverlay();
@@ -230,7 +243,8 @@
         }
 
         // 点击遮罩层关闭弹窗
-        document.getElementById('overlay').addEventListener('click', onOverlayClick);
+        const overlayEl = document.getElementById('overlay');
+        if (overlayEl) overlayEl.addEventListener('click', onOverlayClick);
 
         /* 登录/注册：账号在自建 API（仓库 backend/），浏览器只存会话 token。本机先启动 backend；公网基址由 auth-config.js / USS_AUTH_API_BASE 决定。 */
 
@@ -536,8 +550,68 @@
             }
         }
 
-        function clearAccountSettingsHint() {
-            const el = document.getElementById('accountSettingsHint');
+        let accountSettingsPanel = 'hub';
+        let settingsEmailSendCooldownTimer = null;
+        let settingsPasswordSendCooldownTimer = null;
+        let settingsRsiIssueCooldownTimer = null;
+        let settingsRsiBindPollTimer = null;
+        let settingsRsiBindPollInFlight = false;
+        let settingsRsiPendingHandle = '';
+
+        function maskAccountEmail(email) {
+            const raw = String(email || '').trim();
+            if (!raw || raw.indexOf('@') < 0) return '—';
+            const parts = raw.split('@');
+            const local = parts[0];
+            const domain = parts.slice(1).join('@');
+            if (local.length <= 2) return local.charAt(0) + '***@' + domain;
+            return local.charAt(0) + '***' + local.charAt(local.length - 1) + '@' + domain;
+        }
+
+        function accountSettingsViews() {
+            return {
+                hub: document.getElementById('accountSettingsHub'),
+                email: document.getElementById('accountSettingsEmail'),
+                password: document.getElementById('accountSettingsPassword'),
+                rsi: document.getElementById('accountSettingsRsi'),
+            };
+        }
+
+        function showAccountSettingsPanel(panel) {
+            accountSettingsPanel = panel || 'hub';
+            const views = accountSettingsViews();
+            Object.keys(views).forEach(function (key) {
+                const el = views[key];
+                if (el) el.hidden = key !== accountSettingsPanel;
+            });
+            if (accountSettingsPanel === 'email') {
+                resetChangeEmailForm(false);
+                refreshAccountSettingsEmailDisplay();
+            } else if (accountSettingsPanel === 'password') {
+                resetAccountSettingsForm(false);
+                refreshAccountSettingsEmailDisplay();
+            } else if (accountSettingsPanel === 'rsi') {
+                resetRsiBindForm(false);
+                refreshAccountSettingsRsiDisplay();
+            }
+            syncAuthFloatFields();
+        }
+
+        function backToAccountSettingsHub() {
+            showAccountSettingsPanel('hub');
+        }
+
+        function refreshAccountSettingsEmailDisplay() {
+            const sess = loadAuthSession();
+            const masked = maskAccountEmail(sess && sess.email);
+            ['settingsCurrentEmailDisplay', 'settingsPasswordEmailDisplay'].forEach(function (id) {
+                const display = document.getElementById(id);
+                if (display) display.textContent = masked;
+            });
+        }
+
+        function clearAccountSettingsRsiHint() {
+            const el = document.getElementById('accountSettingsRsiHint');
             if (el) {
                 el.textContent = '';
                 el.hidden = true;
@@ -546,8 +620,239 @@
             }
         }
 
-        function setAccountSettingsHint(msg, isInfo) {
-            const el = document.getElementById('accountSettingsHint');
+        function setAccountSettingsRsiHint(msg, isInfo) {
+            const el = document.getElementById('accountSettingsRsiHint');
+            if (!el) return;
+            if (!msg) {
+                clearAccountSettingsRsiHint();
+                return;
+            }
+            el.textContent = msg;
+            el.hidden = false;
+            el.classList.toggle('rsi-form-hint--info', !!isInfo);
+            el.classList.toggle('rsi-form-hint--error', !isInfo);
+        }
+
+        function stopSettingsRsiBindPoll() {
+            if (settingsRsiBindPollTimer) {
+                clearInterval(settingsRsiBindPollTimer);
+                settingsRsiBindPollTimer = null;
+            }
+            settingsRsiBindPollInFlight = false;
+        }
+
+        function startSettingsRsiBindPoll() {
+            stopSettingsRsiBindPoll();
+            settingsRsiBindPollTimer = setInterval(function () {
+                submitRsiBindConfirm({ auto: true });
+            }, 8000);
+            setTimeout(function () {
+                submitRsiBindConfirm({ auto: true });
+            }, 3000);
+        }
+
+        function stopSettingsRsiIssueCooldown() {
+            if (settingsRsiIssueCooldownTimer) {
+                clearInterval(settingsRsiIssueCooldownTimer);
+                settingsRsiIssueCooldownTimer = null;
+            }
+            const btn = document.getElementById('settingsRsiIssueCodeBtn');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '获取验证码';
+            }
+        }
+
+        function startSettingsRsiIssueCooldown(seconds) {
+            stopSettingsRsiIssueCooldown();
+            const btn = document.getElementById('settingsRsiIssueCodeBtn');
+            if (!btn || !seconds || seconds < 1) return;
+            let left = Math.ceil(seconds);
+            btn.disabled = true;
+            btn.textContent = left + 's 后重发';
+            settingsRsiIssueCooldownTimer = setInterval(function () {
+                left -= 1;
+                if (left <= 0) {
+                    stopSettingsRsiIssueCooldown();
+                    return;
+                }
+                btn.textContent = left + 's 后重发';
+            }, 1000);
+        }
+
+        function resetRsiBindForm(clearHints) {
+            settingsRsiPendingHandle = '';
+            stopSettingsRsiBindPoll();
+            const codeBox = document.getElementById('settingsRsiCodeBox');
+            const codeVal = document.getElementById('settingsRsiCodeValue');
+            const handleInput = document.getElementById('settingsRsiHandleInput');
+            if (codeBox) codeBox.hidden = true;
+            if (codeVal) codeVal.textContent = '';
+            if (handleInput) {
+                handleInput.disabled = false;
+                handleInput.value = '';
+            }
+            stopSettingsRsiIssueCooldown();
+            if (clearHints !== false) clearAccountSettingsRsiHint();
+            syncAuthFloatFields();
+        }
+
+        function refreshAccountSettingsRsiDisplay() {
+            const sess = loadAuthSession();
+            const lockedView = document.getElementById('settingsRsiBindLockedView');
+            const formView = document.getElementById('settingsRsiBindFormView');
+            const lockedStatus = document.getElementById('settingsRsiBindLockedStatus');
+            const handleInput = document.getElementById('settingsRsiHandleInput');
+            const locked = !!(sess && sess.rsiBindLocked);
+            const handle =
+                sess && (sess.bindingId || sess.rsiProfileHandle)
+                    ? String(sess.bindingId || sess.rsiProfileHandle)
+                    : '';
+            if (lockedView) lockedView.hidden = !locked;
+            if (formView) formView.hidden = locked;
+            if (locked && lockedStatus) {
+                lockedStatus.textContent = '已验证昵称：' + handle;
+            }
+            if (!locked && handleInput && !settingsRsiPendingHandle) {
+                const prefill = handle ? handle.toLowerCase() : '';
+                if (!handleInput.value && prefill) {
+                    handleInput.value = prefill;
+                    syncAuthFloatField(handleInput);
+                }
+            }
+        }
+
+        function openRsiBiographyExample() {
+            const src = 'assets/rsi-biography-example.jpg';
+            if (
+                window.UssCommunityImageLightbox &&
+                typeof window.UssCommunityImageLightbox.open === 'function'
+            ) {
+                window.UssCommunityImageLightbox.open(src);
+                return;
+            }
+            window.open(src, '_blank', 'noopener,noreferrer');
+        }
+
+        async function submitRsiBindIssueCode() {
+            clearAccountSettingsRsiHint();
+            const sess = loadAuthSession();
+            if (!sess || !sess.token) {
+                setAccountSettingsRsiHint('请先登录');
+                return;
+            }
+            if (sess.rsiBindLocked) {
+                setAccountSettingsRsiHint('RSI 昵称已绑定，不可更换');
+                return;
+            }
+            const handleRaw = String(document.getElementById('settingsRsiHandleInput')?.value || '')
+                .trim()
+                .toLowerCase();
+            if (!handleRaw) {
+                setAccountSettingsRsiHint('请填写 RSI Handle');
+                return;
+            }
+            const btn = document.getElementById('settingsRsiIssueCodeBtn');
+            if (btn && btn.disabled) return;
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '获取中…';
+            }
+            try {
+                const res = await window.UssAuthApi.issueRsiBindCode(sess.token, handleRaw);
+                settingsRsiPendingHandle = (res && res.handle) || handleRaw;
+                const handleInput = document.getElementById('settingsRsiHandleInput');
+                if (handleInput) {
+                    handleInput.value = settingsRsiPendingHandle;
+                    syncAuthFloatField(handleInput);
+                }
+                const codeBox = document.getElementById('settingsRsiCodeBox');
+                const codeVal = document.getElementById('settingsRsiCodeValue');
+                const link = document.getElementById('settingsRsiProfileLink');
+                if (codeVal) codeVal.textContent = (res && res.code) || '';
+                if (link) {
+                    link.href =
+                        (res && res.profileEditUrl) ||
+                        'https://robertsspaceindustries.com/en/account/settings/profile';
+                }
+                if (codeBox) codeBox.hidden = !(res && res.code);
+                setAccountSettingsRsiHint((res && res.message) || '验证码已生成', true);
+                startSettingsRsiIssueCooldown(60);
+                if (res && res.code) startSettingsRsiBindPoll();
+            } catch (e) {
+                if (e.cooldownSec) startSettingsRsiIssueCooldown(e.cooldownSec);
+                else stopSettingsRsiIssueCooldown();
+                setAccountSettingsRsiHint(safeUserFacingMessage(e));
+            }
+        }
+
+        async function submitRsiBindConfirm(opts) {
+            opts = opts || {};
+            const auto = !!opts.auto;
+            if (auto && settingsRsiBindPollInFlight) return;
+            if (!auto) clearAccountSettingsRsiHint();
+            const sess = loadAuthSession();
+            if (!sess || !sess.token) {
+                if (!auto) setAccountSettingsRsiHint('请先登录');
+                return;
+            }
+            if (sess.rsiBindLocked) {
+                stopSettingsRsiBindPoll();
+                if (!auto) setAccountSettingsRsiHint('RSI 昵称已绑定，不可更换');
+                return;
+            }
+            const handleRaw = String(document.getElementById('settingsRsiHandleInput')?.value || '')
+                .trim()
+                .toLowerCase();
+            const handle = settingsRsiPendingHandle || handleRaw;
+            if (!handle) {
+                if (!auto) setAccountSettingsRsiHint('请填写 RSI Handle 并先获取验证码');
+                return;
+            }
+            if (!settingsRsiPendingHandle) {
+                if (!auto) setAccountSettingsRsiHint('请先点击「获取验证码」');
+                return;
+            }
+            if (auto) settingsRsiBindPollInFlight = true;
+            try {
+                const res = await window.UssAuthApi.confirmRsiBind(sess.token, handle);
+                stopSettingsRsiBindPoll();
+                saveAuthSessionFromUser(sess.token, (res && res.user) || {}, undefined, sess);
+                refreshNavLoginState();
+                refreshLoginDrawerView();
+                resetRsiBindForm(false);
+                refreshAccountSettingsRsiDisplay();
+                setAccountSettingsRsiHint((res && res.message) || '绑定成功', true);
+            } catch (e) {
+                const status = e && (e.status || e.httpStatus);
+                const code = e && e.code;
+                if (auto) {
+                    if (status === 429 || status === 403 || code === 'AUTH_H010') {
+                        stopSettingsRsiBindPoll();
+                        setAccountSettingsRsiHint(safeUserFacingMessage(e));
+                    }
+                } else {
+                    setAccountSettingsRsiHint(safeUserFacingMessage(e));
+                }
+            } finally {
+                if (auto) settingsRsiBindPollInFlight = false;
+            }
+        }
+
+        function clearAccountSettingsHint() {
+            ['accountSettingsHint', 'accountSettingsEmailHint'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.textContent = '';
+                    el.hidden = true;
+                    el.classList.remove('rsi-form-hint--info');
+                    el.classList.add('rsi-form-hint--error');
+                }
+            });
+        }
+
+        function setAccountSettingsHint(msg, isInfo, targetId) {
+            const el = document.getElementById(targetId || 'accountSettingsHint');
             if (!el) return;
             if (!msg) {
                 clearAccountSettingsHint();
@@ -559,15 +864,90 @@
             el.classList.toggle('rsi-form-hint--error', !isInfo);
         }
 
-        function resetAccountSettingsForm() {
-            ['settingsCurrentPassword', 'settingsNewPassword', 'settingsConfirmPassword'].forEach(function (id) {
+        function stopSettingsEmailSendCooldown() {
+            if (settingsEmailSendCooldownTimer) {
+                clearInterval(settingsEmailSendCooldownTimer);
+                settingsEmailSendCooldownTimer = null;
+            }
+            const btn = document.getElementById('settingsEmailSendCodeBtn');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '发送验证码';
+            }
+        }
+
+        function startSettingsEmailSendCooldown(seconds) {
+            stopSettingsEmailSendCooldown();
+            const btn = document.getElementById('settingsEmailSendCodeBtn');
+            if (!btn || !seconds || seconds < 1) return;
+            let left = Math.ceil(seconds);
+            btn.disabled = true;
+            btn.textContent = left + 's 后重发';
+            settingsEmailSendCooldownTimer = setInterval(function () {
+                left -= 1;
+                if (left <= 0) {
+                    stopSettingsEmailSendCooldown();
+                    return;
+                }
+                btn.textContent = left + 's 后重发';
+            }, 1000);
+        }
+
+        function stopSettingsPasswordSendCooldown() {
+            if (settingsPasswordSendCooldownTimer) {
+                clearInterval(settingsPasswordSendCooldownTimer);
+                settingsPasswordSendCooldownTimer = null;
+            }
+            const btn = document.getElementById('settingsPasswordSendCodeBtn');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '发送验证码';
+            }
+        }
+
+        function startSettingsPasswordSendCooldown(seconds) {
+            stopSettingsPasswordSendCooldown();
+            const btn = document.getElementById('settingsPasswordSendCodeBtn');
+            if (!btn || !seconds || seconds < 1) return;
+            let left = Math.ceil(seconds);
+            btn.disabled = true;
+            btn.textContent = left + 's 后重发';
+            settingsPasswordSendCooldownTimer = setInterval(function () {
+                left -= 1;
+                if (left <= 0) {
+                    stopSettingsPasswordSendCooldown();
+                    return;
+                }
+                btn.textContent = left + 's 后重发';
+            }, 1000);
+        }
+
+        function resetChangeEmailForm(clearHints) {
+            ['settingsEmailCode', 'settingsNewEmail', 'settingsConfirmEmail'].forEach(function (id) {
+                const input = document.getElementById(id);
+                if (input) input.value = '';
+            });
+            const submit = document.getElementById('settingsEmailSubmitBtn');
+            if (submit) {
+                submit.disabled = false;
+                submit.textContent = '确认修改';
+            }
+            stopSettingsEmailSendCooldown();
+            if (clearHints !== false) clearAccountSettingsHint();
+            syncAuthFloatFields();
+        }
+
+        function resetAccountSettingsForm(clearHints) {
+            const codeInput = document.getElementById('settingsPasswordCode');
+            if (codeInput) codeInput.value = '';
+            ['settingsNewPassword', 'settingsConfirmPassword'].forEach(function (id) {
                 const input = document.getElementById(id);
                 if (input) {
                     input.value = '';
                     input.type = 'password';
                 }
             });
-            ['settingsCurrentPwToggle', 'settingsNewPwToggle', 'settingsConfirmPwToggle'].forEach(function (id) {
+            ['settingsNewPwToggle', 'settingsConfirmPwToggle'].forEach(function (id) {
                 setPasswordToggleIcon(document.getElementById(id), false);
             });
             syncAuthFloatFields();
@@ -576,7 +956,16 @@
                 submit.disabled = false;
                 submit.textContent = '确认修改';
             }
-            clearAccountSettingsHint();
+            stopSettingsPasswordSendCooldown();
+            if (clearHints !== false) clearAccountSettingsHint();
+        }
+
+        function resetAccountSettingsAll() {
+            accountSettingsPanel = 'hub';
+            resetChangeEmailForm();
+            resetAccountSettingsForm();
+            resetRsiBindForm();
+            showAccountSettingsPanel('hub');
         }
 
         function openAccountSettings() {
@@ -584,7 +973,7 @@
                 openLoginDrawer();
                 return;
             }
-            resetAccountSettingsForm();
+            resetAccountSettingsAll();
             const backdrop = document.getElementById('accountSettingsBackdrop');
             if (!backdrop) return;
             backdrop.hidden = false;
@@ -597,8 +986,123 @@
         function closeAccountSettings() {
             const backdrop = document.getElementById('accountSettingsBackdrop');
             if (backdrop) backdrop.hidden = true;
-            resetAccountSettingsForm();
+            resetAccountSettingsAll();
             updatePageScrollLock();
+        }
+
+        async function submitChangeEmailSendCode() {
+            setAccountSettingsHint('', false, 'accountSettingsEmailHint');
+            const sess = loadAuthSession();
+            if (!sess || !sess.token) {
+                setAccountSettingsHint('请先登录', false, 'accountSettingsEmailHint');
+                return;
+            }
+            const btn = document.getElementById('settingsEmailSendCodeBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '发送中…';
+            }
+            try {
+                const res = await window.UssAuthApi.sendEmailChangeCode(sess.token);
+                setAccountSettingsHint(
+                    (res && res.message) || '验证码已发送到您的注册邮箱，请查收（含垃圾箱）。',
+                    true,
+                    'accountSettingsEmailHint'
+                );
+                startSettingsEmailSendCooldown(60);
+            } catch (e) {
+                if (e.cooldownSec) startSettingsEmailSendCooldown(e.cooldownSec);
+                else stopSettingsEmailSendCooldown();
+                setAccountSettingsHint(safeUserFacingMessage(e), false, 'accountSettingsEmailHint');
+            }
+        }
+
+        async function submitChangeEmail() {
+            setAccountSettingsHint('', false, 'accountSettingsEmailHint');
+            const sess = loadAuthSession();
+            if (!sess || !sess.token) {
+                setAccountSettingsHint('请先登录', false, 'accountSettingsEmailHint');
+                return;
+            }
+            const code = String(document.getElementById('settingsEmailCode')?.value || '').trim();
+            const newEmail = String(document.getElementById('settingsNewEmail')?.value || '')
+                .trim()
+                .toLowerCase();
+            const confirmEmail = String(document.getElementById('settingsConfirmEmail')?.value || '')
+                .trim()
+                .toLowerCase();
+            if (!code || !newEmail || !confirmEmail) {
+                setAccountSettingsHint('请填写完整', false, 'accountSettingsEmailHint');
+                return;
+            }
+            if (!/^\d{6}$/.test(code)) {
+                setAccountSettingsHint('请输入 6 位数字验证码', false, 'accountSettingsEmailHint');
+                return;
+            }
+            if (newEmail !== confirmEmail) {
+                setAccountSettingsHint('两次输入的新邮箱不一致', false, 'accountSettingsEmailHint');
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+                setAccountSettingsHint('请填写有效的新邮箱地址', false, 'accountSettingsEmailHint');
+                return;
+            }
+            const btn = document.getElementById('settingsEmailSubmitBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '提交中…';
+            }
+            try {
+                const res = await window.UssAuthApi.confirmEmailChange(sess.token, {
+                    code: code,
+                    newEmail: newEmail,
+                    confirmEmail: confirmEmail,
+                });
+                const next = saveAuthSessionFromUser(sess.token, (res && res.user) || { email: newEmail }, undefined, sess);
+                if (window.UssAdminStepUp && window.UssAdminStepUp.clearSession) {
+                    window.UssAdminStepUp.clearSession();
+                }
+                refreshAccountSettingsEmailDisplay();
+                refreshNavLoginState();
+                setAccountSettingsHint((res && res.message) || '邮箱已更新', true, 'accountSettingsEmailHint');
+                setTimeout(function () {
+                    backToAccountSettingsHub();
+                }, 900);
+            } catch (e) {
+                setAccountSettingsHint(safeUserFacingMessage(e), false, 'accountSettingsEmailHint');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '确认修改';
+                }
+            }
+        }
+
+        async function submitChangePasswordSendCode() {
+            setAccountSettingsHint('');
+            const sess = loadAuthSession();
+            if (!sess || !sess.token) {
+                setAccountSettingsHint('请先登录');
+                return;
+            }
+            const btn = document.getElementById('settingsPasswordSendCodeBtn');
+            if (btn && btn.disabled) return;
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '发送中…';
+            }
+            try {
+                const res = await window.UssAuthApi.sendPasswordChangeCode(sess.token);
+                setAccountSettingsHint(
+                    (res && res.message) || '验证码已发送到您的注册邮箱，请查收（含垃圾箱）。',
+                    true
+                );
+                startSettingsPasswordSendCooldown(60);
+            } catch (e) {
+                if (e.cooldownSec) startSettingsPasswordSendCooldown(e.cooldownSec);
+                else stopSettingsPasswordSendCooldown();
+                setAccountSettingsHint(safeUserFacingMessage(e));
+            }
         }
 
         async function submitChangePassword() {
@@ -608,11 +1112,15 @@
                 setAccountSettingsHint('请先登录');
                 return;
             }
-            const currentPassword = String(document.getElementById('settingsCurrentPassword')?.value || '');
+            const code = String(document.getElementById('settingsPasswordCode')?.value || '').trim();
             const newPassword = String(document.getElementById('settingsNewPassword')?.value || '');
             const confirmPassword = String(document.getElementById('settingsConfirmPassword')?.value || '');
-            if (!currentPassword || !newPassword || !confirmPassword) {
+            if (!code || !newPassword || !confirmPassword) {
                 setAccountSettingsHint('请填写完整');
+                return;
+            }
+            if (!/^\d{6}$/.test(code)) {
+                setAccountSettingsHint('请输入 6 位数字验证码');
                 return;
             }
             if (newPassword !== confirmPassword) {
@@ -630,10 +1138,13 @@
             }
             try {
                 await window.UssAuthApi.changePassword(sess.token, {
-                    currentPassword: currentPassword,
+                    code: code,
                     newPassword: newPassword,
                     confirmPassword: confirmPassword,
                 });
+                if (window.UssAdminStepUp && window.UssAdminStepUp.clearSession) {
+                    window.UssAdminStepUp.clearSession();
+                }
                 setAccountSettingsHint('密码已更新', true);
                 setTimeout(function () {
                     closeAccountSettings();
@@ -687,10 +1198,14 @@
                 rsiOrgRankSlots: u.rsiOrgRankSlots !== undefined ? u.rsiOrgRankSlots : p.rsiOrgRankSlots,
                 rsiProfileSyncedAt:
                     u.rsiProfileSyncedAt !== undefined ? u.rsiProfileSyncedAt : p.rsiProfileSyncedAt,
+                rsiBindLocked: u.rsiBindLocked !== undefined ? !!u.rsiBindLocked : !!p.rsiBindLocked,
                 rsiAssetsPending:
                     u.rsiAssetsPending !== undefined ? !!u.rsiAssetsPending : p.rsiAssetsPending,
                 isAdmin: u.isAdmin !== undefined ? !!u.isAdmin : !!p.isAdmin,
                 isSuperAdmin: u.isSuperAdmin !== undefined ? !!u.isSuperAdmin : !!p.isSuperAdmin,
+                memberKind: u.memberKind !== undefined && u.memberKind !== null ? u.memberKind : p.memberKind,
+                hasFleetPrivilege:
+                    u.hasFleetPrivilege !== undefined ? !!u.hasFleetPrivilege : p.hasFleetPrivilege,
             };
         }
 
@@ -699,7 +1214,10 @@
             if (!snapshot || !token) return null;
             var cached =
                 window.UssAuthSessionSync && window.UssAuthSessionSync.loadProfileCache
-                    ? window.UssAuthSessionSync.loadProfileCache(snapshot.bindingId)
+                    ? window.UssAuthSessionSync.loadProfileCache(
+                          snapshot.bindingId,
+                          snapshot.rsiProfileHandle
+                      )
                     : null;
             var base = loadAuthSession() || {};
             var merged = Object.assign({}, cached || {}, base, snapshot, { token: token });
@@ -827,7 +1345,10 @@
             if (!isLoggedIn() || !window.UssAuthSessionSync) return false;
             const sess = loadAuthSession();
             if (!sess || !sess.token || !sessionProfileLooksIncomplete(sess)) return false;
-            const cached = window.UssAuthSessionSync.loadProfileCache(sess.bindingId);
+            const cached = window.UssAuthSessionSync.loadProfileCache(
+                sess.bindingId,
+                sess.rsiProfileHandle
+            );
             if (!cached) return false;
             const remember = !!(
                 localStorage.getItem(AUTH_SESSION_KEY) && !sessionStorage.getItem(AUTH_SESSION_KEY)
@@ -875,11 +1396,36 @@
             }
         }
 
+        function sessionHasFleetUiAccess(sess) {
+            if (!sess) return false;
+            if (sess.isSuperAdmin || sess.isAdmin) return true;
+            if (sess.hasFleetPrivilege === true || sess.hasFleetPrivilege === 1) return true;
+            if (sess.hasFleetPrivilege === false || sess.hasFleetPrivilege === 0) return false;
+            if (String(sess.memberKind || '').toLowerCase() === 'civilian') return false;
+            return true;
+        }
+
+        function canAccessFleetMemberAreas() {
+            if (!isLoggedIn()) return false;
+            const sess = loadAuthSession();
+            if (
+                window.UssAuthSessionSync &&
+                typeof window.UssAuthSessionSync.sessionHasFleetUiAccess === 'function'
+            ) {
+                return window.UssAuthSessionSync.sessionHasFleetUiAccess(sess);
+            }
+            return sessionHasFleetUiAccess(sess);
+        }
+
         function refreshNavLoginState() {
             try {
                 const root = document.documentElement;
                 if (isLoggedIn()) root.classList.add('auth-session-cached');
                 else root.classList.remove('auth-session-cached');
+                const sess = getAuthSession();
+                const isFleet = isLoggedIn() && sessionHasFleetUiAccess(sess);
+                if (isFleet) root.classList.add('auth-fleet-member');
+                else root.classList.remove('auth-fleet-member');
             } catch (e) {
                 /* ignore */
             }
@@ -3050,11 +3596,13 @@
         async function loadCommunityPosts() {
             const feed = document.getElementById('communityFeed');
             if (!feed || !window.UssAuthApi) return;
-            if (!isLoggedIn()) {
+            if (!canAccessFleetMemberAreas()) {
                 feed.innerHTML = '';
                 syncCommunityFeedLayout(false);
                 return;
             }
+            const sess = loadAuthSession();
+            if (!sess || !sess.token) return;
             const loading = document.getElementById('communityFeedLoading');
             const cached = readCommunityUiCache('posts');
             const hadCache = !!(cached && Array.isArray(cached.posts) && cached.posts.length);
@@ -3064,7 +3612,7 @@
                 loading.hidden = false;
             }
             try {
-                const data = await window.UssAuthApi.communityListPosts(50);
+                const data = await window.UssAuthApi.communityListPosts(sess.token, 50);
                 const posts = data.posts || [];
                 renderCommunityPosts(posts);
                 writeCommunityUiCache('posts', { posts: posts });
@@ -3212,10 +3760,12 @@
             const log = document.getElementById('communityChatLog');
             if (!log || !window.UssAuthApi) return;
             clearCommunityChatHint();
-            if (!isLoggedIn()) {
+            if (!canAccessFleetMemberAreas()) {
                 communityChatMaxSeq = 0;
                 return;
             }
+            const sessChat = loadAuthSession();
+            if (!sessChat || !sessChat.token) return;
             delete log.dataset.guestPreview;
             if (!opts.force) {
                 const cached = readCommunityUiCache('chat:fleet');
@@ -3237,7 +3787,7 @@
                     opts.force || !hasRenderedFleet || !(communityChatMaxSeq || 0)
                         ? 0
                         : communityChatMaxSeq;
-                const data = await window.UssAuthApi.communityChatFetch(afterSeq);
+                const data = await window.UssAuthApi.communityChatFetch(sessChat.token, afterSeq);
                 const list = data.messages || [];
                 if (afterSeq > 0) {
                     if (list.length) {
@@ -3588,7 +4138,7 @@
 
         async function pollCommunityChat() {
             if (!window.UssAuthApi) return { ok: true, skipped: true };
-            if (!isLoggedIn()) return { ok: true, skipped: true };
+            if (!canAccessFleetMemberAreas()) return { ok: true, skipped: true };
             try {
                 const sess = loadAuthSession();
                 if (!sess || !sess.token) return { ok: true, skipped: true };
@@ -3599,7 +4149,7 @@
                     curFleet = communityChatMaxSeq;
                 }
 
-                const fleetData = await window.UssAuthApi.communityChatFetch(curFleet);
+                const fleetData = await window.UssAuthApi.communityChatFetch(sess.token, curFleet);
                 const fleetList = fleetData.messages || [];
                 if (fleetList.length) {
                     fleetList.forEach(function (m) {
@@ -3905,7 +4455,7 @@
         function refreshCommunitySessionUi(opts) {
             opts = opts || {};
             const deferNetwork = !!opts.deferNetwork || !window.__ussPageReady;
-            const logged = isLoggedIn();
+            const logged = canAccessFleetMemberAreas();
             const hint = document.getElementById('communityAuthHint');
             const ta = document.getElementById('communityText');
             const fileInput = document.getElementById('communityFileInput');
@@ -4259,6 +4809,21 @@
             refreshLoginDrawerView();
             markPageReadyOnce();
             if (!isLoggedIn()) return;
+            if (!canAccessFleetMemberAreas()) return;
+            if (
+                window.UssAuthSessionSync &&
+                typeof window.UssAuthSessionSync.refreshAuthSessionFromServer === 'function'
+            ) {
+                try {
+                    await window.UssAuthSessionSync.refreshAuthSessionFromServer({
+                        onUpdated: function () {
+                            refreshNavLoginState();
+                            refreshLoginDrawerView();
+                            refreshCommunitySessionUi();
+                        },
+                    });
+                } catch (ignoreSync) {}
+            }
             loadCommunityChatFull({ scrollToBottom: true }).catch(function () {});
             loadCommunityRoster().catch(function () {});
             startCommunityChatPoll();
@@ -4292,10 +4857,56 @@
             '<path d="M163.25 925.49c-19.55 0-35.3-5.9-47.07-17.67-8.53-8.53-18.52-24.21-17.67-50.47 0.5-15.45 4.55-32.95 12.36-53.5 13.73-36.13 38.74-80.38 74.32-131.53 9.84-14.14 29.27-17.62 43.4-7.79 14.14 9.83 17.62 29.27 7.79 43.4-73.56 105.76-76.13 145.9-75.38 155.08 8.71 0.71 45.41-1.6 140.27-65.28 81.02-54.39 176.51-135.21 268.88-227.58s173.2-187.86 227.59-268.88c63.68-94.86 65.99-131.55 65.28-140.27-9.23-0.75-49.94 1.86-157.45 77.06-14.11 9.87-33.55 6.43-43.42-7.68-9.87-14.11-6.43-33.55 7.68-43.42 51.74-36.19 96.52-61.66 133.09-75.71 20.76-7.98 38.43-12.13 54.02-12.71 26.52-0.99 42.31 9.06 50.9 17.65 19.81 19.81 22.98 50.87 9.43 92.33-10.11 30.93-29.65 68.89-58.07 112.83-56.61 87.53-143.6 191.55-244.94 292.9-101.35 101.35-205.37 188.33-292.9 244.94-43.95 28.42-81.91 47.96-112.83 58.07-16.84 5.49-31.94 8.23-45.28 8.23z"/>' +
             '</svg>';
 
+        var RSI_NO_MAIN_ORG_MSG = '// NO MAIN ORG FOUND IN PUBLIC RECORDS';
+
+        function hasOrgFleetIdentity(sess) {
+            const orgName = sess && sess.rsiOrgName != null ? String(sess.rsiOrgName).trim() : '';
+            const orgSid = sess && sess.rsiOrgSid != null ? String(sess.rsiOrgSid).trim() : '';
+            return !!(orgName || orgSid);
+        }
+
+        /** 已有公民基础资料、但无组织 SID/名称时展示 RSI 无舰队提示 */
+        function shouldShowNoMainOrgMessage(sess) {
+            if (!sess || hasOrgFleetIdentity(sess)) return false;
+            const hasIdentity =
+                (sess.bindingId && String(sess.bindingId).trim()) ||
+                (sess.rsiProfileHandle && String(sess.rsiProfileHandle).trim());
+            if (!hasIdentity) return false;
+            const enlisted = sess.rsiEnlisted != null ? String(sess.rsiEnlisted).trim() : '';
+            const location = sess.rsiLocation != null ? String(sess.rsiLocation).trim() : '';
+            const rank = sess.rsiRankLabel != null ? String(sess.rsiRankLabel).trim() : '';
+            const handle = sess.rsiProfileHandle != null ? String(sess.rsiProfileHandle).trim() : '';
+            return !!(enlisted || location || rank || handle);
+        }
+
+        function hideOrgFleetDetails(wrap, logo, nameA, sidRow, sidEl, roleRow, roleEl, rankWrap) {
+            wrap.hidden = true;
+            wrap.style.display = 'none';
+            logo.removeAttribute('src');
+            logo.hidden = true;
+            nameA.textContent = '';
+            nameA.hidden = true;
+            nameA.setAttribute('href', '#');
+            if (sidRow) sidRow.hidden = true;
+            sidEl.textContent = '';
+            roleEl.textContent = '';
+            roleRow.hidden = true;
+            rankWrap.innerHTML = '';
+        }
+
+        function setOrgFleetSectionMode(section, mode) {
+            if (!section) return;
+            section.classList.toggle('drawer-org-section--no-main-org', mode === 'no-main-org');
+            section.classList.toggle('drawer-org-section--has-fleet', mode === 'fleet');
+        }
+
         function fillOrgFleetBlock(sess) {
+            const section = document.getElementById('loggedInOrgSection');
             const wrap = document.getElementById('loggedInOrgFleet');
+            const noFleet = document.getElementById('loggedInOrgNoFleet');
             const logo = document.getElementById('loggedInOrgLogo');
             const nameA = document.getElementById('loggedInOrgName');
+            const sidRow = document.getElementById('loggedInOrgSidRow');
             const sidEl = document.getElementById('loggedInOrgSid');
             const roleRow = document.getElementById('loggedInOrgRoleRow');
             const roleEl = document.getElementById('loggedInOrgRole');
@@ -4307,20 +4918,23 @@
             const orgRole = sess && sess.rsiOrgRoleLabel != null ? String(sess.rsiOrgRoleLabel).trim() : '';
             var slots = sess && sess.rsiOrgRankSlots != null ? Number(sess.rsiOrgRankSlots) : 0;
             if (!Number.isFinite(slots)) slots = 0;
-            const showFleet = !!(orgName || orgSid || orgLogo || orgRole || slots > 0);
+            const showFleet = hasOrgFleetIdentity(sess);
+            const showNoMainOrg = shouldShowNoMainOrgMessage(sess);
             if (!showFleet) {
-                wrap.hidden = true;
-                logo.removeAttribute('src');
-                logo.hidden = true;
-                nameA.textContent = '';
-                nameA.setAttribute('href', '#');
-                sidEl.textContent = '';
-                roleEl.textContent = '';
-                roleRow.hidden = true;
-                rankWrap.innerHTML = '';
+                hideOrgFleetDetails(wrap, logo, nameA, sidRow, sidEl, roleRow, roleEl, rankWrap);
+                if (noFleet) {
+                    noFleet.textContent = RSI_NO_MAIN_ORG_MSG;
+                    noFleet.hidden = !showNoMainOrg;
+                }
+                setOrgFleetSectionMode(section, showNoMainOrg ? 'no-main-org' : 'idle');
                 return;
             }
+            if (noFleet) noFleet.hidden = true;
+            setOrgFleetSectionMode(section, 'fleet');
             wrap.hidden = false;
+            wrap.style.display = '';
+            nameA.hidden = false;
+            if (sidRow) sidRow.hidden = false;
             if (orgLogo) {
                 logo.src = window.UssAuthApi.resolveAssetUrl(orgLogo);
                 logo.hidden = false;
@@ -4361,8 +4975,11 @@
                 authed.style.display = '';
                 if (drawerContent) drawerContent.classList.add('login-drawer-content--authed');
                 const sess = loadAuthSession();
-                /* 与注册表单 #regBindingId 同源字段（bindingId），服务端 normalize 后的账号 Handle */
-                document.getElementById('loggedInBindingId').textContent = sess && sess.bindingId ? sess.bindingId : '—';
+                const displayHandle =
+                    (sess && sess.bindingId && String(sess.bindingId).trim()) ||
+                    (sess && sess.rsiProfileHandle && String(sess.rsiProfileHandle).trim()) ||
+                    '—';
+                document.getElementById('loggedInBindingId').textContent = displayHandle;
                 const rsiHandleWrap = document.getElementById('loggedInRsiHandleWrap');
                 const rsiHandleEl = document.getElementById('loggedInRsiHandle');
                 const rankRow = document.getElementById('loggedInRsiRankRow');
@@ -4716,6 +5333,9 @@
                     newPassword: newPassword,
                     confirmPassword: confirmPassword,
                 });
+                if (window.UssAdminStepUp && window.UssAdminStepUp.clearSession) {
+                    window.UssAdminStepUp.clearSession();
+                }
                 setForgotPasswordHint(res.message || '密码已重置', true);
                 const loginEmail = document.getElementById('loginEmail');
                 if (loginEmail) loginEmail.value = email;
