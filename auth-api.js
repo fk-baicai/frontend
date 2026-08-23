@@ -113,8 +113,21 @@
         try {
             stepUp =
                 (window.UssAdminStepUp && window.UssAdminStepUp.getToken && window.UssAdminStepUp.getToken()) ||
-                sessionStorage.getItem('ussAdminStepUpToken') ||
                 '';
+            if (!stepUp) {
+                try {
+                    stepUp = localStorage.getItem('ussAdminStepUpToken') || '';
+                } catch (e1) {
+                    stepUp = '';
+                }
+            }
+            if (!stepUp) {
+                try {
+                    stepUp = sessionStorage.getItem('ussAdminStepUpToken') || '';
+                } catch (e2) {
+                    stepUp = '';
+                }
+            }
         } catch (ignore) {}
         if (stepUp) headers['X-Admin-Step-Up'] = stepUp;
         var r = await fetch(joinUrl(path), Object.assign({}, init, { headers: headers }));

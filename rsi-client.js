@@ -81,6 +81,37 @@
         return { rsiEnlisted: rsiEnlisted, rsiLocation: rsiLocation, rsiFluency: rsiFluency };
     }
 
+    function clampOrgRankCount(n) {
+        var x = Number(n);
+        if (!isFinite(x) || x < 0) return 0;
+        return Math.min(20, Math.floor(x));
+    }
+
+    function parseOrgRanking(ranking) {
+        if (!ranking) return { rsiOrgRankSlots: 0, rsiOrgRankTotal: 0 };
+        var slots = [];
+        var kids = ranking.children;
+        for (var i = 0; i < kids.length; i++) {
+            if (kids[i].tagName === 'SPAN') slots.push(kids[i]);
+        }
+        var total = clampOrgRankCount(slots.length);
+        var filled = 0;
+        for (var j = 0; j < slots.length; j++) {
+            var cls = ' ' + String(slots[j].className || '') + ' ';
+            if (cls.indexOf(' active ') !== -1) filled += 1;
+        }
+        if (!filled) {
+            for (var k = 0; k < slots.length; k++) {
+                var c2 = ' ' + String(slots[k].className || '') + ' ';
+                if (c2.indexOf(' filled ') !== -1 || c2.indexOf(' on ') !== -1) filled += 1;
+            }
+        }
+        return {
+            rsiOrgRankSlots: clampOrgRankCount(filled),
+            rsiOrgRankTotal: total,
+        };
+    }
+
     function extractOrgFleetBlock(doc) {
         var empty = {
             rsiOrgName: null,
@@ -89,6 +120,7 @@
             rsiOrgLogoUrl: null,
             rsiOrgRoleLabel: null,
             rsiOrgRankSlots: 0,
+            rsiOrgRankTotal: 0,
         };
         var orgA = doc.querySelector('a.value[href="' + REQUIRED_ORG_HREF + '"]');
         if (!orgA) return empty;
@@ -125,6 +157,7 @@
         }
 
         var rsiOrgRankSlots = 0;
+        var rsiOrgRankTotal = 0;
         var rsiOrgRoleLabel = '';
         var cur = orgA;
         var container = null;
@@ -147,7 +180,11 @@
         }
 
         var ranking = container.querySelector('div.ranking');
-        if (ranking) rsiOrgRankSlots = ranking.querySelectorAll('span.active').length;
+        if (ranking) {
+            var parsed = parseOrgRanking(ranking);
+            rsiOrgRankSlots = parsed.rsiOrgRankSlots;
+            rsiOrgRankTotal = parsed.rsiOrgRankTotal;
+        }
 
         var entries = container.querySelectorAll('p.entry, .entry');
         for (var ei = 0; ei < entries.length; ei++) {
@@ -191,6 +228,7 @@
             rsiOrgLogoUrl: rsiOrgLogoUrl,
             rsiOrgRoleLabel: rsiOrgRoleLabel || null,
             rsiOrgRankSlots: rsiOrgRankSlots,
+            rsiOrgRankTotal: rsiOrgRankTotal,
         };
     }
 
@@ -228,6 +266,7 @@
             rsiOrgLogoUrl: org.rsiOrgLogoUrl,
             rsiOrgRoleLabel: org.rsiOrgRoleLabel,
             rsiOrgRankSlots: org.rsiOrgRankSlots,
+            rsiOrgRankTotal: org.rsiOrgRankTotal,
         };
     }
 
@@ -450,6 +489,7 @@
             rsiOrgLogoUrl: extras.rsiOrgLogoUrl,
             rsiOrgRoleLabel: extras.rsiOrgRoleLabel,
             rsiOrgRankSlots: extras.rsiOrgRankSlots,
+            rsiOrgRankTotal: extras.rsiOrgRankTotal,
         };
     }
 

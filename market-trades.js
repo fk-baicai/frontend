@@ -56,6 +56,14 @@
         return { Authorization: 'Bearer ' + s.token };
     }
 
+    function formatTradeError(data, fallback) {
+        if (data && data.code && window.UssApiError && typeof window.UssApiError.formatUserError === 'function') {
+            var hinted = window.UssApiError.formatUserError(data.code);
+            if (hinted) return hinted;
+        }
+        return (data && data.message) || fallback || '操作失败';
+    }
+
     function escapeHtml(s) {
         if (s == null) return '';
         return String(s)
@@ -274,10 +282,6 @@
         return '<button type="button" class="market-btn market-trades-btn-cancel-purchase" data-purchase-id="' + escapeHtml(purchaseId) + '">' + escapeHtml(label) + '</button>';
     }
 
-    function cancelPurchaseBtnHtml(purchaseId, label) {
-        return '<button type="button" class="market-btn market-trades-btn-cancel-purchase" data-purchase-id="' + escapeHtml(purchaseId) + '">' + escapeHtml(label) + '</button>';
-    }
-
     function buildPurchaseActions(p, role) {
         var actions = '';
         if (p.status === 'pending') {
@@ -315,6 +319,8 @@
             if (p.reviewRating) {
                 actions += '<span class="market-trades-wait-hint">买家评价：' + escapeHtml(p.reviewRating) + ' 星</span>';
             }
+        } else if (p.status === 'cancelled') {
+            actions = '<button type="button" class="market-btn market-trades-btn-delete-purchase" data-purchase-id="' + escapeHtml(p.id) + '">删除</button>';
         }
         return actions;
     }
@@ -481,7 +487,7 @@
             body: JSON.stringify(body),
         });
         var data = await r.json().catch(function () { return {}; });
-        if (!r.ok) throw new Error((data && data.message) || '操作失败');
+        if (!r.ok) throw new Error(formatTradeError(data, '操作失败'));
     }
 
     async function deleteOrder(orderId) {
@@ -490,7 +496,16 @@
             headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
         });
         var data = await r.json().catch(function () { return {}; });
-        if (!r.ok) throw new Error((data && data.message) || '删除失败');
+        if (!r.ok) throw new Error(formatTradeError(data, '删除失败'));
+    }
+
+    async function deletePurchase(purchaseId) {
+        var r = await fetch(joinUrl('/api/market/purchases/' + encodeURIComponent(purchaseId)), {
+            method: 'DELETE',
+            headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
+        });
+        var data = await r.json().catch(function () { return {}; });
+        if (!r.ok) throw new Error(formatTradeError(data, '删除失败'));
     }
 
     async function patchPurchase(purchaseId, body) {
@@ -500,7 +515,7 @@
             body: JSON.stringify(body),
         });
         var data = await r.json().catch(function () { return {}; });
-        if (!r.ok) throw new Error((data && data.message) || '操作失败');
+        if (!r.ok) throw new Error(formatTradeError(data, '操作失败'));
     }
 
     function openCompleteModal(purchaseId) {
@@ -564,6 +579,7 @@
             status: 'completed',
             reviewRating: state.completeRating,
             reviewText: el.completeReview ? el.completeReview.value.trim() : '',
+            rating: state.completeRating,
         };
         try {
             await patchPurchase(state.completingPurchaseId, payload);
@@ -701,6 +717,22 @@
                     }).then(function (ok) {
                         if (!ok) return;
                         deleteOrder(oid2).then(loadTabData).catch(function (e) {
+                            window.alert((e && e.message) || '删除失败');
+                        });
+                    });
+                    return;
+                }
+                var delPurchaseBtn = ev.target.closest('.market-trades-btn-delete-purchase');
+                if (delPurchaseBtn) {
+                    var pidDel = delPurchaseBtn.getAttribute('data-purchase-id');
+                    if (!pidDel) return;
+                    askConfirm({
+                        title: '删除订单',
+                        message: '确认从列表中删除该已取消订单？对方仍可在自己的记录里看到。',
+                        confirmText: '确认删除',
+                    }).then(function (ok) {
+                        if (!ok) return;
+                        deletePurchase(pidDel).then(loadTabData).catch(function (e) {
                             window.alert((e && e.message) || '删除失败');
                         });
                     });

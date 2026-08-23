@@ -1,5 +1,5 @@
 /**
- * 管理员二次验证（可选 7/30/180/360 天 step-up 会话，sessionStorage）
+ * 管理员二次验证（可选 7/30/180/360 天 step-up 会话，localStorage 持久化）
  */
 (function () {
     var TOKEN_KEY = 'ussAdminStepUpToken';
@@ -13,38 +13,77 @@
         return String(base).replace(/\/$/, '') + path;
     }
 
-    function getToken() {
+    function readStore(key) {
         try {
-            return sessionStorage.getItem(TOKEN_KEY) || '';
+            var v = localStorage.getItem(key);
+            if (v) return v;
+            v = sessionStorage.getItem(key);
+            if (v) {
+                localStorage.setItem(key, v);
+                sessionStorage.removeItem(key);
+                return v;
+            }
         } catch (e) {
-            return '';
+            try {
+                return sessionStorage.getItem(key) || '';
+            } catch (e2) {
+                return '';
+            }
         }
+        return '';
+    }
+
+    function writeStore(key, value) {
+        try {
+            localStorage.setItem(key, String(value || ''));
+            sessionStorage.removeItem(key);
+        } catch (e) {
+            try {
+                sessionStorage.setItem(key, String(value || ''));
+            } catch (e2) {
+                /* ignore */
+            }
+        }
+    }
+
+    function removeStore(key) {
+        try {
+            localStorage.removeItem(key);
+        } catch (e) {
+            /* ignore */
+        }
+        try {
+            sessionStorage.removeItem(key);
+        } catch (e) {
+            /* ignore */
+        }
+    }
+
+    function getToken() {
+        var exp = getExpiresAt();
+        if (exp) {
+            var t = Date.parse(exp);
+            if (Number.isFinite(t) && t <= Date.now()) {
+                clearSession();
+                return '';
+            }
+        }
+        return readStore(TOKEN_KEY) || '';
     }
 
     function getExpiresAt() {
-        try {
-            return sessionStorage.getItem(EXPIRES_KEY) || '';
-        } catch (e) {
-            return '';
-        }
+        return readStore(EXPIRES_KEY) || '';
     }
 
     function setSession(stepUpToken, expiresAt) {
-        try {
-            sessionStorage.setItem(TOKEN_KEY, String(stepUpToken || ''));
-            if (expiresAt) sessionStorage.setItem(EXPIRES_KEY, String(expiresAt));
-        } catch (e) {
-            /* ignore */
-        }
+        writeStore(TOKEN_KEY, stepUpToken);
+        if (expiresAt) writeStore(EXPIRES_KEY, expiresAt);
+        else removeStore(EXPIRES_KEY);
     }
 
     function clearSession() {
-        try {
-            sessionStorage.removeItem(TOKEN_KEY);
-            sessionStorage.removeItem(EXPIRES_KEY);
-        } catch (e) {
-            /* ignore */
-        }
+        removeStore(TOKEN_KEY);
+        removeStore(EXPIRES_KEY);
     }
 
     function isStepUpError(err) {
@@ -83,24 +122,30 @@
             );
         }).join('');
         return (
-            '<div class="admin-step-up-panel">' +
-            '<h2>邮箱二次验证</h2>' +
-            '<p class="hint">进入管理系统前，请先向注册邮箱发送验证码并完成验证。</p>' +
-            '<div class="admin-step-up-row">' +
-            '<button type="button" id="btnAdminStepUpSend">发送验证码</button>' +
-            '<span id="adminStepUpSendStatus" class="hint"></span>' +
-            '</div>' +
-            '<div class="admin-step-up-row">' +
+            '<div class="admin-step-up-panel" role="dialog" aria-modal="true" aria-labelledby="adminStepUpTitle">' +
+            '<header class="admin-step-up-head">' +
+            '<h2 class="admin-step-up-title" id="adminStepUpTitle">邮箱二次验证</h2>' +
+            '</header>' +
+            '<div class="admin-step-up-body">' +
+            '<p class="admin-step-up-lead">进入管理系统前，请先向注册邮箱发送验证码并完成验证。</p>' +
+            '<div class="admin-step-up-field">' +
+            '<label class="admin-step-up-field-label" for="adminStepUpCode">验证码</label>' +
+            '<div class="admin-step-up-code-row">' +
             '<input id="adminStepUpCode" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" placeholder="6 位验证码" />' +
-            '<button type="button" id="btnAdminStepUpVerify">验证并进入</button>' +
-            '</div>' +
-            '<p id="adminStepUpErr" class="err" hidden></p>' +
-            '<p id="adminStepUpValidHint" class="hint"></p>' +
+            '<button type="button" class="admin-step-up-btn" id="btnAdminStepUpSend">发送验证码</button>' +
+            '</div></div>' +
+            '<p id="adminStepUpSendStatus" class="admin-step-up-status" aria-live="polite"></p>' +
             '<div class="admin-step-up-duration">' +
-            '<span class="admin-step-up-duration-label">验证有效期限</span>' +
-            '<div class="admin-step-up-duration-options">' +
+            '<span class="admin-step-up-duration-label" id="adminStepUpDurationLabel">验证有效期限</span>' +
+            '<div class="admin-step-up-duration-options" role="radiogroup" aria-labelledby="adminStepUpDurationLabel">' +
             opts +
-            '</div></div></div>'
+            '</div></div>' +
+            '<p id="adminStepUpErr" class="admin-step-up-err" hidden role="alert"></p>' +
+            '<p id="adminStepUpValidHint" class="admin-step-up-status"></p>' +
+            '</div>' +
+            '<footer class="admin-step-up-foot">' +
+            '<button type="button" class="admin-step-up-btn admin-step-up-btn--primary" id="btnAdminStepUpVerify">验证并进入</button>' +
+            '</footer></div>'
         );
     }
 
@@ -185,8 +230,9 @@
         });
         var data = await parseJson(r);
         if (!r.ok) throw formatUserError(r, data, 'AUTH_P005');
-        if (data && data.stepUpToken) {
-            setSession(data.stepUpToken, data.expiresAt);
+        var tok = data && data.stepUpToken;
+        if (tok) {
+            setSession(tok, data.expiresAt);
         }
         return data;
     }
@@ -252,6 +298,9 @@
 
         gateEl.hidden = false;
         document.body.classList.add('admin-step-up-active');
+        if (codeInput && typeof codeInput.focus === 'function') {
+            codeInput.focus();
+        }
 
         if (sendBtn) {
             sendBtn.onclick = async function () {

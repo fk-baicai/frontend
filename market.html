@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"></noscript>
-    <link rel="stylesheet" href="market.css?v=70">
+    <link rel="stylesheet" href="market.css?v=76">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -254,6 +254,14 @@
                                     <textarea id="marketItemInfoInput" rows="3" maxlength="500" placeholder="成色、改装、备注…"></textarea>
                                 </label>
                             </div>
+
+                            <div class="market-field">
+                                <label class="market-inline-field" for="marketContactInput">
+                                    <span class="market-field__label">联系方式</span>
+                                    <input type="text" id="marketContactInput" maxlength="120" placeholder="邮箱、QQ 或其他联系方式" autocomplete="off">
+                                </label>
+                                <p class="market-field__hint">默认使用注册邮箱，可改为其他联系方式。买家提交购买后才显示完整信息。</p>
+                            </div>
                         </div>
 
                         <div class="market-form__col market-form__col--details">
@@ -264,6 +272,7 @@
                                         <button type="button" class="is-active" data-trade-type="currency">资金置换</button>
                                         <button type="button" data-trade-type="barter">物品互换</button>
                                     </div>
+                                    <p class="market-field__hint" id="marketHqPointsHint" hidden>超级管理员：互换中可在一侧输入「积分」，表示 USS 总部签到积分。成交后只增减对方积分，你的账户不扣减。</p>
                                 </div>
                                 <div class="market-field market-field--inline" id="marketOrderTypeField">
                                     <span class="market-field__label">单据方向</span>
@@ -291,6 +300,7 @@
                                         <option value="fps_magazine">武器配件</option>
                                         <option value="fps_armor">个人护甲</option>
                                         <option value="other">其他</option>
+                                        <option value="hq_points">签到积分</option>
                                     </select>
                                 </label>
                             </div>
@@ -309,7 +319,7 @@
                                     <input type="number" id="marketPriceInput" class="market-control" min="0" step="1" placeholder="120">
                                 </label>
                                 <label class="market-inline-field">
-                                    <span class="market-field__label">数量</span>
+                                    <span class="market-field__label" id="marketQtyLabel">数量</span>
                                     <input type="number" id="marketQtyInput" class="market-control" min="1" step="1" value="1">
                                 </label>
                             </div>
@@ -366,6 +376,7 @@
                                         <option value="fps_magazine">武器配件</option>
                                         <option value="fps_armor">个人护甲</option>
                                         <option value="other">其他</option>
+                                        <option value="hq_points">签到积分</option>
                                     </select>
                                 </label>
                             </div>
@@ -375,7 +386,7 @@
                                     <input type="number" id="marketWantQualityInput" class="market-control" min="0" max="1000" step="1" value="500">
                                 </label>
                                 <label class="market-inline-field" for="marketWantQtyInput">
-                                    <span class="market-field__label">换取数量</span>
+                                    <span class="market-field__label" id="marketWantQtyLabel">换取数量</span>
                                     <input type="number" id="marketWantQtyInput" class="market-control" min="1" step="1" value="1">
                                 </label>
                             </div>
@@ -399,6 +410,22 @@
                 <button type="button" class="market-modal__close" id="marketDetailClose" aria-label="关闭">&times;</button>
             </header>
             <div class="market-detail__body" id="marketDetailBody"></div>
+        </div>
+    </div>
+
+    <div id="marketConfirmBackdrop" class="market-modal-backdrop market-confirm-backdrop" hidden>
+        <div class="market-modal market-confirm" role="dialog" aria-modal="true" aria-labelledby="marketConfirmTitle" aria-describedby="marketConfirmMessage">
+            <header class="market-modal__head">
+                <h2 class="market-modal__title" id="marketConfirmTitle">请确认</h2>
+                <button type="button" class="market-modal__close" id="marketConfirmClose" aria-label="关闭">&times;</button>
+            </header>
+            <div class="market-confirm__body">
+                <p class="market-confirm__message" id="marketConfirmMessage"></p>
+            </div>
+            <footer class="market-modal__foot market-confirm__foot">
+                <button type="button" class="market-btn" id="marketConfirmCancel">再想想</button>
+                <button type="button" class="market-btn market-btn--accent" id="marketConfirmOk">确认</button>
+            </footer>
         </div>
     </div>
 
@@ -543,23 +570,27 @@
                     <p>交易前请核对品质、数量与报价；转账截图与交易凭证请保留原图，便于纠纷追溯。</p>
                 </div>
             </div>
+            <footer class="market-flow-modal__foot" id="marketFlowForceFoot" hidden>
+                <p class="market-flow-modal__force-hint" id="marketFlowForceHint">首次操作前请完整阅读买家与卖家流程</p>
+                <button type="button" class="market-btn market-btn--accent market-flow-modal__ack" id="marketFlowAckBtn" disabled aria-live="polite">请阅读（10）</button>
+            </footer>
         </div>
     </div>
 
     <script src="login-drawer-mount.js"></script>
     <script src="home-boot.js"></script>
     <script defer src="pw-toggle-icons.js"></script>
-    <script src="api-error.js" defer></script>
+    <script src="api-error.js?v=3" defer></script>
     <script src="auth-api.js" defer></script>
     <script src="auth-session-sync.js" defer></script>
     <script defer src="rsi-client.js"></script>
     <script defer src="rsi-sync.js"></script>
-    <script defer src="home-app.js?v=20260823a"></script>
+    <script defer src="home-app.js?v=20260823d"></script>
     <script src="nav-dropdown.js" defer></script>
     <script src="nav-auth-tools.js" defer></script>
     <script src="site-footer.js" defer></script>
     <script src="community-image-lightbox.js" defer></script>
-    <script src="market-notify.js" defer></script>
-    <script src="market.js?v=46" defer></script>
+    <script src="market-notify.js?v=3" defer></script>
+    <script src="market.js?v=60" defer></script>
 </body>
 </html>

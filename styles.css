@@ -326,7 +326,7 @@ body.home-page-body .nav-mega-panel {
  }
 }
 
-/* 顶栏「积分系统」：与侧栏个人信息/职务同色（#8ee0ff 系列） */
+/* 顶栏下拉：与侧栏个人信息/职务同色（#8ee0ff 系列） */
 .nav-dropdown-toggle {
  display: inline-flex;
  align-items: center;
@@ -828,6 +828,15 @@ html:not(.auth-session-cached) .auth-fleet-only {
 }
 
 .drawer-org-ranking .drawer-org-rank-svg path {
+ fill: #8ee0ff;
+}
+
+.drawer-org-ranking .drawer-org-rank-slot:not(.active) .drawer-org-rank-svg {
+ opacity: 0.28;
+ filter: none;
+}
+
+.drawer-org-ranking .drawer-org-rank-slot:not(.active) .drawer-org-rank-svg path {
  fill: #8ee0ff;
 }
 

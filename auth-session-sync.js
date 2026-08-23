@@ -194,6 +194,7 @@
             rsiOrgLogoUrl: sess.rsiOrgLogoUrl,
             rsiOrgRoleLabel: sess.rsiOrgRoleLabel,
             rsiOrgRankSlots: sess.rsiOrgRankSlots,
+            rsiOrgRankTotal: sess.rsiOrgRankTotal,
             rsiProfileSyncedAt: sess.rsiProfileSyncedAt,
             rsiAssetsPending: sess.rsiAssetsPending,
         };
@@ -264,6 +265,10 @@
                 user.rsiOrgRankSlots !== undefined && user.rsiOrgRankSlots !== null
                     ? user.rsiOrgRankSlots
                     : prev.rsiOrgRankSlots,
+            rsiOrgRankTotal:
+                user.rsiOrgRankTotal !== undefined && user.rsiOrgRankTotal !== null
+                    ? user.rsiOrgRankTotal
+                    : prev.rsiOrgRankTotal,
             rsiProfileSyncedAt: mergeProfileField(user.rsiProfileSyncedAt, prev.rsiProfileSyncedAt),
             rsiBindLocked:
                 user.rsiBindLocked !== undefined ? !!user.rsiBindLocked : !!prev.rsiBindLocked,

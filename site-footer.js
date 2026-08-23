@@ -92,4 +92,12 @@
         '</div>';
 
     document.body.appendChild(footer);
+
+    if (!document.querySelector('script[src*="market-notify.js"]')) {
+        var notifyScript = document.createElement('script');
+        notifyScript.src = 'market-notify.js?v=3';
+        notifyScript.defer = true;
+        notifyScript.setAttribute('data-uss-market-notify', '1');
+        document.body.appendChild(notifyScript);
+    }
 })();

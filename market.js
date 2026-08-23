@@ -45,6 +45,7 @@
         fps_weapon: '个人武器',
         fps_magazine: '武器配件',
         fps_armor: '个人护甲',
+        hq_points: '签到积分',
     };
 
     var CATEGORY_GROUPS = [
@@ -167,6 +168,7 @@
             tradeTimeEnd: '21:00',
             categoryGroup: '',
             itemInfo: '',
+            contact: '',
             location: null,
             items: [{ componentId: null, name: '', categoryGroup: null, typeLabel: '', quantity: 1, pricePerUnit: '', quality: DEFAULT_QUALITY }],
             autoImage: null,
@@ -210,6 +212,53 @@
         return !!(s && s.token);
     }
 
+    function hasVerifiedRsiBind() {
+        var s = loadSession();
+        return !!(s && s.rsiBindLocked);
+    }
+
+    function openRsiBindPanel() {
+        if (typeof window.openRsiBindSettings === 'function') {
+            window.openRsiBindSettings();
+            return;
+        }
+        if (typeof window.openAccountSettings === 'function') {
+            window.openAccountSettings();
+            if (typeof window.showAccountSettingsPanel === 'function') {
+                window.showAccountSettingsPanel('rsi');
+            }
+        }
+    }
+
+    function ensureRsiBindThen(next) {
+        if (typeof next !== 'function') return;
+        if (hasVerifiedRsiBind()) {
+            next();
+            return;
+        }
+        askConfirm({
+            title: '需要 RSI 绑定',
+            message: '发布挂单前须先完成 RSI 绑定（验证公民 Handle）。绑定完成后即可挂单。',
+            confirmText: '去绑定',
+            cancelText: '取消',
+        }).then(function (ok) {
+            if (ok) openRsiBindPanel();
+        });
+    }
+
+    function apiErrorText(data, fallback) {
+        if (data && data.code && window.UssApiError && typeof window.UssApiError.formatUserError === 'function') {
+            var hinted = window.UssApiError.formatUserError(data.code);
+            if (hinted) return hinted;
+        }
+        return (data && data.message) || fallback;
+    }
+
+    function accountEmail() {
+        var s = loadSession();
+        return s && s.email ? String(s.email).trim() : '';
+    }
+
     function authHeaders() {
         var s = loadSession();
         if (!s || !s.token) return {};
@@ -233,6 +282,10 @@
             return joinUrl('/api/market/uploads/' + s.split('/').pop().split('?')[0]);
         }
         return joinUrl(s.charAt(0) === '/' ? s : '/' + s);
+    }
+
+    function hqPointsImageUrl() {
+        return 'market-hq-points.webp';
     }
 
     function componentImageUrl(componentId) {
@@ -268,9 +321,32 @@
         return { display: s.slice(0, 2) + '***' + s.slice(-1), full: s };
     }
 
+    function maskSidDisplay(sid) {
+        var s = String(sid || '').trim();
+        if (!s) return '';
+        if (s.length === 1) return '*';
+        if (s.length === 2) return s.charAt(0) + '*';
+        if (s.indexOf('*') !== -1) return s;
+        return s.charAt(0) + '***';
+    }
+
+    function maskEmailDisplay(email) {
+        var s = String(email || '').trim();
+        if (!s) return '';
+        var at = s.indexOf('@');
+        if (at < 1) {
+            if (s.length <= 2) return s.charAt(0) + '***';
+            return s.slice(0, 2) + '****';
+        }
+        var local = s.slice(0, at);
+        var domain = s.slice(at);
+        if (local.length <= 2) return local.charAt(0) + '***' + domain;
+        return local.slice(0, 2) + '****' + domain;
+    }
+
     function renderCardFooterHtml(order, seller, avatarUrl, opts) {
         opts = opts || {};
-        var masked = maskAuthorName(order.authorHandle || order.bindingId || '—');
+        var masked = maskAuthorName(order.authorHandle || (order.seller && order.seller.bindingId) || '—');
         var it0 = (order.items && order.items[0]) || {};
         var loc = (order.location && order.location.name) || '未指定地点';
         var qty = it0.quantity || 1;
@@ -342,6 +418,8 @@
     }
 
     function categoryLabel(group) {
+        var g = String(group || '').trim();
+        if (g === 'hq_points') return '签到积分';
         if (isOtherCategory(group)) return '其他';
         return CATEGORY_LABELS[group] || '其他';
     }
@@ -357,14 +435,71 @@
         return normalizeQuality(it && it.quality != null ? it.quality : DEFAULT_QUALITY);
     }
 
+    function isSuperAdminSession() {
+        var s = loadSession();
+        return !!(s && s.isSuperAdmin);
+    }
+
+    function isHqPointsItem(it) {
+        if (!it) return false;
+        if (String(it.componentId || '').trim() === 'uss-hq-points') return true;
+        var n = String(it.name || it.nameZh || '').replace(/\s+/g, '');
+        return n === '积分' || n === 'USS总部积分' || n === 'USS总部签到积分';
+    }
+
+    function isHqPointsListing(order) {
+        if (!order || order.tradeType !== 'barter' || !order.items) return false;
+        return isHqPointsItem(order.items[0]) || isHqPointsItem(order.items[1]);
+    }
+
+    function hqPointsSuggestItem() {
+        return {
+            id_item: 'uss-hq-points',
+            name: '积分',
+            name_zh: 'USS总部签到积分',
+            name_en: 'HQ Check-in Points',
+            type: 'hq_points',
+            type_label_zh: 'USS总部签到积分',
+            _hqPoints: true,
+        };
+    }
+
+    function withHqPointsSuggest(q, items) {
+        var list = Array.isArray(items) ? items.slice() : [];
+        if (!isSuperAdminSession() || state.create.tradeType !== 'barter') return list;
+        var t = String(q || '').trim();
+        if (!t || t.indexOf('积分') < 0) return list;
+        list.unshift(hqPointsSuggestItem());
+        return list;
+    }
+
+    function coerceTypedHqPoints(it) {
+        if (!it || !isSuperAdminSession() || state.create.tradeType !== 'barter') return it;
+        if (!isHqPointsItem(it) && String(it.name || '').trim() !== '积分') return it;
+        it.componentId = 'uss-hq-points';
+        it.name = '积分';
+        it.nameZh = 'USS总部签到积分';
+        it.categoryGroup = 'hq_points';
+        it.typeLabel = 'USS总部签到积分';
+        return it;
+    }
+
     function formatQualityBrief(order) {
         var it = (order.items && order.items[0]) || {};
+        if (isHqPointsItem(it)) return 'USS总部签到积分 ×' + String(it.hqPointsAmount || it.quantity || 1);
         return '品质 ' + itemQuality(it);
     }
 
     function formatPrice(order) {
         if (order.tradeType === 'barter') {
             var want = (order.items && order.items[1]) || {};
+            var offer = (order.items && order.items[0]) || {};
+            if (isHqPointsItem(want)) {
+                return '换取 积分 ×' + String(want.hqPointsAmount || want.quantity || 1);
+            }
+            if (isHqPointsItem(offer)) {
+                return '给出 积分 ×' + String(offer.hqPointsAmount || 1);
+            }
             var wantName = want.nameZh || want.name;
             if (wantName) return '换取 ' + wantName;
             return '物品置换';
@@ -399,6 +534,7 @@
     function wantImageSrc(order) {
         var it1 = (order.items && order.items[1]) || {};
         if (order.images && order.images[1]) return absMediaUrl(order.images[1]);
+        if (isHqPointsItem(it1)) return hqPointsImageUrl();
         if (it1.componentId) return componentImageUrl(it1.componentId);
         return '';
     }
@@ -567,6 +703,7 @@
         if (order.images && order.images[0]) {
             return absMediaUrl(order.images[0]);
         }
+        if (isHqPointsItem(it0)) return hqPointsImageUrl();
         if (it0.componentId) {
             return componentImageUrl(it0.componentId);
         }
@@ -578,27 +715,233 @@
         if (img) {
             var fallback = '';
             var it0 = (order.items && order.items[0]) || {};
-            if (it0.componentId) {
+            if (it0.componentId && !isHqPointsItem(it0)) {
                 fallback = componentImageUrl(it0.componentId);
             }
             return '<img src="' + escapeHtml(img) + '"' +
                 (fallback && fallback !== img ? ' data-fallback="' + escapeHtml(fallback) + '"' : '') +
                 ' alt="" loading="lazy" decoding="async" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.onerror=null;this.classList.add(\'is-broken\')}">';
         }
+        var it0m = (order.items && order.items[0]) || {};
+        if (isHqPointsItem(it0m)) {
+            return '<span class="market-card__media--empty market-card__media--points">分</span>';
+        }
         var initial = escapeHtml(primaryItemName(order).charAt(0) || '?');
         return '<span class="market-card__media--empty">' + initial + '</span>';
     }
 
-    function openFlowGuide() {
-        if (!el.flowBackdrop) return;
-        el.flowBackdrop.hidden = false;
-        document.body.style.overflow = 'hidden';
+    var FLOW_ACK_KEY = 'ussMarketFlowAck.v1';
+    var FLOW_FORCE_SECONDS = 10;
+    var flowForceTimer = null;
+    var flowForceDeadline = 0;
+    var flowForceOnAck = null;
+    var flowForceKind = '';
+
+    function flowAckStorageKey() {
+        var sess = loadSession();
+        var bid = sess && sess.bindingId ? String(sess.bindingId).trim().toLowerCase() : '';
+        return FLOW_ACK_KEY + ':' + (bid || 'anon');
     }
 
-    function closeFlowGuide() {
+    function readFlowAck() {
+        try {
+            var raw = localStorage.getItem(flowAckStorageKey());
+            var data = raw ? JSON.parse(raw) : {};
+            return { publish: !!data.publish, purchase: !!data.purchase };
+        } catch (e) {
+            return { publish: false, purchase: false };
+        }
+    }
+
+    function writeFlowAck(kind) {
+        var cur = readFlowAck();
+        if (kind === 'purchase') cur.purchase = true;
+        else cur.publish = true;
+        try {
+            localStorage.setItem(flowAckStorageKey(), JSON.stringify(cur));
+        } catch (e) { /* ignore */ }
+    }
+
+    function hasFlowAck(kind) {
+        var ack = readFlowAck();
+        return kind === 'purchase' ? ack.purchase : ack.publish;
+    }
+
+    function clearFlowForceTimer() {
+        if (flowForceTimer) {
+            clearInterval(flowForceTimer);
+            flowForceTimer = null;
+        }
+        flowForceDeadline = 0;
+    }
+
+    function flowForceRemain() {
+        if (!flowForceDeadline) return 0;
+        return Math.max(0, Math.ceil((flowForceDeadline - Date.now()) / 1000));
+    }
+
+    function syncBodyScrollLock() {
+        var locked =
+            (el.flowBackdrop && !el.flowBackdrop.hidden) ||
+            (el.detailBackdrop && !el.detailBackdrop.hidden) ||
+            (el.confirmBackdrop && !el.confirmBackdrop.hidden);
+        document.body.style.overflow = locked ? 'hidden' : '';
+    }
+
+    var confirmResolver = null;
+
+    function closeConfirmModal(result) {
+        if (el.confirmBackdrop) el.confirmBackdrop.hidden = true;
+        syncBodyScrollLock();
+        var resolve = confirmResolver;
+        confirmResolver = null;
+        if (resolve) resolve(!!result);
+    }
+
+    function askConfirm(opts) {
+        opts = opts || {};
+        return new Promise(function (resolve) {
+            if (!el.confirmBackdrop || !el.confirmMessage || !el.confirmOk) {
+                if (opts.notice) {
+                    window.alert(opts.message || '');
+                    resolve(true);
+                    return;
+                }
+                resolve(window.confirm(opts.message || '确定？'));
+                return;
+            }
+            var notice = !!opts.notice;
+            confirmResolver = resolve;
+            if (el.confirmTitle) el.confirmTitle.textContent = opts.title || (notice ? '提示' : '请确认');
+            el.confirmMessage.textContent = opts.message || '确定？';
+            el.confirmOk.textContent = opts.confirmText || (notice ? '知道了' : '确认');
+            if (el.confirmCancel) {
+                el.confirmCancel.hidden = notice;
+                el.confirmCancel.textContent = opts.cancelText || '再想想';
+            }
+            el.confirmBackdrop.hidden = false;
+            syncBodyScrollLock();
+            if (notice) el.confirmOk.focus();
+            else if (el.confirmCancel) el.confirmCancel.focus();
+        });
+    }
+
+    function isFlowForced() {
+        return !!(el.flowBackdrop && el.flowBackdrop.classList.contains('is-forced'));
+    }
+
+    function syncFlowForceUi() {
         if (!el.flowBackdrop) return;
+        var forced = isFlowForced();
+        var remain = flowForceRemain();
+        var wasReady = el.flowBackdrop.classList.contains('is-ack-ready');
+        el.flowBackdrop.classList.toggle('is-ack-ready', forced && remain <= 0);
+        if (el.flowForceFoot) el.flowForceFoot.hidden = !forced;
+        if (el.flowClose) {
+            el.flowClose.disabled = forced && remain > 0;
+            el.flowClose.setAttribute('aria-hidden', forced && remain > 0 ? 'true' : 'false');
+        }
+        if (!el.flowAckBtn) return;
+        if (!forced) return;
+        if (remain > 0) {
+            el.flowAckBtn.disabled = true;
+            el.flowAckBtn.textContent = '请阅读（' + remain + '）';
+        } else {
+            el.flowAckBtn.disabled = false;
+            el.flowAckBtn.textContent = flowForceKind === 'purchase' ? '我已阅读，继续购买' : '我已阅读，继续发布';
+            if (!wasReady) el.flowAckBtn.focus();
+        }
+    }
+
+    function setFlowPanelFocus(kind) {
+        if (!el.flowBackdrop) return;
+        var buyer = el.flowBackdrop.querySelector('.market-flow-panel--buyer');
+        var seller = el.flowBackdrop.querySelector('.market-flow-panel--seller');
+        if (buyer) buyer.classList.toggle('is-focus', kind === 'purchase');
+        if (seller) seller.classList.toggle('is-focus', kind === 'publish');
+    }
+
+    function showFlowGuide(options) {
+        options = options || {};
+        if (!el.flowBackdrop) return;
+        clearFlowForceTimer();
+        var forced = !!options.forced;
+        flowForceKind = forced ? String(options.kind || 'publish') : '';
+        flowForceOnAck = forced && typeof options.onAck === 'function' ? options.onAck : null;
+        el.flowBackdrop.hidden = false;
+        el.flowBackdrop.classList.toggle('is-forced', forced);
+        el.flowBackdrop.classList.remove('is-ack-ready');
+        el.flowBackdrop.scrollTop = 0;
+        setFlowPanelFocus(flowForceKind);
+        if (el.flowForceHint) {
+            el.flowForceHint.textContent = flowForceKind === 'purchase'
+                ? '首次购买前请完整阅读交易流程，倒计时结束后才可继续。'
+                : '首次发布挂单前请完整阅读交易流程，倒计时结束后才可继续。';
+        }
+        if (forced) {
+            flowForceDeadline = Date.now() + FLOW_FORCE_SECONDS * 1000;
+            syncFlowForceUi();
+            flowForceTimer = setInterval(function () {
+                var remain = flowForceRemain();
+                syncFlowForceUi();
+                if (remain <= 0) clearFlowForceTimer();
+            }, 1000);
+        } else {
+            if (el.flowForceFoot) el.flowForceFoot.hidden = true;
+            if (el.flowClose) {
+                el.flowClose.disabled = false;
+                el.flowClose.setAttribute('aria-hidden', 'false');
+            }
+        }
+        syncBodyScrollLock();
+    }
+
+    function closeFlowGuide(fromAck) {
+        if (!el.flowBackdrop) return;
+        if (isFlowForced() && flowForceRemain() > 0 && !fromAck) return;
+        var pendingAck = fromAck ? flowForceOnAck : null;
+        clearFlowForceTimer();
+        flowForceOnAck = null;
+        flowForceKind = '';
         el.flowBackdrop.hidden = true;
-        document.body.style.overflow = '';
+        el.flowBackdrop.classList.remove('is-forced', 'is-ack-ready');
+        setFlowPanelFocus('');
+        if (el.flowForceFoot) el.flowForceFoot.hidden = true;
+        if (el.flowClose) {
+            el.flowClose.disabled = false;
+            el.flowClose.setAttribute('aria-hidden', 'false');
+        }
+        syncBodyScrollLock();
+        if (typeof pendingAck === 'function') pendingAck();
+    }
+
+    function ackForcedFlow() {
+        if (!isFlowForced() || flowForceRemain() > 0) return;
+        var kind = flowForceKind;
+        writeFlowAck(kind);
+        closeFlowGuide(true);
+    }
+
+    function requireFlowAck(kind, thenFn) {
+        if (typeof thenFn !== 'function') return;
+        if (hasFlowAck(kind) || !el.flowBackdrop) {
+            thenFn();
+            return;
+        }
+        if (isFlowForced() && flowForceKind === kind) {
+            flowForceOnAck = thenFn;
+            return;
+        }
+        showFlowGuide({
+            forced: true,
+            kind: kind,
+            onAck: thenFn,
+        });
+    }
+
+    function openFlowGuide() {
+        if (isFlowForced()) return;
+        showFlowGuide({ forced: false });
     }
 
     function renderGrid() {
@@ -702,9 +1045,13 @@
         return html;
     }
 
-    function renderSellerProfileHtml(seller, partyLabel) {
-        var handle = seller.rsiProfileHandle || seller.bindingId || '—';
-        var displayName = seller.bindingId || handle;
+    function renderSellerProfileHtml(seller, partyLabel, opts) {
+        opts = opts || {};
+        var revealed = !!seller.contactRevealed || !!opts.revealed;
+        var rawHandle = seller.rsiProfileHandle || seller.bindingId || '—';
+        var rawName = seller.bindingId || rawHandle;
+        var handle = revealed ? String(rawHandle || '—') : maskAuthorName(rawHandle).display;
+        var displayName = revealed ? String(rawName || '—') : maskAuthorName(rawName).display;
         var avatar = resolveAssetUrl(seller.avatarUrl) || defaultAvatar();
         var rankIcon = resolveAssetUrl(seller.rsiRankIconUrl);
         var orgLogo = resolveAssetUrl(seller.rsiOrgLogoUrl);
@@ -731,7 +1078,7 @@
         var orgHtml = '';
         if (seller.rsiOrgName || seller.rsiOrgSid || orgLogo) {
             var orgMeta = [];
-            if (seller.rsiOrgSid) orgMeta.push('SID ' + escapeHtml(seller.rsiOrgSid));
+            if (seller.rsiOrgSid) orgMeta.push('SID ' + escapeHtml(revealed ? seller.rsiOrgSid : maskSidDisplay(seller.rsiOrgSid)));
             if (seller.rsiOrgRoleLabel) orgMeta.push(escapeHtml(seller.rsiOrgRoleLabel));
             orgHtml =
                 '<div class="market-seller-card__org">' +
@@ -753,14 +1100,29 @@
             ? '<div class="market-seller-card__facts">' + facts.join('') + '</div>'
             : '';
         var email = seller.email ? String(seller.email).trim() : '';
-        var contactHtml = email
-            ? (
+        var emailMasked = seller.emailMasked ? String(seller.emailMasked).trim() : '';
+        var hasContact = seller.hasContact === true || !!email || !!emailMasked;
+        var contactHtml;
+        if (revealed && email) {
+            var copyLabel = email.indexOf('@') >= 0 ? '复制邮箱' : '复制';
+            contactHtml =
                 '<div class="market-seller-card__contact">' +
                 '<span class="market-detail__email">' + escapeHtml(email) + '</span>' +
-                '<button type="button" class="market-detail__copy-btn market-seller-card__copy" data-email="' + escapeHtml(email) + '">复制邮箱</button>' +
-                '</div>'
-            )
-            : '<p class="market-detail__note">发布者未公开联系方式</p>';
+                '<button type="button" class="market-detail__copy-btn market-seller-card__copy" data-email="' + escapeHtml(email) + '" data-copy-label="' + escapeHtml(copyLabel) + '">' + escapeHtml(copyLabel) + '</button>' +
+                '</div>';
+        } else if (hasContact) {
+            contactHtml =
+                '<div class="market-seller-card__contact">' +
+                '<span class="market-detail__email market-seller-card__email--masked">' +
+                escapeHtml(emailMasked || maskEmailDisplay(email) || '****@****') +
+                '</span>' +
+                '</div>';
+            if (!revealed) {
+                contactHtml += '<p class="market-seller-card__contact-hint">提交购买后显示完整联系方式</p>';
+            }
+        } else {
+            contactHtml = '<p class="market-detail__note">发布者未公开联系方式</p>';
+        }
 
         return (
             '<div class="market-detail__section market-seller-card">' +
@@ -800,6 +1162,9 @@
             rsiOrgSid: null,
             rsiOrgRoleLabel: null,
             memberKind: null,
+            hasContact: false,
+            contactRevealed: false,
+            emailMasked: null,
             completedTradeCount: order.completedTradeCount || 0,
             averageRating: null,
             reviewCount: 0,
@@ -812,12 +1177,14 @@
         var img = orderImageSrc(order);
         if (img) {
             var it0 = (order.items && order.items[0]) || {};
-            var fallback = it0.componentId ? componentImageUrl(it0.componentId) : '';
+            var fallback = it0.componentId && !isHqPointsItem(it0) ? componentImageUrl(it0.componentId) : '';
             return '<img class="market-detail__media-img market-detail__media-img--zoom" src="' + escapeHtml(img) + '"' +
                 (fallback && fallback !== img ? ' data-fallback="' + escapeHtml(fallback) + '"' : '') +
                 ' alt="点击查看大图" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback}">';
         }
         var initial = escapeHtml(primaryItemName(order).charAt(0) || '?');
+        var it0e = (order.items && order.items[0]) || {};
+        if (isHqPointsItem(it0e)) initial = '分';
         return '<span class="market-detail__media--empty">' + initial + '</span>';
     }
 
@@ -829,6 +1196,9 @@
 
     function listingTypeMeta(order) {
         if (order.tradeType === 'barter') {
+            if (isHqPointsListing(order)) {
+                return { cls: 'market-card__badge--points-barter', text: '积分互换' };
+            }
             return { cls: 'market-card__badge--barter', text: '互换' };
         }
         if (order.orderType === 'buy') {
@@ -844,6 +1214,9 @@
 
     function orderTypeBadge(order) {
         if (order.tradeType === 'barter') {
+            if (isHqPointsListing(order)) {
+                return { cls: ' market-detail__badge--points-barter', text: '积分互换' };
+            }
             return { cls: ' market-detail__badge--barter', text: '互换' };
         }
         if (order.orderType === 'buy') {
@@ -926,6 +1299,15 @@
         return data;
     }
 
+    function mergeOrderIntoState(nextOrder) {
+        if (!nextOrder || !nextOrder.id) return null;
+        var idx = state.orders.findIndex(function (o) { return o && o.id === nextOrder.id; });
+        var merged = idx >= 0 ? Object.assign({}, state.orders[idx], nextOrder) : nextOrder;
+        if (idx >= 0) state.orders[idx] = merged;
+        else state.orders.unshift(merged);
+        return merged;
+    }
+
     function setPurchaseSubmittedUi(order, submitted) {
         var hint = document.getElementById('marketDetailPurchaseHint');
         var nudgeBtn = document.getElementById('marketDetailNudgeBtn');
@@ -949,6 +1331,7 @@
         var it0 = (order.items && order.items[0]) || {};
         var stockQty = Math.max(1, Math.floor(Number(it0.quantity) || 1));
         var seller = getSeller(order);
+        var sellerRevealed = !!seller.contactRevealed || !!options.unlockSellerContact;
         var badge = orderTypeBadge(order);
         var priceClass = order.tradeType === 'barter' ? ' market-detail__price--barter' : '';
         var loc = (order.location && order.location.name) || '未指定地点';
@@ -975,7 +1358,7 @@
             var wantName = wantItemName(order) || '未指定';
             var wantMediaInner = wantImg
                 ? '<img class="market-detail__media-img market-detail__media-img--zoom" src="' + escapeHtml(wantImg) + '" alt="点击查看大图">'
-                : '<span class="market-detail__media--empty">' + escapeHtml(wantName.charAt(0) || '?') + '</span>';
+                : '<span class="market-detail__media--empty">' + escapeHtml(isHqPointsItem(it1) ? '分' : (wantName.charAt(0) || '?')) + '</span>';
             barterWantHtml =
                 '<div class="market-detail__section market-detail__barter-want">' +
                 '<h4 class="market-detail__section-title">期望换取</h4>' +
@@ -985,8 +1368,9 @@
                 '<p class="market-detail__cat">' + escapeHtml(categoryLabel(it1.categoryGroup)) + '</p>' +
                 '<h3 class="market-detail__title">' + escapeHtml(wantName) + '</h3>' +
                 '<dl class="market-detail__dl">' +
-                '<dt>数量</dt><dd>×' + escapeHtml(it1.quantity || 1) + '</dd>' +
-                '<dt>品质</dt><dd>' + escapeHtml(itemQuality(it1)) + '</dd>' +
+                (isHqPointsItem(it1)
+                    ? '<dt>积分数</dt><dd>×' + escapeHtml(String(it1.hqPointsAmount || it1.quantity || 1)) + '</dd>'
+                    : '<dt>数量</dt><dd>×' + escapeHtml(it1.quantity || 1) + '</dd><dt>品质</dt><dd>' + escapeHtml(itemQuality(it1)) + '</dd>') +
                 '</dl></div></div></div>';
         }
 
@@ -1005,8 +1389,9 @@
             '<h3 class="market-detail__title">' + escapeHtml(primaryItemName(order)) + '</h3>' +
             '<p class="market-detail__price' + priceClass + '" id="marketDetailPriceLine">' + escapeHtml(formatPrice(order)) + '</p>' +
             '<dl class="market-detail__dl">' +
-            '<dt>可购数量</dt><dd>×' + escapeHtml(String(stockQty)) + '</dd>' +
-            '<dt>品质</dt><dd>' + escapeHtml(itemQuality(it0)) + '</dd>' +
+            (isHqPointsItem(it0)
+                ? '<dt>积分数</dt><dd>×' + escapeHtml(String(it0.hqPointsAmount || 1)) + '</dd>'
+                : '<dt>可购数量</dt><dd>×' + escapeHtml(String(stockQty)) + '</dd><dt>品质</dt><dd>' + escapeHtml(itemQuality(it0)) + '</dd>') +
             '<dt>交易位置</dt><dd>' + escapeHtml(locLine) + '</dd>' +
             '<dt>交易时段</dt><dd>每日 ' + escapeHtml(formatTradeWindow(order)) + '</dd>' +
             '<dt>有效期</dt><dd>' + escapeHtml(formatExpires(order.expiresAt)) + '</dd>' +
@@ -1022,7 +1407,7 @@
             '</div>' +
             '</div>' +
             barterWantHtml +
-            renderSellerProfileHtml(seller, partyLabel) +
+            renderSellerProfileHtml(seller, partyLabel, { revealed: sellerRevealed }) +
             (!isOwnOrder(order) && order.orderType === 'sell'
                 ? (
                     '<div class="market-detail__actions">' +
@@ -1044,15 +1429,17 @@
                 var em = copyBtn.getAttribute('data-email') || '';
                 if (!em) return;
                 copyTextToClipboard(em).then(function () {
+                    var label = copyBtn.getAttribute('data-copy-label') || '复制';
                     copyBtn.textContent = '已复制';
                     copyBtn.classList.add('is-copied');
                     setTimeout(function () {
-                        copyBtn.textContent = '复制邮箱';
+                        copyBtn.textContent = label;
                         copyBtn.classList.remove('is-copied');
                     }, 1800);
                 }).catch(function () {
+                    var label = copyBtn.getAttribute('data-copy-label') || '复制';
                     copyBtn.textContent = '复制失败';
-                    setTimeout(function () { copyBtn.textContent = '复制邮箱'; }, 1800);
+                    setTimeout(function () { copyBtn.textContent = label; }, 1800);
                 });
             });
         });
@@ -1074,9 +1461,19 @@
                 if (!oid) return;
                 nudgeBtn.disabled = true;
                 sendPurchaseNudge(oid).then(function () {
-                    window.alert('已发送强提醒，请等待卖家确认交易。');
+                    return askConfirm({
+                        title: '强提醒',
+                        message: '已发送强提醒，请等待卖家确认交易。',
+                        confirmText: '确定',
+                        notice: true,
+                    });
                 }).catch(function (e) {
-                    window.alert((e && e.message) || '强提醒发送失败');
+                    return askConfirm({
+                        title: '强提醒',
+                        message: (e && e.message) || '强提醒发送失败',
+                        confirmText: '确定',
+                        notice: true,
+                    });
                 }).finally(function () {
                     nudgeBtn.disabled = false;
                 });
@@ -1133,19 +1530,36 @@
                 ev.stopPropagation();
                 var oid = purchaseBtn.getAttribute('data-order-id') || '';
                 if (!oid) return;
+                if (!isLoggedIn()) {
+                    if (typeof window.openLoginDrawer === 'function') window.openLoginDrawer();
+                    return;
+                }
                 var buyQty = qtyInput ? clampDetailQty(qtyInput.value) : 1;
-                purchaseBtn.disabled = true;
-                submitPurchase(oid, buyQty).then(function () {
-                    setPurchaseSubmittedUi(order, true);
-                    if (window.UssMarketNotify && typeof window.UssMarketNotify.pollOnce === 'function') {
-                        window.UssMarketNotify.pollOnce();
-                    }
-                }).catch(function (e) {
-                    purchaseBtn.disabled = false;
-                    purchaseBtn.classList.add('market-btn--accent');
-                    purchaseBtn.classList.remove('is-done');
-                    purchaseBtn.removeAttribute('aria-disabled');
-                    window.alert((e && e.message) || '提交失败');
+                requireFlowAck('purchase', function () {
+                    purchaseBtn.disabled = true;
+                    submitPurchase(oid, buyQty).then(function (data) {
+                        var next = data && data.purchase && data.purchase.order;
+                        var shown = next ? mergeOrderIntoState(next) || order : order;
+                        renderOrderDetail(shown, { showPurchaseHint: true, unlockSellerContact: true });
+                        setPurchaseSubmittedUi(shown, true);
+                        if (window.UssMarketNotify && typeof window.UssMarketNotify.push === 'function') {
+                            window.UssMarketNotify.push({
+                                kind: 'buyer',
+                                title: '购买已提交',
+                                body: '请等待卖家确认交易，可在商城管理中查看进度。',
+                                url: 'market-trades.html?tab=purchases',
+                            });
+                        }
+                        if (window.UssMarketNotify && typeof window.UssMarketNotify.pollOnce === 'function') {
+                            window.UssMarketNotify.pollOnce();
+                        }
+                    }).catch(function (e) {
+                        purchaseBtn.disabled = false;
+                        purchaseBtn.classList.add('market-btn--accent');
+                        purchaseBtn.classList.remove('is-done');
+                        purchaseBtn.removeAttribute('aria-disabled');
+                        window.alert((e && e.message) || '提交失败');
+                    });
                 });
             });
         }
@@ -1156,12 +1570,17 @@
         if (!order || !el.detailBackdrop) return;
         renderOrderDetail(order);
         el.detailBackdrop.hidden = false;
-        document.body.style.overflow = 'hidden';
+        syncBodyScrollLock();
         if (el.detailClose) el.detailClose.focus();
         if (!isOwnOrder(order) && order.orderType === 'sell') {
             fetchMyBuyerPurchaseForOrder(orderId).then(function (purchase) {
                 if (!purchase) return;
-                setPurchaseSubmittedUi(order, true);
+                var shown = purchase.order ? (mergeOrderIntoState(purchase.order) || order) : order;
+                renderOrderDetail(shown, {
+                    showPurchaseHint: purchase.status === 'pending',
+                    unlockSellerContact: true,
+                });
+                setPurchaseSubmittedUi(shown, true);
                 if (purchase.status !== 'pending') {
                     var hint = document.getElementById('marketDetailPurchaseHint');
                     var nudgeBtn = document.getElementById('marketDetailNudgeBtn');
@@ -1175,7 +1594,7 @@
     function closeOrderDetail() {
         if (!el.detailBackdrop) return;
         el.detailBackdrop.hidden = true;
-        document.body.style.overflow = '';
+        syncBodyScrollLock();
         if (el.detailModal) el.detailModal.classList.remove('market-detail--barter');
     }
 
@@ -1200,6 +1619,12 @@
             if (typeof window.openLoginDrawer === 'function') window.openLoginDrawer();
             return;
         }
+        ensureRsiBindThen(function () {
+            requireFlowAck('publish', openCreateModal);
+        });
+    }
+
+    function openCreateModal() {
         state.editingOrderId = null;
         resetCreateForm();
         if (el.modalBackdrop) {
@@ -1257,6 +1682,7 @@
             tradeTimeEnd: order.tradeTimeEnd || '21:00',
             categoryGroup: it0.categoryGroup || '',
             itemInfo: order.note || '',
+            contact: order.contact || (order.seller && order.seller.email) || accountEmail(),
             location: order.location ? {
                 id: order.location.id || null,
                 name: order.location.name || '',
@@ -1317,6 +1743,7 @@
             tradeTimeEnd: '21:00',
             categoryGroup: '',
             itemInfo: '',
+            contact: accountEmail(),
             location: null,
             items: [{ componentId: null, name: '', categoryGroup: null, typeLabel: '', quantity: 1, pricePerUnit: '', quality: DEFAULT_QUALITY }],
             autoImage: null,
@@ -1331,6 +1758,7 @@
         if (el.imageInput) el.imageInput.value = '';
         if (el.wantImageInput) el.wantImageInput.value = '';
         if (el.itemInfoInput) el.itemInfoInput.value = '';
+        if (el.contactInput) el.contactInput.value = state.create.contact || '';
         setEditModalUi(false);
         syncCreateFormUi();
     }
@@ -1340,6 +1768,16 @@
         container.querySelectorAll('button[data-' + attr + ']').forEach(function (btn) {
             btn.classList.toggle('is-active', btn.getAttribute('data-' + attr) === value);
         });
+    }
+
+    function syncHqPointsFormHints() {
+        var offerPts = isHqPointsItem(currentItem());
+        var wantPts = isHqPointsItem(currentWantItem());
+        if (el.hqPointsHint) {
+            el.hqPointsHint.hidden = !(isSuperAdminSession() && state.create.tradeType === 'barter');
+        }
+        if (el.qtyLabel) el.qtyLabel.textContent = offerPts ? '积分数' : '数量';
+        if (el.wantQtyLabel) el.wantQtyLabel.textContent = wantPts ? '积分数' : '换取数量';
     }
 
     function syncCreateFormUi() {
@@ -1356,6 +1794,7 @@
         if (el.tradeTimeStart) el.tradeTimeStart.value = c.tradeTimeStart || '20:00';
         if (el.tradeTimeEnd) el.tradeTimeEnd.value = c.tradeTimeEnd || '21:00';
         if (el.itemInfoInput) el.itemInfoInput.value = c.itemInfo || '';
+        if (el.contactInput) el.contactInput.value = c.contact || '';
         if (el.qualityInput) el.qualityInput.value = itemQuality(it);
         var isBarter = c.tradeType === 'barter';
         if (el.priceField) el.priceField.hidden = isBarter;
@@ -1368,9 +1807,15 @@
         if (el.wantItemInput) el.wantItemInput.value = want.name || '';
         if (el.wantCategorySelect) el.wantCategorySelect.value = c.barterWantCategoryGroup || want.categoryGroup || '';
         if (el.wantQualityInput) el.wantQualityInput.value = itemQuality(want);
-        if (el.wantQtyInput) el.wantQtyInput.value = want.quantity || 1;
+        if (el.qtyInput) {
+            el.qtyInput.value = isHqPointsItem(it) ? (it.hqPointsAmount || it.quantity || 1) : (it.quantity || 1);
+        }
+        if (el.wantQtyInput) {
+            el.wantQtyInput.value = isHqPointsItem(want) ? (want.hqPointsAmount || want.quantity || 1) : (want.quantity || 1);
+        }
         renderProductImage(it);
         renderWantProductImage(want);
+        syncHqPointsFormHints();
         if (el.formError) el.formError.hidden = true;
     }
 
@@ -1379,6 +1824,7 @@
         if (state.create.existingImage) return absMediaUrl(state.create.existingImage);
         if (state.create.autoImage) return state.create.autoImage;
         var it = currentItem();
+        if (it && isHqPointsItem(it)) return hqPointsImageUrl();
         if (it && it.componentId) return componentImageUrl(it.componentId);
         return '';
     }
@@ -1388,7 +1834,7 @@
         var src = displayImageSrc();
         var hasUser = !!state.create.userImage;
         var hasExisting = !!state.create.existingImage;
-        var hasAuto = !!(state.create.autoImage || (it && it.componentId));
+        var hasAuto = !!(state.create.autoImage || (it && isHqPointsItem(it)) || (it && it.componentId && !isHqPointsItem(it)));
         if (el.imageRemove) el.imageRemove.hidden = !(hasUser || hasExisting);
         if (el.imagePlaceholder) el.imagePlaceholder.hidden = !!src;
         if (el.itemPreviewType) {
@@ -1420,6 +1866,7 @@
         if (state.create.barterWantExistingImage) return absMediaUrl(state.create.barterWantExistingImage);
         if (state.create.barterWantAutoImage) return state.create.barterWantAutoImage;
         var want = currentWantItem();
+        if (want && isHqPointsItem(want)) return hqPointsImageUrl();
         if (want && want.componentId) return componentImageUrl(want.componentId);
         return '';
     }
@@ -1429,7 +1876,7 @@
         var src = displayWantImageSrc();
         var hasUser = !!state.create.barterWantUserImage;
         var hasExisting = !!state.create.barterWantExistingImage;
-        var hasAuto = !!(state.create.barterWantAutoImage || (want && want.componentId));
+        var hasAuto = !!(state.create.barterWantAutoImage || (want && isHqPointsItem(want)) || (want && want.componentId && !isHqPointsItem(want)));
         if (el.wantImageRemove) el.wantImageRemove.hidden = !(hasUser || hasExisting);
         if (el.wantImagePlaceholder) el.wantImagePlaceholder.hidden = !!src;
         if (el.wantItemPreviewType) {
@@ -1487,6 +1934,25 @@
 
     async function applyWantItemPick(picked) {
         var want = currentWantItem();
+        if (picked && (picked._hqPoints || String(picked.id_item || picked.componentId || '') === 'uss-hq-points')) {
+            want.componentId = 'uss-hq-points';
+            want.name = '积分';
+            want.nameZh = 'USS总部签到积分';
+            want.typeLabel = 'USS总部签到积分';
+            want.categoryGroup = 'hq_points';
+            state.create.barterWantCategoryGroup = 'hq_points';
+            if (el.wantCategorySelect) el.wantCategorySelect.value = 'hq_points';
+            if (el.wantItemInput) {
+                el.wantItemInput.value = '积分';
+                el.wantItemInput.setAttribute('aria-expanded', 'false');
+            }
+            hideSuggest(el.wantItemSuggest);
+            state.create.barterWantAutoImage = null;
+            renderWantProductImage(want);
+            syncHqPointsFormHints();
+            return;
+        }
+        var want = currentWantItem();
         want.componentId = itemComponentId(picked);
         want.name = itemDisplayName(picked) || String(picked.id_item || '');
         want.nameZh = picked.name_zh || null;
@@ -1518,6 +1984,25 @@
     }
 
     async function applyItemPick(picked) {
+        var it = currentItem();
+        if (picked && (picked._hqPoints || String(picked.id_item || picked.componentId || '') === 'uss-hq-points')) {
+            it.componentId = 'uss-hq-points';
+            it.name = '积分';
+            it.nameZh = 'USS总部签到积分';
+            it.typeLabel = 'USS总部签到积分';
+            it.categoryGroup = 'hq_points';
+            state.create.categoryGroup = 'hq_points';
+            if (el.categorySelect) el.categorySelect.value = 'hq_points';
+            if (el.itemInput) {
+                el.itemInput.value = '积分';
+                el.itemInput.setAttribute('aria-expanded', 'false');
+            }
+            hideSuggest(el.itemSuggest);
+            state.create.autoImage = null;
+            renderProductImage(it);
+            syncHqPointsFormHints();
+            return;
+        }
         var it = currentItem();
         it.componentId = itemComponentId(picked);
         it.name = itemDisplayName(picked) || String(picked.id_item || '');
@@ -1577,6 +2062,7 @@
         if (el.tradeTimeStart) c.tradeTimeStart = el.tradeTimeStart.value || '20:00';
         if (el.tradeTimeEnd) c.tradeTimeEnd = el.tradeTimeEnd.value || '21:00';
         if (el.itemInfoInput) c.itemInfo = el.itemInfoInput.value.trim();
+        if (el.contactInput) c.contact = el.contactInput.value.trim();
         if (c.tradeType === 'barter') {
             var want = currentWantItem();
             if (el.wantItemInput) want.name = el.wantItemInput.value.trim();
@@ -1629,11 +2115,11 @@
                 signal: itemSuggestController.signal,
             });
             var data = await r.json().catch(function () { return {}; });
-            if (!r.ok || data.ok === false) return cb([]);
-            cb(Array.isArray(data.items) ? data.items : []);
+            if (!r.ok || data.ok === false) return cb(withHqPointsSuggest(q, []));
+            cb(withHqPointsSuggest(q, Array.isArray(data.items) ? data.items : []));
         } catch (e) {
             if (e && e.name === 'AbortError') return;
-            cb([]);
+            cb(withHqPointsSuggest(q, []));
         } finally {
             itemSuggestController = null;
         }
@@ -1678,11 +2164,11 @@
                 signal: wantItemSuggestController.signal,
             });
             var data = await r.json().catch(function () { return {}; });
-            if (!r.ok || data.ok === false) return cb([]);
-            cb(Array.isArray(data.items) ? data.items : []);
+            if (!r.ok || data.ok === false) return cb(withHqPointsSuggest(q, []));
+            cb(withHqPointsSuggest(q, Array.isArray(data.items) ? data.items : []));
         } catch (e) {
             if (e && e.name === 'AbortError') return;
-            cb([]);
+            cb(withHqPointsSuggest(q, []));
         } finally {
             wantItemSuggestController = null;
         }
@@ -1800,15 +2286,18 @@
 
     function buildPayloadItems() {
         var c = state.create;
-        var it = currentItem();
+        var it = coerceTypedHqPoints(currentItem());
+        var offerPts = isHqPointsItem(it);
+        var offerAmount = Math.max(1, parseInt(it.quantity, 10) || 1);
         var row = {
             componentId: it.componentId,
             name: it.name,
             nameZh: it.nameZh,
-            categoryGroup: c.categoryGroup || it.categoryGroup,
-            quantity: it.quantity,
+            categoryGroup: offerPts ? 'hq_points' : (c.categoryGroup || it.categoryGroup),
+            quantity: offerPts ? 1 : it.quantity,
             quality: itemQuality(it),
         };
+        if (offerPts) row.hqPointsAmount = offerAmount;
         if (c.tradeType === 'currency') {
             var priceRaw = it.pricePerUnit;
             if (priceRaw === '' || priceRaw == null) {
@@ -1819,15 +2308,18 @@
             }
             return [row];
         }
-        var want = currentWantItem();
+        var want = coerceTypedHqPoints(currentWantItem());
+        var wantPts = isHqPointsItem(want);
+        var wantAmount = Math.max(1, parseInt(want.quantity, 10) || 1);
         var wantRow = {
             componentId: want.componentId,
             name: want.name,
             nameZh: want.nameZh,
-            categoryGroup: c.barterWantCategoryGroup || want.categoryGroup,
-            quantity: want.quantity,
+            categoryGroup: wantPts ? 'hq_points' : (c.barterWantCategoryGroup || want.categoryGroup),
+            quantity: wantPts ? wantAmount : want.quantity,
             quality: itemQuality(want),
         };
+        if (wantPts) wantRow.hqPointsAmount = wantAmount;
         return [row, wantRow];
     }
 
@@ -1841,7 +2333,7 @@
             el.formError.hidden = false;
             return;
         }
-        if (!c.categoryGroup) {
+        if (!c.categoryGroup && !isHqPointsItem(currentItem())) {
             el.formError.textContent = '请选择物品分类';
             el.formError.hidden = false;
             return;
@@ -1865,7 +2357,19 @@
             return;
         }
         if (c.tradeType === 'barter') {
-            if (!c.barterWantCategoryGroup && !items[1].categoryGroup) {
+            var offerPts = isHqPointsItem(items[0]);
+            var wantPts = isHqPointsItem(items[1]);
+            if (offerPts && wantPts) {
+                el.formError.textContent = '积分只能填写在互换的一侧';
+                el.formError.hidden = false;
+                return;
+            }
+            if (!isSuperAdminSession() && (offerPts || wantPts)) {
+                el.formError.textContent = '仅超级管理员可发布积分互换';
+                el.formError.hidden = false;
+                return;
+            }
+            if (!wantPts && !c.barterWantCategoryGroup && !items[1].categoryGroup) {
                 el.formError.textContent = '请选择换取物品分类';
                 el.formError.hidden = false;
                 return;
@@ -1897,6 +2401,7 @@
             items: items,
             images: submitImages(),
             note: c.itemInfo || '',
+            contact: c.contact || '',
         };
         if (el.btnSubmit) el.btnSubmit.disabled = true;
         try {
@@ -1909,6 +2414,7 @@
                     items: payload.items,
                     images: payload.images,
                     note: payload.note,
+                    contact: payload.contact,
                 };
                 var patchRes = await fetch(joinUrl('/api/market/orders/' + encodeURIComponent(state.editingOrderId)), {
                     method: 'PATCH',
@@ -1931,7 +2437,14 @@
                 body: JSON.stringify(payload),
             });
             var data = await r.json().catch(function () { return {}; });
-            if (!r.ok) throw new Error((data && data.message) || '生成单据失败');
+            if (!r.ok) {
+                if (data && data.code === 'MKT_042') {
+                    closeModal();
+                    ensureRsiBindThen(function () {});
+                    return;
+                }
+                throw new Error(apiErrorText(data, '生成单据失败'));
+            }
             closeModal();
             state.tab = c.orderType === 'buy' ? 'buy' : 'sell';
             syncTabs();
@@ -1994,20 +2507,48 @@
                 if (ev.target === el.detailBackdrop) closeOrderDetail();
             });
         }
-        if (el.flowClose) el.flowClose.addEventListener('click', closeFlowGuide);
+        if (el.flowClose) el.flowClose.addEventListener('click', function () {
+            closeFlowGuide(false);
+        });
+        if (el.flowAckBtn) {
+            el.flowAckBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                ackForcedFlow();
+            });
+        }
         if (el.flowBackdrop) {
             el.flowBackdrop.addEventListener('click', function (ev) {
-                if (ev.target === el.flowBackdrop) closeFlowGuide();
+                if (ev.target !== el.flowBackdrop) return;
+                if (isFlowForced()) return;
+                closeFlowGuide(false);
             });
         }
         document.addEventListener('keydown', function (ev) {
             if (ev.key !== 'Escape') return;
             var lb = document.getElementById('communityImageLightbox');
             if (lb && lb.classList.contains('is-open')) return;
+            if (el.confirmBackdrop && !el.confirmBackdrop.hidden) {
+                ev.preventDefault();
+                closeConfirmModal(false);
+                return;
+            }
+            if (el.flowBackdrop && !el.flowBackdrop.hidden) {
+                closeFlowGuide(false);
+                return;
+            }
             if (el.detailBackdrop && !el.detailBackdrop.hidden) closeOrderDetail();
-            else if (el.flowBackdrop && !el.flowBackdrop.hidden) closeFlowGuide();
             else if (el.modalBackdrop && !el.modalBackdrop.hidden) closeModal();
         });
+        if (!document.body.classList.contains('market-trades-body')) {
+            if (el.confirmClose) el.confirmClose.addEventListener('click', function () { closeConfirmModal(false); });
+            if (el.confirmCancel) el.confirmCancel.addEventListener('click', function () { closeConfirmModal(false); });
+            if (el.confirmOk) el.confirmOk.addEventListener('click', function () { closeConfirmModal(true); });
+            if (el.confirmBackdrop) {
+                el.confirmBackdrop.addEventListener('click', function (ev) {
+                    if (ev.target === el.confirmBackdrop) closeConfirmModal(false);
+                });
+            }
+        }
         if (el.btnCreate) el.btnCreate.addEventListener('click', openModal);
         if (el.modalClose) el.modalClose.addEventListener('click', closeModal);
         if (el.modalCancel) el.modalCancel.addEventListener('click', closeModal);
@@ -2261,9 +2802,18 @@
         el.detailModal = el.detailBackdrop ? el.detailBackdrop.querySelector('.market-detail') : null;
         el.detailBody = $('marketDetailBody');
         el.detailClose = $('marketDetailClose');
+        el.confirmBackdrop = $('marketConfirmBackdrop');
+        el.confirmTitle = $('marketConfirmTitle');
+        el.confirmMessage = $('marketConfirmMessage');
+        el.confirmClose = $('marketConfirmClose');
+        el.confirmCancel = $('marketConfirmCancel');
+        el.confirmOk = $('marketConfirmOk');
         el.flowBackdrop = $('marketFlowBackdrop');
         el.flowClose = $('marketFlowClose');
         el.flowGuideBtn = $('marketFlowGuideBtn');
+        el.flowForceFoot = $('marketFlowForceFoot');
+        el.flowForceHint = $('marketFlowForceHint');
+        el.flowAckBtn = $('marketFlowAckBtn');
         el.modalClose = $('marketModalClose');
         el.modalCancel = $('marketModalCancel');
         el.segTradeType = $('marketSegTradeType');
@@ -2280,6 +2830,7 @@
         el.tradeTimeStart = $('marketTradeTimeStart');
         el.tradeTimeEnd = $('marketTradeTimeEnd');
         el.itemInfoInput = $('marketItemInfoInput');
+        el.contactInput = $('marketContactInput');
         el.itemInput = $('marketItemInput');
         el.itemSuggest = $('marketItemSuggest');
         el.itemPreviewType = $('marketItemPreviewType');
@@ -2289,13 +2840,16 @@
         el.imagePlaceholder = $('marketImagePlaceholder');
         el.imageRemove = $('marketImageRemove');
         el.qtyInput = $('marketQtyInput');
+        el.qtyLabel = $('marketQtyLabel');
         el.priceInput = $('marketPriceInput');
         el.priceField = $('marketPriceField');
+        el.hqPointsHint = $('marketHqPointsHint');
         el.wantItemInput = $('marketWantItemInput');
         el.wantItemSuggest = $('marketWantItemSuggest');
         el.wantCategorySelect = $('marketWantCategorySelect');
         el.wantQualityInput = $('marketWantQualityInput');
         el.wantQtyInput = $('marketWantQtyInput');
+        el.wantQtyLabel = $('marketWantQtyLabel');
         el.wantImageInput = $('marketWantImageInput');
         el.wantImagePreview = $('marketWantImagePreview');
         el.wantImagePreviewImg = $('marketWantImagePreviewImg');
@@ -2326,13 +2880,9 @@
         window.addEventListener('storage', refreshNavLoginState);
         renderCategoryChips();
         syncTabs();
-        if (!isLoggedIn()) {
-            showGate('请先登录后访问星巢贸易');
-            return;
-        }
         hideGate();
         fetchOrders();
-        if (window.UssMarketNotify && typeof window.UssMarketNotify.init === 'function') {
+        if (isLoggedIn() && window.UssMarketNotify && typeof window.UssMarketNotify.init === 'function') {
             window.UssMarketNotify.init();
         }
     }

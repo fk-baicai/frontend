@@ -411,9 +411,13 @@
                 'forgotPwCode',
                 'forgotPwNewPassword',
                 'forgotPwConfirmPassword',
-                'settingsCurrentPassword',
+                'settingsEmailCode',
+                'settingsNewEmail',
+                'settingsConfirmEmail',
+                'settingsPasswordCode',
                 'settingsNewPassword',
                 'settingsConfirmPassword',
+                'settingsRsiHandleInput',
             ].forEach(function (id) {
                 var el = document.getElementById(id);
                 if (el) syncAuthFloatField(el);
@@ -982,6 +986,11 @@
             updatePageScrollLock();
         }
 
+        function openRsiBindSettings() {
+            openAccountSettings();
+            showAccountSettingsPanel('rsi');
+        }
+
         function closeAccountSettings() {
             const backdrop = document.getElementById('accountSettingsBackdrop');
             if (backdrop) backdrop.hidden = true;
@@ -1195,6 +1204,7 @@
                 rsiOrgLogoUrl: u.rsiOrgLogoUrl !== undefined ? u.rsiOrgLogoUrl : p.rsiOrgLogoUrl,
                 rsiOrgRoleLabel: u.rsiOrgRoleLabel !== undefined ? u.rsiOrgRoleLabel : p.rsiOrgRoleLabel,
                 rsiOrgRankSlots: u.rsiOrgRankSlots !== undefined ? u.rsiOrgRankSlots : p.rsiOrgRankSlots,
+                rsiOrgRankTotal: u.rsiOrgRankTotal !== undefined ? u.rsiOrgRankTotal : p.rsiOrgRankTotal,
                 rsiProfileSyncedAt:
                     u.rsiProfileSyncedAt !== undefined ? u.rsiProfileSyncedAt : p.rsiProfileSyncedAt,
                 rsiBindLocked: u.rsiBindLocked !== undefined ? !!u.rsiBindLocked : !!p.rsiBindLocked,
@@ -4890,6 +4900,8 @@
             const orgRole = sess && sess.rsiOrgRoleLabel != null ? String(sess.rsiOrgRoleLabel).trim() : '';
             var slots = sess && sess.rsiOrgRankSlots != null ? Number(sess.rsiOrgRankSlots) : 0;
             if (!Number.isFinite(slots)) slots = 0;
+            var totalSlots = sess && sess.rsiOrgRankTotal != null ? Number(sess.rsiOrgRankTotal) : 0;
+            if (!Number.isFinite(totalSlots) || totalSlots < 1) totalSlots = 5;
             const showFleet = hasOrgFleetIdentity(sess);
             const showNoMainOrg = shouldShowNoMainOrgMessage(sess);
             if (!showFleet) {
@@ -4926,11 +4938,16 @@
                 roleEl.textContent = '';
                 roleRow.hidden = true;
             }
-            var n = Math.max(0, Math.min(20, slots));
+            var filled = Number(slots);
+            if (!Number.isFinite(filled) || filled < 0) filled = 0;
+            var total = Number(totalSlots);
+            if (!Number.isFinite(total) || total < 1) total = 5;
+            if (filled > total) total = Math.min(20, filled);
             rankWrap.innerHTML = '';
-            for (var i = 0; i < n; i++) {
+            rankWrap.setAttribute('aria-hidden', 'false');
+            for (var i = 0; i < total; i++) {
                 var sp = document.createElement('span');
-                sp.className = 'active drawer-org-rank-slot';
+                sp.className = (i < filled ? 'active ' : '') + 'drawer-org-rank-slot';
                 sp.setAttribute('aria-hidden', 'true');
                 sp.innerHTML = ORG_RANK_ICON_SVG;
                 rankWrap.appendChild(sp);
