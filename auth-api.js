@@ -147,7 +147,7 @@
             this.base = AUTH_API_BASE;
         },
 
-        /** 将 API 返回的相对路径（如 /avatars/uuid.jpg）拼成可给 <img src> 使用的绝对地址 */
+        /** 将 API 返回的相对路径（如 /avatars/uuid.webp）拼成可给 <img src> 使用的绝对地址 */
         resolveAssetUrl: function (rel) {
             if (!rel || typeof rel !== 'string') return '';
             if (/^https?:\/\//i.test(rel)) return rel;
@@ -171,7 +171,7 @@
             var base = pathRel.split('/').pop() || '';
             var m = /^(.+)\.(jpe?g|png|gif|webp)$/i.exec(base);
             if (!m) return joinUrl(pathRel + qs);
-            return joinUrl('/community-uploads/' + m[1] + '-thumb.jpg' + qs);
+            return joinUrl('/community-uploads/' + m[1] + '-thumb.webp' + qs);
         },
 
         async register(body, opts) {

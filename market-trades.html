@@ -33,7 +33,7 @@
     <nav class="navbar">
         <div class="navbar-start">
         <div class="logo">
-            <a href="index.html" aria-label="首页"><img src="fleet-logo.jpg" alt="舰队 LOGO" decoding="async"></a>
+            <a href="index.html" aria-label="首页"><img src="fleet-logo.webp" alt="舰队 LOGO" decoding="async"></a>
         </div>
         <div class="nav-links" role="navigation" aria-label="站点导航">
             <div class="nav-dropdown">
@@ -155,7 +155,7 @@
                     if (/^https?:\/\//i.test(rel)) src = rel;
                     else src = base + (rel.charAt(0) === '/' ? rel : '/' + rel);
                 }
-                img.src = src || (window.USS_DEFAULT_AVATAR || 'default-avatar.png');
+                img.src = src || (window.USS_DEFAULT_AVATAR || 'default-avatar.webp');
                 img.alt = '用户头像';
             } catch (e) { /* ignore */ }
         })();
@@ -415,12 +415,12 @@
     <script src="auth-session-sync.js" defer></script>
     <script defer src="rsi-client.js"></script>
     <script defer src="rsi-sync.js"></script>
-    <script defer src="home-app.js?v=20260723b"></script>
+    <script defer src="home-app.js?v=20260823a"></script>
     <script src="nav-dropdown.js" defer></script>
     <script src="nav-auth-tools.js" defer></script>
     <script src="site-footer.js" defer></script>
     <script src="market-notify.js" defer></script>
-    <script src="market.js?v=44" defer></script>
+    <script src="market.js?v=46" defer></script>
     <script src="market-trades.js?v=14" defer></script>
 </body>
 </html>

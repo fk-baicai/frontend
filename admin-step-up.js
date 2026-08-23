@@ -67,6 +67,65 @@
         return n;
     }
 
+    function gateMarkup() {
+        var opts = DURATION_OPTIONS.map(function (days, i) {
+            var checked = i === 0 ? ' checked' : '';
+            return (
+                '<label class="admin-step-up-duration-option">' +
+                '<input type="radio" name="adminStepUpDuration" value="' +
+                days +
+                '"' +
+                checked +
+                ' />' +
+                '<span>' +
+                days +
+                ' 天</span></label>'
+            );
+        }).join('');
+        return (
+            '<div class="admin-step-up-panel">' +
+            '<h2>邮箱二次验证</h2>' +
+            '<p class="hint">进入管理系统前，请先向注册邮箱发送验证码并完成验证。</p>' +
+            '<div class="admin-step-up-row">' +
+            '<button type="button" id="btnAdminStepUpSend">发送验证码</button>' +
+            '<span id="adminStepUpSendStatus" class="hint"></span>' +
+            '</div>' +
+            '<div class="admin-step-up-row">' +
+            '<input id="adminStepUpCode" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" placeholder="6 位验证码" />' +
+            '<button type="button" id="btnAdminStepUpVerify">验证并进入</button>' +
+            '</div>' +
+            '<p id="adminStepUpErr" class="err" hidden></p>' +
+            '<p id="adminStepUpValidHint" class="hint"></p>' +
+            '<div class="admin-step-up-duration">' +
+            '<span class="admin-step-up-duration-label">验证有效期限</span>' +
+            '<div class="admin-step-up-duration-options">' +
+            opts +
+            '</div></div></div>'
+        );
+    }
+
+    function ensureGateElement(preferred) {
+        var el = preferred || document.getElementById('adminStepUpGate');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'adminStepUpGate';
+            el.hidden = true;
+            var main = document.querySelector('main');
+            var app = document.getElementById('app');
+            if (main && app && app.parentNode === main) {
+                main.insertBefore(el, app);
+            } else if (main) {
+                main.insertBefore(el, main.firstChild);
+            } else {
+                document.body.appendChild(el);
+            }
+        }
+        if (!el.querySelector('#btnAdminStepUpSend')) {
+            el.innerHTML = gateMarkup();
+        }
+        return el;
+    }
+
     async function parseJson(r) {
         try {
             return await r.json();
@@ -164,10 +223,10 @@
     function mountGate(opts) {
         opts = opts || {};
         var authToken = opts.authToken;
-        var gateEl = opts.gateEl || document.getElementById('adminStepUpGate');
-        if (!gateEl || !authToken) {
+        if (!authToken) {
             return Promise.resolve(false);
         }
+        var gateEl = ensureGateElement(opts.gateEl);
 
         var sendBtn = gateEl.querySelector('#btnAdminStepUpSend');
         var verifyBtn = gateEl.querySelector('#btnAdminStepUpVerify');
@@ -285,6 +344,7 @@
         clearSession: clearSession,
         getAuthHeaders: getAuthHeaders,
         getSelectedDuration: getSelectedDuration,
+        ensureGateElement: ensureGateElement,
         isStepUpError: isStepUpError,
         fetchStatus: fetchStatus,
         sendCode: sendCode,

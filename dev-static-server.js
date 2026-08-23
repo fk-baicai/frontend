@@ -17,6 +17,7 @@ function contentType(filePath) {
     if (filePath.endsWith('.js')) return 'application/javascript; charset=utf-8';
     if (filePath.endsWith('.mp4')) return 'video/mp4';
     if (filePath.endsWith('.webm')) return 'video/webm';
+    if (filePath.endsWith('.webp')) return 'image/webp';
     if (filePath.endsWith('.png')) return 'image/png';
     if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) return 'image/jpeg';
     if (filePath.endsWith('.ico')) return 'image/x-icon';

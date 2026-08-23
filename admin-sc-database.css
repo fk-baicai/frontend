@@ -193,6 +193,10 @@ body.admin-step-up-active main {
     padding-bottom: 2rem;
 }
 
+body.admin-step-up-active #app {
+    display: none !important;
+}
+
 #adminStepUpGate:not([hidden]) {
     display: flex;
     align-items: center;

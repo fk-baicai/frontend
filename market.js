@@ -219,7 +219,19 @@
     function absMediaUrl(rel) {
         if (!rel) return '';
         var s = String(rel);
-        if (/^https?:\/\//i.test(s)) return s;
+        if (/^data:/i.test(s) || /^blob:/i.test(s)) return s;
+        if (/^https?:\/\//i.test(s)) {
+            try {
+                var abs = new URL(s);
+                if (/\/(?:api\/market\/uploads|market-uploads)\//i.test(abs.pathname)) {
+                    return joinUrl('/api/market/uploads/' + abs.pathname.split('/').pop());
+                }
+            } catch (e) { /* keep original */ }
+            return s;
+        }
+        if (/\/(?:api\/market\/uploads|market-uploads)\//i.test(s)) {
+            return joinUrl('/api/market/uploads/' + s.split('/').pop().split('?')[0]);
+        }
         return joinUrl(s.charAt(0) === '/' ? s : '/' + s);
     }
 
@@ -229,7 +241,7 @@
     }
 
     function defaultAvatar() {
-        return window.USS_DEFAULT_AVATAR || 'default-avatar.png';
+        return window.USS_DEFAULT_AVATAR || 'default-avatar.webp';
     }
 
     function escapeHtml(s) {

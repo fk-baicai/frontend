@@ -1,23 +1,22 @@
 /**
  * 首页应用逻辑（自 index.html 拆出，defer 加载以缩短 HTML 解析时间）
  */
-        const DEFAULT_AVATAR_DATA_URI = 'data:image/svg+xml,' + encodeURIComponent(
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
-            '<circle cx="32" cy="32" r="32" fill="#1e4d6b"/>' +
-            '<circle cx="32" cy="26" r="14" fill="#a8d8e8"/>' +
-            '<ellipse cx="32" cy="56" rx="22" ry="18" fill="#a8d8e8"/>' +
-            '</svg>'
-        );
+        function defaultSiteAvatarSrc() {
+            if (typeof window.ussDefaultAvatarSrc === 'function') return window.ussDefaultAvatarSrc();
+            return String(window.USS_DEFAULT_AVATAR || 'default-avatar.webp');
+        }
 
         function sessionAvatarSrc() {
-            if (!isLoggedIn()) return DEFAULT_AVATAR_DATA_URI;
+            if (!isLoggedIn()) return defaultSiteAvatarSrc();
             const sess = loadAuthSession();
             const rel = sess && sess.avatarUrl;
             if (rel && window.UssAuthApi && typeof window.UssAuthApi.resolveAssetUrl === 'function') {
                 const url = window.UssAuthApi.resolveAssetUrl(rel);
-                if (url) return url;
+                if (url && !(window.ussIsGenericDefaultAvatarUrl && window.ussIsGenericDefaultAvatarUrl(url))) {
+                    return url;
+                }
             }
-            return DEFAULT_AVATAR_DATA_URI;
+            return defaultSiteAvatarSrc();
         }
 
         function sessionRankIconSrc(sess) {
@@ -723,7 +722,7 @@
         }
 
         function openRsiBiographyExample() {
-            const src = 'assets/rsi-biography-example.jpg';
+            const src = 'assets/rsi-biography-example.webp';
             if (
                 window.UssCommunityImageLightbox &&
                 typeof window.UssCommunityImageLightbox.open === 'function'
@@ -1454,7 +1453,7 @@
                 avatarWrap.classList.add('is-hidden');
                 btn.classList.remove('is-logged-in');
                 btn.setAttribute('aria-label', '登录或注册');
-                img.src = DEFAULT_AVATAR_DATA_URI;
+                img.src = defaultSiteAvatarSrc();
                 img.alt = '默认头像';
             }
             if (window.UssNavTools && typeof window.UssNavTools.refresh === 'function') {
@@ -1948,16 +1947,16 @@
                     img.className = 'community-chat-mention-pop__avatar-img';
                     img.alt = '';
                     if (it.isAll) {
-                        img.src = communityAvatarFallbackDataUri('全');
+                        img.src = defaultSiteAvatarSrc();
                     } else {
                         const src = communityAvatarSrc(it.avatarUrl);
                         img.src =
                             src && !communityIsGenericDefaultAvatarUrl(src)
                                 ? src
-                                : communityAvatarFallbackDataUri(communityAuthorInitial(it.bindingId));
+                                : defaultSiteAvatarSrc();
                         img.onerror = function () {
                             img.onerror = null;
-                            img.src = communityAvatarFallbackDataUri(communityAuthorInitial(it.bindingId));
+                            img.src = defaultSiteAvatarSrc();
                         };
                     }
                     av.appendChild(img);
@@ -2806,18 +2805,6 @@
             }
         }
 
-        function communityAuthorInitial(bindingId, authorLabel) {
-            if (authorLabel) {
-                const s = String(authorLabel).trim();
-                if (s) return s.charAt(0);
-            }
-            const s = String(bindingId || '').trim();
-            if (s === '__honghou__') return '红';
-            if (!s) return '?';
-            const ch = s.charAt(0);
-            return ch.toUpperCase();
-        }
-
         function communityAvatarSrc(avatarUrl) {
             if (avatarUrl && window.UssAuthApi && typeof window.UssAuthApi.resolveAssetUrl === 'function') {
                 const url = window.UssAuthApi.resolveAssetUrl(avatarUrl);
@@ -2831,32 +2818,19 @@
         function communityResolveAvatarUrl(bindingId, avatarUrl) {
             if (avatarUrl) return avatarUrl;
             if (String(bindingId || '').trim().toLowerCase() === '__honghou__') {
-                return window.USS_HONGHOU_AVATAR || '/avatars/honghou.jpg';
+                return window.USS_HONGHOU_AVATAR || '/avatars/honghou.webp';
             }
             return null;
         }
 
-        function communityAvatarFallbackDataUri(initial) {
-            const ch = String(initial || '?').charAt(0).toUpperCase();
-            return (
-                'data:image/svg+xml,' +
-                encodeURIComponent(
-                    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
-                        '<circle cx="32" cy="32" r="32" fill="#1e4d6b"/>' +
-                        '<text x="32" y="40" text-anchor="middle" font-size="28" fill="#a8d8e8" font-family="sans-serif">' +
-                        ch +
-                        '</text>' +
-                        '</svg>'
-                )
-            );
-        }
-
         function communityIsGenericDefaultAvatarUrl(url) {
+            if (typeof window.ussIsGenericDefaultAvatarUrl === 'function') {
+                return window.ussIsGenericDefaultAvatarUrl(url);
+            }
             const s = String(url || '');
             if (!s) return true;
-            const def = String(window.USS_DEFAULT_AVATAR || 'default-avatar.png');
-            if (s === def) return true;
-            return /(?:^|\/)default-avatar\.png(?:$|\?)/i.test(s);
+            if (/(?:^|\/)default-avatar\.(png|webp)(?:$|\?)/i.test(s)) return true;
+            return /avatar_default/i.test(s);
         }
 
         function communityPrepareAvatarImg(img, bindingId, avatarUrl, authorLabel, eager, rsiFallbackUrl) {
@@ -2867,9 +2841,7 @@
                     img.fetchPriority = 'high';
                 } catch (ignore) {}
             }
-            const fallback = communityAvatarFallbackDataUri(
-                communityAuthorInitial(bindingId, authorLabel)
-            );
+            const fallback = defaultSiteAvatarSrc();
             const resolved = communityResolveAvatarUrl(bindingId, avatarUrl);
             let remote = resolved ? communityAvatarSrc(resolved) : '';
             if ((!remote || communityIsGenericDefaultAvatarUrl(remote)) && rsiFallbackUrl) {
@@ -2895,7 +2867,7 @@
                 delete img.dataset.src;
                 delete img.dataset.loadedSrc;
             };
-            /* 真实头像优先；仅在无 RSI/本站头像时暂用字母，等待登录抓取回填 */
+            /* 真实头像优先；无自制肖像时用 default-avatar.webp */
             if (!remote || remote === fallback || communityIsGenericDefaultAvatarUrl(remote)) return;
             if (eager || !window.UssLazyMedia) {
                 img.src = remote;

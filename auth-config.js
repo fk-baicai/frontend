@@ -89,10 +89,21 @@
         window.USS_RSI_REQUIRED_ORG_HREF = '/orgs/5000';
     }
     if (!window.USS_DEFAULT_AVATAR) {
-        window.USS_DEFAULT_AVATAR = 'default-avatar.png';
+        window.USS_DEFAULT_AVATAR = 'default-avatar.webp';
     }
+    window.ussDefaultAvatarSrc = function () {
+        return String(window.USS_DEFAULT_AVATAR || 'default-avatar.webp');
+    };
+    window.ussIsGenericDefaultAvatarUrl = function (url) {
+        var s = String(url || '');
+        if (!s) return true;
+        var def = String(window.USS_DEFAULT_AVATAR || 'default-avatar.webp');
+        if (s === def) return true;
+        if (/(?:^|\/)default-avatar\.(png|webp)(?:$|\?)/i.test(s)) return true;
+        return /avatar_default/i.test(s);
+    };
     if (!window.USS_HONGHOU_AVATAR) {
-        window.USS_HONGHOU_AVATAR = '/avatars/honghou.jpg';
+        window.USS_HONGHOU_AVATAR = '/avatars/honghou.webp';
     }
 })();
 

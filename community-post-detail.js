@@ -134,30 +134,22 @@
         }
     }
 
-    function authorInitial(bindingId, authorLabel) {
-        if (authorLabel) {
-            var label = String(authorLabel).trim();
-            if (label) return label.charAt(0);
-        }
-        var s = String(bindingId || '').trim();
-        if (s === '__honghou__') return '红';
-        return s ? s.charAt(0).toUpperCase() : '?';
-    }
-
     function resolveAvatarUrl(bindingId, avatarUrl) {
         if (avatarUrl) return avatarUrl;
         if (String(bindingId || '').trim().toLowerCase() === '__honghou__') {
-            return window.USS_HONGHOU_AVATAR || '/avatars/honghou.jpg';
+            return window.USS_HONGHOU_AVATAR || '/avatars/honghou.webp';
         }
         return null;
     }
 
     function isGenericDefaultAvatar(url) {
+        if (typeof window.ussIsGenericDefaultAvatarUrl === 'function') {
+            return window.ussIsGenericDefaultAvatarUrl(url);
+        }
         var s = String(url || '');
         if (!s) return true;
-        var def = String(window.USS_DEFAULT_AVATAR || 'default-avatar.png');
-        if (s === def) return true;
-        return /(?:^|\/)default-avatar\.png(?:$|\?)/i.test(s);
+        if (/(?:^|\/)default-avatar\.(png|webp)(?:$|\?)/i.test(s)) return true;
+        return /avatar_default/i.test(s);
     }
 
     function avatarSrc(avatarUrl) {
@@ -170,16 +162,9 @@
         return '';
     }
 
-    function avatarFallback(initial) {
-        var ch = String(initial || '?').charAt(0).toUpperCase();
-        return (
-            'data:image/svg+xml,' +
-            encodeURIComponent(
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="#1e4d6b"/><text x="32" y="40" text-anchor="middle" font-size="28" fill="#a8d8e8" font-family="sans-serif">' +
-                    ch +
-                    '</text></svg>'
-            )
-        );
+    function avatarFallback() {
+        if (typeof window.ussDefaultAvatarSrc === 'function') return window.ussDefaultAvatarSrc();
+        return String(window.USS_DEFAULT_AVATAR || 'default-avatar.webp');
     }
 
     function normalizeUrl(url) {
@@ -244,7 +229,7 @@
         img.decoding = 'async';
         img.loading = 'lazy';
         var remote = avatarSrc(resolveAvatarUrl(bindingId, avatarUrl));
-        var fallback = avatarFallback(authorInitial(bindingId, authorLabel));
+        var fallback = avatarFallback();
         img.src = fallback;
         var rsiFb = rsiAvatarUrl;
         if (rsiFb && String(rsiFb).trim()) {

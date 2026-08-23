@@ -363,9 +363,11 @@
     }
 
     var CHECKIN_AVATAR_FALLBACK =
-        (typeof window !== 'undefined' && window.USS_DEFAULT_AVATAR) || 'default-avatar.png';
+        (typeof window !== 'undefined' && window.USS_DEFAULT_AVATAR) || 'default-avatar.webp';
 
     function checkinAvatarSrc(avatarUrl) {
+        var raw = avatarUrl != null ? String(avatarUrl) : '';
+        if (/avatar_default/i.test(raw)) return CHECKIN_AVATAR_FALLBACK;
         if (avatarUrl && window.UssAuthApi && typeof window.UssAuthApi.resolveAssetUrl === 'function') {
             var resolved = window.UssAuthApi.resolveAssetUrl(avatarUrl);
             if (resolved) return resolved;
