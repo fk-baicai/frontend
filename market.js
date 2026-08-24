@@ -153,6 +153,9 @@
         }
     }
 
+    var PAGE_SIZE_KEY = 'ussMarketPageSize';
+    var PAGE_SIZES = [20, 40, 60];
+
     var state = {
         tab: 'sell',
         categoryGroup: '',
@@ -160,6 +163,8 @@
         orders: [],
         loading: false,
         editingOrderId: null,
+        page: 1,
+        pageSize: 20,
         create: {
             tradeType: 'currency',
             orderType: 'sell',
@@ -440,6 +445,11 @@
         return !!(s && s.isSuperAdmin);
     }
 
+    function isPrivilegedSession() {
+        var s = loadSession();
+        return !!(s && (s.isSuperAdmin || s.isAdmin));
+    }
+
     function isHqPointsItem(it) {
         if (!it) return false;
         if (String(it.componentId || '').trim() === 'uss-hq-points') return true;
@@ -562,6 +572,72 @@
         if (!Number.isFinite(t)) return '无限';
         var d = Math.max(0, Math.ceil((t - Date.now()) / 86400000));
         return d + ' 天';
+    }
+
+    function formatDateMinute(iso) {
+        if (!iso) return '';
+        var t = Date.parse(String(iso));
+        if (!Number.isFinite(t)) return '';
+        var d = new Date(t);
+        function pad(n) { return n < 10 ? '0' + n : String(n); }
+        return (
+            d.getFullYear() +
+            '-' + pad(d.getMonth() + 1) +
+            '-' + pad(d.getDate()) +
+            ' ' + pad(d.getHours()) +
+            ':' + pad(d.getMinutes())
+        );
+    }
+
+    function formatDateShort(iso) {
+        if (!iso) return '';
+        var t = Date.parse(String(iso));
+        if (!Number.isFinite(t)) return '';
+        var d = new Date(t);
+        var day = d.getDate();
+        return (d.getMonth() + 1) + '-' + (day < 10 ? '0' + day : String(day));
+    }
+
+    function formatDateYmd(iso) {
+        if (!iso) return '';
+        var t = Date.parse(String(iso));
+        if (!Number.isFinite(t)) return '';
+        var d = new Date(t);
+        return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    }
+
+    function dateTimeHtml(iso, extraClass) {
+        var day = formatDateYmd(iso);
+        if (!day) return '';
+        var cls = 'market-datetime' + (extraClass ? ' ' + extraClass : '');
+        return (
+            '<time class="' + cls + '" datetime="' + escapeHtml(String(iso)) + '">' +
+            escapeHtml(day) +
+            '</time>'
+        );
+    }
+
+    function timeLineHtml(label, iso) {
+        var stamp = dateTimeHtml(iso);
+        if (!stamp) return '';
+        return (
+            '<p class="market-time-line">' +
+            '<span class="market-time-line__label">' + escapeHtml(label) + '</span>' +
+            stamp +
+            '</p>'
+        );
+    }
+
+    function isSameMinute(a, b) {
+        var left = formatDateMinute(a);
+        var right = formatDateMinute(b);
+        return !!(left && right && left === right);
+    }
+
+    function listingUpdatedAt(order) {
+        if (!order) return '';
+        if (isSameMinute(order.updatedAt, order.createdAt)) return '';
+        return order.updatedAt || '';
     }
 
     function primaryItemName(order) {
@@ -694,8 +770,63 @@
             }
         } finally {
             state.loading = false;
+            state.page = 1;
             renderGrid();
         }
+    }
+
+    function readPageSize() {
+        try {
+            var n = Number(localStorage.getItem(PAGE_SIZE_KEY));
+            if (PAGE_SIZES.indexOf(n) >= 0) return n;
+        } catch (e) { /* ignore */ }
+        return 20;
+    }
+
+    function pagedOrders() {
+        var size = PAGE_SIZES.indexOf(state.pageSize) >= 0 ? state.pageSize : 20;
+        var total = state.orders.length;
+        var pages = Math.max(1, Math.ceil(total / size) || 1);
+        if (state.page > pages) state.page = pages;
+        if (state.page < 1) state.page = 1;
+        var start = (state.page - 1) * size;
+        return state.orders.slice(start, start + size);
+    }
+
+    function renderPager() {
+        if (!el.pager) return;
+        var total = state.orders.length;
+        if (!total || state.loading) {
+            el.pager.hidden = true;
+            el.pager.innerHTML = '';
+            return;
+        }
+        el.pager.hidden = false;
+        var size = PAGE_SIZES.indexOf(state.pageSize) >= 0 ? state.pageSize : 20;
+        var pages = Math.max(1, Math.ceil(total / size));
+        var sizeOpts = PAGE_SIZES.map(function (n) {
+            return '<option value="' + n + '"' + (n === size ? ' selected' : '') + '>' + n + '</option>';
+        }).join('');
+        var btns = '';
+        var i;
+        for (i = 1; i <= pages; i++) {
+            btns += '<button type="button" class="market-pager__btn' + (i === state.page ? ' is-active' : '') + '" data-page="' + i + '">' + i + '</button>';
+        }
+        el.pager.innerHTML =
+            '<label class="market-pager__size">每页 <select id="marketPageSize" aria-label="每页条数">' + sizeOpts + '</select></label>' +
+            '<div class="market-pager__pages">' +
+            '<button type="button" class="market-pager__btn" data-page="prev"' + (state.page <= 1 ? ' disabled' : '') + '>上一页</button>' +
+            btns +
+            '<button type="button" class="market-pager__btn" data-page="next"' + (state.page >= pages ? ' disabled' : '') + '>下一页</button>' +
+            '</div>' +
+            '<span class="market-pager__meta">共 ' + total + ' 条</span>';
+    }
+
+    function isFleetMemberSession() {
+        var s = loadSession();
+        if (!s) return false;
+        if (s.isSuperAdmin || s.isAdmin) return true;
+        return String(s.memberKind || '').toLowerCase() !== 'civilian';
     }
 
     function orderImageSrc(order) {
@@ -720,7 +851,7 @@
             }
             return '<img src="' + escapeHtml(img) + '"' +
                 (fallback && fallback !== img ? ' data-fallback="' + escapeHtml(fallback) + '"' : '') +
-                ' alt="" loading="lazy" decoding="async" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.onerror=null;this.classList.add(\'is-broken\')}">';
+                ' alt="" loading="lazy" decoding="async" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.onerror=null;this.classList.add(\'is-broken\');this.alt=\'\';var p=this.parentNode;if(p&&!p.querySelector(\'.market-card__media--empty\')){var s=document.createElement(\'span\');s.className=\'market-card__media--empty\';s.textContent=\'?\';p.appendChild(s);}}">';
         }
         var it0m = (order.items && order.items[0]) || {};
         if (isHqPointsItem(it0m)) {
@@ -730,8 +861,9 @@
         return '<span class="market-card__media--empty">' + initial + '</span>';
     }
 
-    var FLOW_ACK_KEY = 'ussMarketFlowAck.v1';
-    var FLOW_FORCE_SECONDS = 10;
+    var FLOW_ACK_KEY = 'ussMarketFlowAck.v2';
+    var TERMS_ACK_KEY = 'ussMarketTermsAck.v1';
+    var FLOW_FORCE_SECONDS = 5;
     var flowForceTimer = null;
     var flowForceDeadline = 0;
     var flowForceOnAck = null;
@@ -747,24 +879,20 @@
         try {
             var raw = localStorage.getItem(flowAckStorageKey());
             var data = raw ? JSON.parse(raw) : {};
-            return { publish: !!data.publish, purchase: !!data.purchase };
+            return { mute: !!data.mute };
         } catch (e) {
-            return { publish: false, purchase: false };
+            return { mute: false };
         }
     }
 
-    function writeFlowAck(kind) {
-        var cur = readFlowAck();
-        if (kind === 'purchase') cur.purchase = true;
-        else cur.publish = true;
+    function writeFlowMute() {
         try {
-            localStorage.setItem(flowAckStorageKey(), JSON.stringify(cur));
+            localStorage.setItem(flowAckStorageKey(), JSON.stringify({ mute: true, at: new Date().toISOString() }));
         } catch (e) { /* ignore */ }
     }
 
-    function hasFlowAck(kind) {
-        var ack = readFlowAck();
-        return kind === 'purchase' ? ack.purchase : ack.publish;
+    function hasFlowAck() {
+        return readFlowAck().mute;
     }
 
     function clearFlowForceTimer() {
@@ -782,6 +910,7 @@
 
     function syncBodyScrollLock() {
         var locked =
+            (el.termsBackdrop && !el.termsBackdrop.hidden) ||
             (el.flowBackdrop && !el.flowBackdrop.hidden) ||
             (el.detailBackdrop && !el.detailBackdrop.hidden) ||
             (el.confirmBackdrop && !el.confirmBackdrop.hidden);
@@ -789,19 +918,73 @@
     }
 
     var confirmResolver = null;
+    var confirmPromptMode = false;
+    var confirmPromptRequired = false;
+    var confirmPromptValue = '';
+
+    function resetConfirmPromptUi() {
+        confirmPromptMode = false;
+        confirmPromptRequired = false;
+        confirmPromptValue = '';
+        if (el.confirmModal) el.confirmModal.classList.remove('market-confirm--prompt');
+        if (el.confirmPromptWrap) el.confirmPromptWrap.hidden = true;
+        if (el.confirmPromptInput) {
+            el.confirmPromptInput.value = '';
+            el.confirmPromptInput.removeAttribute('aria-invalid');
+        }
+        if (el.confirmPromptError) {
+            el.confirmPromptError.hidden = true;
+            el.confirmPromptError.textContent = '';
+        }
+    }
 
     function closeConfirmModal(result) {
         if (el.confirmBackdrop) el.confirmBackdrop.hidden = true;
         syncBodyScrollLock();
         var resolve = confirmResolver;
+        var promptMode = confirmPromptMode;
+        var promptValue = confirmPromptValue;
         confirmResolver = null;
-        if (resolve) resolve(!!result);
+        resetConfirmPromptUi();
+        if (!resolve) return;
+        if (promptMode) resolve(result ? promptValue : null);
+        else resolve(!!result);
+    }
+
+    function submitConfirmModal() {
+        if (confirmPromptMode) {
+            var val = el.confirmPromptInput ? String(el.confirmPromptInput.value || '').trim() : '';
+            if (confirmPromptRequired && !val) {
+                if (el.confirmPromptError) {
+                    el.confirmPromptError.textContent = '请填写下架理由';
+                    el.confirmPromptError.hidden = false;
+                }
+                if (el.confirmPromptInput) {
+                    el.confirmPromptInput.setAttribute('aria-invalid', 'true');
+                    el.confirmPromptInput.focus();
+                }
+                return;
+            }
+            if (el.confirmPromptError) {
+                el.confirmPromptError.hidden = true;
+                el.confirmPromptError.textContent = '';
+            }
+            if (el.confirmPromptInput) el.confirmPromptInput.removeAttribute('aria-invalid');
+            confirmPromptValue = val;
+        }
+        closeConfirmModal(true);
     }
 
     function askConfirm(opts) {
         opts = opts || {};
         return new Promise(function (resolve) {
+            var promptOpts = opts.prompt && typeof opts.prompt === 'object' ? opts.prompt : (opts.prompt ? {} : null);
             if (!el.confirmBackdrop || !el.confirmMessage || !el.confirmOk) {
+                if (promptOpts) {
+                    var fallback = window.prompt(promptOpts.label || opts.message || '请填写');
+                    resolve(fallback == null ? null : String(fallback).trim());
+                    return;
+                }
                 if (opts.notice) {
                     window.alert(opts.message || '');
                     resolve(true);
@@ -812,6 +995,9 @@
             }
             var notice = !!opts.notice;
             confirmResolver = resolve;
+            confirmPromptMode = !!promptOpts;
+            confirmPromptRequired = !!(promptOpts && promptOpts.required !== false);
+            confirmPromptValue = '';
             if (el.confirmTitle) el.confirmTitle.textContent = opts.title || (notice ? '提示' : '请确认');
             el.confirmMessage.textContent = opts.message || '确定？';
             el.confirmOk.textContent = opts.confirmText || (notice ? '知道了' : '确认');
@@ -819,11 +1005,155 @@
                 el.confirmCancel.hidden = notice;
                 el.confirmCancel.textContent = opts.cancelText || '再想想';
             }
+            if (el.confirmModal) el.confirmModal.classList.toggle('market-confirm--prompt', confirmPromptMode);
+            if (el.confirmPromptWrap) el.confirmPromptWrap.hidden = !confirmPromptMode;
+            if (el.confirmPromptLabel) {
+                el.confirmPromptLabel.textContent = (promptOpts && promptOpts.label) || '下架理由';
+            }
+            if (el.confirmPromptHint) {
+                var hint = promptOpts && promptOpts.hint;
+                el.confirmPromptHint.textContent = hint || '最多 200 字，买家可见。';
+                el.confirmPromptHint.hidden = !confirmPromptMode;
+            }
+            if (el.confirmPromptError) {
+                el.confirmPromptError.hidden = true;
+                el.confirmPromptError.textContent = '';
+            }
+            if (el.confirmPromptInput) {
+                el.confirmPromptInput.value = (promptOpts && promptOpts.value) || '';
+                el.confirmPromptInput.placeholder = (promptOpts && promptOpts.placeholder) || '请填写下架理由';
+                el.confirmPromptInput.maxLength = (promptOpts && promptOpts.maxLength) || 200;
+                el.confirmPromptInput.removeAttribute('aria-invalid');
+            }
             el.confirmBackdrop.hidden = false;
             syncBodyScrollLock();
-            if (notice) el.confirmOk.focus();
+            if (confirmPromptMode && el.confirmPromptInput) el.confirmPromptInput.focus();
+            else if (notice) el.confirmOk.focus();
             else if (el.confirmCancel) el.confirmCancel.focus();
         });
+    }
+
+    function termsAckStorageKey() {
+        var sess = loadSession();
+        var bid = sess && sess.bindingId ? String(sess.bindingId).trim().toLowerCase() : '';
+        return TERMS_ACK_KEY + ':' + (bid || 'anon');
+    }
+
+    function hasTermsAck() {
+        try {
+            var raw = localStorage.getItem(termsAckStorageKey());
+            var data = raw ? JSON.parse(raw) : {};
+            return !!data.ack;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function writeTermsAck() {
+        try {
+            localStorage.setItem(termsAckStorageKey(), JSON.stringify({ ack: true, at: new Date().toISOString() }));
+        } catch (e) { /* ignore */ }
+    }
+
+    var termsForceOnAck = null;
+    var termsForceKind = '';
+
+    function isTermsForced() {
+        return !!(el.termsBackdrop && el.termsBackdrop.classList.contains('is-forced'));
+    }
+
+    function syncTermsAckBtn() {
+        if (!el.termsAckBtn) return;
+        var checked = !!(el.termsChk && el.termsChk.checked);
+        el.termsAckBtn.disabled = !checked;
+        if (!isTermsForced()) {
+            el.termsAckBtn.textContent = '关闭';
+            el.termsAckBtn.disabled = false;
+            return;
+        }
+        el.termsAckBtn.textContent = checked
+            ? (termsForceKind === 'purchase' ? '同意并继续购买' : '同意并继续发布')
+            : '请先勾选同意';
+    }
+
+    function showTermsGuide(options) {
+        options = options || {};
+        if (!el.termsBackdrop) return;
+        var forced = !!options.forced;
+        termsForceKind = forced ? String(options.kind || 'publish') : '';
+        termsForceOnAck = forced && typeof options.onAck === 'function' ? options.onAck : null;
+        if (el.termsChk) el.termsChk.checked = false;
+        el.termsBackdrop.hidden = false;
+        el.termsBackdrop.classList.toggle('is-forced', forced);
+        if (el.termsBody) el.termsBody.scrollTop = 0;
+        if (el.termsForceFoot) el.termsForceFoot.hidden = false;
+        if (el.termsChk) {
+            var wrap = el.termsChk.closest('.market-terms-check');
+            if (wrap) wrap.hidden = !forced && hasTermsAck();
+        }
+        syncTermsAckBtn();
+        syncBodyScrollLock();
+        if (el.termsChk && el.termsChk.closest('.market-terms-check') && !el.termsChk.closest('.market-terms-check').hidden) {
+            el.termsChk.focus();
+        } else if (el.termsAckBtn) {
+            el.termsAckBtn.focus();
+        }
+    }
+
+    function closeTermsGuide(fromAck) {
+        if (!el.termsBackdrop) return;
+        var pendingAck = fromAck ? termsForceOnAck : null;
+        termsForceOnAck = null;
+        termsForceKind = '';
+        el.termsBackdrop.hidden = true;
+        el.termsBackdrop.classList.remove('is-forced');
+        if (el.termsChk) el.termsChk.checked = false;
+        syncBodyScrollLock();
+        if (typeof pendingAck === 'function') pendingAck();
+    }
+
+    function ackForcedTerms() {
+        if (!isTermsForced()) {
+            if (el.termsChk && el.termsChk.checked) writeTermsAck();
+            closeTermsGuide(false);
+            return;
+        }
+        if (!el.termsChk || !el.termsChk.checked) return;
+        writeTermsAck();
+        closeTermsGuide(true);
+    }
+
+    function requireTermsAck(kind, thenFn, opts) {
+        opts = opts || {};
+        if (typeof thenFn !== 'function') return;
+        if (!el.termsBackdrop) {
+            thenFn();
+            return;
+        }
+        if (!opts.always && hasTermsAck()) {
+            thenFn();
+            return;
+        }
+        if (isTermsForced() && termsForceKind === kind) {
+            termsForceOnAck = thenFn;
+            return;
+        }
+        showTermsGuide({
+            forced: true,
+            kind: kind,
+            onAck: thenFn,
+        });
+    }
+
+    function requireMarketAck(kind, thenFn) {
+        requireTermsAck(kind, function () {
+            requireFlowAck(kind, thenFn);
+        });
+    }
+
+    function openTermsGuide() {
+        if (isTermsForced()) return;
+        showTermsGuide({ forced: false });
     }
 
     function isFlowForced() {
@@ -879,6 +1209,7 @@
                 : '首次发布挂单前请完整阅读交易流程，倒计时结束后才可继续。';
         }
         if (forced) {
+            if (el.flowMuteChk) el.flowMuteChk.checked = false;
             flowForceDeadline = Date.now() + FLOW_FORCE_SECONDS * 1000;
             syncFlowForceUi();
             flowForceTimer = setInterval(function () {
@@ -917,14 +1248,13 @@
 
     function ackForcedFlow() {
         if (!isFlowForced() || flowForceRemain() > 0) return;
-        var kind = flowForceKind;
-        writeFlowAck(kind);
+        if (el.flowMuteChk && el.flowMuteChk.checked) writeFlowMute();
         closeFlowGuide(true);
     }
 
     function requireFlowAck(kind, thenFn) {
         if (typeof thenFn !== 'function') return;
-        if (hasFlowAck(kind) || !el.flowBackdrop) {
+        if (hasFlowAck() || !el.flowBackdrop) {
             thenFn();
             return;
         }
@@ -952,6 +1282,7 @@
                 el.gridEmpty.hidden = false;
                 el.gridEmpty.textContent = '加载中…';
             }
+            renderPager();
             return;
         }
         if (!state.orders.length) {
@@ -960,10 +1291,12 @@
                 el.gridEmpty.hidden = false;
                 el.gridEmpty.textContent = state.tab === 'sell' ? '暂无售卖单据' : '暂无收购单据';
             }
+            renderPager();
             return;
         }
         if (el.gridEmpty) el.gridEmpty.hidden = true;
-        el.grid.innerHTML = state.orders.map(function (o) {
+        var visible = pagedOrders();
+        el.grid.innerHTML = visible.map(function (o) {
             var priceClass = o.tradeType === 'barter' ? ' market-card__price--barter' : '';
             var avatar = absMediaUrl(o.avatarUrl) || defaultAvatar();
             var seller = getSeller(o);
@@ -985,10 +1318,12 @@
                 '</div>' +
                 '<button type="button" class="market-card__cta" aria-label="购买">' + CART_SVG + '</button>' +
                 '</div>' +
+                '<div class="market-card__times">' + timeLineHtml('上架时间', o.createdAt) + '</div>' +
                 renderCardFooterHtml(o, seller, avatar) +
                 '</article>'
             );
         }).join('');
+        renderPager();
     }
 
     function renderManageOrderCardHtml(o) {
@@ -1013,7 +1348,16 @@
             '</div>' +
             '<span class="market-card__manage-status' + statusCls + '">' + escapeHtml(status) + '</span>' +
             '</div>' +
+            '<div class="market-card__times">' +
+            timeLineHtml('上架时间', o.createdAt) +
+            timeLineHtml('最近更新', listingUpdatedAt(o)) +
+            (o.status === 'closed' ? timeLineHtml('下架时间', o.takenDownAt || o.updatedAt) : '') +
+            (formatDateMinute(o.expiresAt) ? timeLineHtml('到期时间', o.expiresAt) : '') +
+            '</div>' +
             renderCardFooterHtml(o, getSeller(o), absMediaUrl(o.avatarUrl) || defaultAvatar(), { remaining: true, manage: true }) +
+            (o.status === 'closed' && o.takedownReason
+                ? '<p class="market-card__takedown-reason">下架理由：' + escapeHtml(o.takedownReason) + '</p>'
+                : '') +
             '<div class="market-card__manage-actions">' +
             '<button type="button" class="market-btn market-trades-btn-edit" data-order-id="' + escapeHtml(o.id) + '">编辑</button>' +
             (o.status === 'closed'
@@ -1143,7 +1487,100 @@
             '<div class="market-seller-card__contact-wrap">' +
             '<div class="market-seller-card__contact-label">联系方式</div>' +
             contactHtml +
-            '</div></div></div>'
+            '</div>' +
+            sellerReviewsHtml(seller) +
+            '</div></div>'
+        );
+    }
+
+    function reviewHasSellerReply(r) {
+        if (!r) return false;
+        var text = String(r.sellerReplyText || r.sellerReviewText || '').trim();
+        var rating = r.sellerReplyRating != null ? r.sellerReplyRating : r.sellerReviewRating;
+        return !!(text || rating != null);
+    }
+
+    function sellerReviewReplyHtml(r) {
+        if (!reviewHasSellerReply(r)) return '';
+        var text = String(r.sellerReplyText || r.sellerReviewText || '').trim();
+        var rating = r.sellerReplyRating != null ? r.sellerReplyRating : r.sellerReviewRating;
+        var at = r.sellerReplyAt || r.sellerReviewAt;
+        var timeHtml = formatDateMinute(at)
+            ? dateTimeHtml(at, 'market-seller-card__review-time')
+            : '';
+        return (
+            '<div class="market-seller-card__review-reply is-collapsed">' +
+            '<div class="market-seller-card__review-reply-body" hidden>' +
+            (rating != null ? '<div class="market-seller-card__review-reply-stars">' + renderStars(rating) + '</div>' : '') +
+            (text ? '<p class="market-seller-card__review-reply-text">' + escapeHtml(text) + '</p>' : '') +
+            timeHtml +
+            '</div>' +
+            '</div>'
+        );
+    }
+
+    function sellerReviewReplyToggleHtml(r) {
+        if (!reviewHasSellerReply(r)) return '';
+        return (
+            '<button type="button" class="market-seller-card__review-reply-toggle" aria-expanded="false" aria-label="展开卖家回复">' +
+            '<span>回复</span>' +
+            '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            '</button>'
+        );
+    }
+
+    function sellerReviewAuthorHtml(r) {
+        var rawName = r.fromDisplayName || r.fromBindingId || '';
+        var name = r.fromDisplayName
+            ? String(r.fromDisplayName)
+            : maskAuthorName(rawName).display;
+        if (!name) name = '买家';
+        return '<span class="market-seller-card__review-name">' + escapeHtml(name) + '</span>';
+    }
+
+    function sellerReviewsHtml(seller) {
+        var list = Array.isArray(seller && seller.recentReviews) ? seller.recentReviews.slice(0, 10) : [];
+        if (!list.length) {
+            return (
+                '<div class="market-seller-card__reviews">' +
+                '<div class="market-seller-card__reviews-label">历史评价</div>' +
+                '<p class="market-seller-card__reviews-empty">暂无评价</p>' +
+                '</div>'
+            );
+        }
+        var extra = list.length > 2;
+        var items = list.map(function (r, i) {
+            var hidden = i >= 2 ? ' hidden' : '';
+            var timeHtml = formatDateMinute(r.createdAt)
+                ? dateTimeHtml(r.createdAt, 'market-seller-card__review-time')
+                : '';
+            return (
+                '<li class="market-seller-card__review"' + hidden + '>' +
+                '<div class="market-seller-card__review-meta">' +
+                sellerReviewAuthorHtml(r) +
+                '<div class="market-seller-card__review-aside">' +
+                '<span class="market-seller-card__review-stars">' + renderStars(r.rating) + '</span>' +
+                timeHtml +
+                sellerReviewReplyToggleHtml(r) +
+                '</div>' +
+                '</div>' +
+                (r.text ? '<p class="market-seller-card__review-text">' + escapeHtml(r.text) + '</p>' : '') +
+                sellerReviewReplyHtml(r) +
+                '</li>'
+            );
+        }).join('');
+        return (
+            '<div class="market-seller-card__reviews' + (extra ? ' is-collapsed' : '') + '">' +
+            '<div class="market-seller-card__reviews-head">' +
+            '<div class="market-seller-card__reviews-label">历史评价</div>' +
+            (extra
+                ? '<button type="button" class="market-seller-card__reviews-toggle" aria-expanded="false" aria-label="展开更多评价">' +
+                  '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+                  '</button>'
+                : '') +
+            '</div>' +
+            '<ul class="market-seller-card__review-list">' + items + '</ul>' +
+            '</div>'
         );
     }
 
@@ -1180,7 +1617,7 @@
             var fallback = it0.componentId && !isHqPointsItem(it0) ? componentImageUrl(it0.componentId) : '';
             return '<img class="market-detail__media-img market-detail__media-img--zoom" src="' + escapeHtml(img) + '"' +
                 (fallback && fallback !== img ? ' data-fallback="' + escapeHtml(fallback) + '"' : '') +
-                ' alt="点击查看大图" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback}">';
+                ' alt="点击查看大图" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.onerror=null;this.classList.add(\'is-broken\');var p=this.parentNode;if(p&&!p.querySelector(\'.market-detail__media--empty\')){var s=document.createElement(\'span\');s.className=\'market-detail__media--empty\';s.textContent=\'?\';p.appendChild(s);}}">';
         }
         var initial = escapeHtml(primaryItemName(order).charAt(0) || '?');
         var it0e = (order.items && order.items[0]) || {};
@@ -1284,7 +1721,7 @@
         var list = Array.isArray(data.purchases) ? data.purchases : [];
         return list.find(function (p) {
             if (!p || String(p.orderId) !== String(orderId)) return false;
-            return p.status === 'pending' || p.status === 'approved' || p.status === 'completed';
+            return p.status === 'pending' || p.status === 'approved';
         }) || null;
     }
 
@@ -1302,7 +1739,18 @@
     function mergeOrderIntoState(nextOrder) {
         if (!nextOrder || !nextOrder.id) return null;
         var idx = state.orders.findIndex(function (o) { return o && o.id === nextOrder.id; });
-        var merged = idx >= 0 ? Object.assign({}, state.orders[idx], nextOrder) : nextOrder;
+        var prev = idx >= 0 ? state.orders[idx] : null;
+        var merged = prev ? Object.assign({}, prev, nextOrder) : nextOrder;
+        if (prev && prev.seller && nextOrder.seller) {
+            merged.seller = Object.assign({}, prev.seller, nextOrder.seller);
+            var prevReviews = prev.seller.recentReviews;
+            var nextReviews = nextOrder.seller.recentReviews;
+            if (Array.isArray(prevReviews) && prevReviews.length) {
+                if (!Array.isArray(nextReviews) || !nextReviews.length) {
+                    merged.seller.recentReviews = prevReviews;
+                }
+            }
+        }
         if (idx >= 0) state.orders[idx] = merged;
         else state.orders.unshift(merged);
         return merged;
@@ -1331,7 +1779,8 @@
         var it0 = (order.items && order.items[0]) || {};
         var stockQty = Math.max(1, Math.floor(Number(it0.quantity) || 1));
         var seller = getSeller(order);
-        var sellerRevealed = !!seller.contactRevealed || !!options.unlockSellerContact;
+        var sellerRevealed = isOwnOrder(order) || !!options.unlockSellerContact
+            || (!!seller.contactRevealed && !isPrivilegedSession());
         var badge = orderTypeBadge(order);
         var priceClass = order.tradeType === 'barter' ? ' market-detail__price--barter' : '';
         var loc = (order.location && order.location.name) || '未指定地点';
@@ -1341,7 +1790,7 @@
         var partyLabel = order.tradeType === 'barter' ? '发布者信息' : (order.orderType === 'buy' ? '收购方信息' : '出售者信息');
         var it1 = (order.items && order.items[1]) || {};
         var barterWantHtml = '';
-        var canPickQty = !isOwnOrder(order) && order.orderType === 'sell' && order.tradeType !== 'barter';
+        var canPickQty = !options.readOnly && !isOwnOrder(order) && order.orderType === 'sell' && order.tradeType !== 'barter';
         var qtyPickerHtml = canPickQty
             ? (
                 '<div class="market-detail__qty" id="marketDetailQtyPicker"' + (showPurchaseHint ? ' hidden' : '') + '>' +
@@ -1378,7 +1827,33 @@
             el.detailModal.classList.toggle('market-detail--barter', order.tradeType === 'barter');
         }
 
+        var canTakedown = !options.readOnly && isSuperAdminSession() && !isOwnOrder(order) && order.status !== 'closed';
+        var canPurchase = !options.readOnly && !isOwnOrder(order) && order.orderType === 'sell';
+        var detailActionsHtml = '';
+        if (canTakedown || canPurchase) {
+            detailActionsHtml =
+                '<div class="market-detail__actions' + (canTakedown && !canPurchase ? ' market-detail__actions--end' : '') + '">' +
+                (canPurchase ? '<a class="market-detail__dash-link" href="market-trades.html">查看我的贸易订单</a>' : '') +
+                '<div class="market-detail__actions-end">' +
+                (canPurchase
+                    ? (
+                        '<p class="market-detail__hint" id="marketDetailPurchaseHint"' + (showPurchaseHint ? '' : ' hidden') + '>请等待卖家确认交易，或点击「强提醒」、自行联系卖家。</p>' +
+                        '<button type="button" class="market-btn market-detail__nudge" id="marketDetailNudgeBtn" data-order-id="' + escapeHtml(order.id) + '"' + (showPurchaseHint ? '' : ' hidden') + '>强提醒</button>' +
+                        '<button type="button" class="market-btn market-btn--accent" id="marketDetailPurchaseBtn" data-order-id="' + escapeHtml(order.id) + '">' +
+                        (order.tradeType === 'barter' ? '确认互换意向' : '提交购买') +
+                        '</button>'
+                    )
+                    : '') +
+                (canTakedown
+                    ? '<button type="button" class="market-btn market-detail__takedown-btn" id="marketDetailTakedownBtn" data-order-id="' + escapeHtml(order.id) + '">下架该商品</button>'
+                    : '') +
+                '</div></div>';
+        }
+
         el.detailBody.innerHTML =
+            (order.listingGone
+                ? '<p class="market-detail__snapshot-note">挂单已删除，以下为成交时保存的商品快照</p>'
+                : '') +
             '<div class="market-detail__grid">' +
             '<div class="market-detail__media">' +
             '<span class="market-detail__badge' + badge.cls + '">' + badge.text + '</span>' +
@@ -1394,7 +1869,15 @@
                 : '<dt>可购数量</dt><dd>×' + escapeHtml(String(stockQty)) + '</dd><dt>品质</dt><dd>' + escapeHtml(itemQuality(it0)) + '</dd>') +
             '<dt>交易位置</dt><dd>' + escapeHtml(locLine) + '</dd>' +
             '<dt>交易时段</dt><dd>每日 ' + escapeHtml(formatTradeWindow(order)) + '</dd>' +
-            '<dt>有效期</dt><dd>' + escapeHtml(formatExpires(order.expiresAt)) + '</dd>' +
+            (formatDateMinute(order.createdAt)
+                ? '<dt>上架时间</dt><dd>' + dateTimeHtml(order.createdAt) + '</dd>'
+                : '') +
+            (formatDateMinute(order.expiresAt)
+                ? '<dt>到期时间</dt><dd>' + dateTimeHtml(order.expiresAt) + '</dd>'
+                : '') +
+            (order.status === 'closed' && formatDateMinute(order.takenDownAt || order.updatedAt)
+                ? '<dt>下架时间</dt><dd>' + dateTimeHtml(order.takenDownAt || order.updatedAt) + '</dd>'
+                : '') +
             (it0.typeLabel ? '<dt>物品类型</dt><dd>' + escapeHtml(it0.typeLabel) + '</dd>' : '') +
             '</dl>' +
             (note ? (
@@ -1408,19 +1891,10 @@
             '</div>' +
             barterWantHtml +
             renderSellerProfileHtml(seller, partyLabel, { revealed: sellerRevealed }) +
-            (!isOwnOrder(order) && order.orderType === 'sell'
-                ? (
-                    '<div class="market-detail__actions">' +
-                    '<a class="market-detail__dash-link" href="market-trades.html">查看我的贸易订单</a>' +
-                    '<div class="market-detail__actions-end">' +
-                    '<p class="market-detail__hint" id="marketDetailPurchaseHint"' + (showPurchaseHint ? '' : ' hidden') + '>请等待卖家确认交易，或点击「强提醒」、自行联系卖家。</p>' +
-                    '<button type="button" class="market-btn market-detail__nudge" id="marketDetailNudgeBtn" data-order-id="' + escapeHtml(order.id) + '"' + (showPurchaseHint ? '' : ' hidden') + '>强提醒</button>' +
-                    '<button type="button" class="market-btn market-btn--accent" id="marketDetailPurchaseBtn" data-order-id="' + escapeHtml(order.id) + '">' +
-                    (order.tradeType === 'barter' ? '确认互换意向' : '提交购买') +
-                    '</button>' +
-                    '</div></div>'
-                )
-                : '');
+            (order.status === 'closed' && order.takedownReason
+                ? '<p class="market-detail__takedown">下架理由：' + escapeHtml(order.takedownReason) + '</p>'
+                : '') +
+            detailActionsHtml;
 
         var copyBtns = el.detailBody.querySelectorAll('.market-seller-card__copy, #marketDetailCopyEmail');
         copyBtns.forEach(function (copyBtn) {
@@ -1441,6 +1915,33 @@
                     copyBtn.textContent = '复制失败';
                     setTimeout(function () { copyBtn.textContent = label; }, 1800);
                 });
+            });
+        });
+        var reviewsToggle = el.detailBody.querySelector('.market-seller-card__reviews-toggle');
+        if (reviewsToggle) {
+            reviewsToggle.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                var box = reviewsToggle.closest('.market-seller-card__reviews');
+                if (!box) return;
+                var collapsed = box.classList.toggle('is-collapsed');
+                reviewsToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                box.querySelectorAll('.market-seller-card__review').forEach(function (li, idx) {
+                    if (idx >= 2) li.hidden = collapsed;
+                });
+            });
+        }
+        el.detailBody.querySelectorAll('.market-seller-card__review-reply-toggle').forEach(function (btn) {
+            btn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                var li = btn.closest('.market-seller-card__review');
+                var wrap = li && li.querySelector('.market-seller-card__review-reply');
+                if (!wrap) return;
+                var body = wrap.querySelector('.market-seller-card__review-reply-body');
+                var collapsed = wrap.classList.toggle('is-collapsed');
+                btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                btn.setAttribute('aria-label', collapsed ? '展开卖家回复' : '收起卖家回复');
+                btn.classList.toggle('is-open', !collapsed);
+                if (body) body.hidden = collapsed;
             });
         });
         el.detailBody.querySelectorAll('.market-detail__media-img--zoom').forEach(function (img) {
@@ -1534,8 +2035,12 @@
                     if (typeof window.openLoginDrawer === 'function') window.openLoginDrawer();
                     return;
                 }
+                if (isHqPointsListing(order) && !isFleetMemberSession()) {
+                    window.alert('无权限');
+                    return;
+                }
                 var buyQty = qtyInput ? clampDetailQty(qtyInput.value) : 1;
-                requireFlowAck('purchase', function () {
+                requireMarketAck('purchase', function () {
                     purchaseBtn.disabled = true;
                     submitPurchase(oid, buyQty).then(function (data) {
                         var next = data && data.purchase && data.purchase.order;
@@ -1563,15 +2068,73 @@
                 });
             });
         }
+        var takedownBtn = document.getElementById('marketDetailTakedownBtn');
+        if (takedownBtn) {
+            takedownBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                var oid = takedownBtn.getAttribute('data-order-id') || order.id || '';
+                askConfirm({
+                    title: '下架商品',
+                    message: '下架后该商品将对买家不可见。请填写理由。',
+                    confirmText: '确认下架',
+                    cancelText: '再想想',
+                    prompt: {
+                        label: '下架理由',
+                        placeholder: '例如：违规定价、虚假商品、重复挂单',
+                        hint: '最多 200 字，买家可见。',
+                        required: true,
+                        maxLength: 200,
+                    },
+                }).then(function (reason) {
+                    if (reason == null) return;
+                    reason = String(reason).trim();
+                    if (!reason) return;
+                    takedownBtn.disabled = true;
+                    return fetch(joinUrl('/api/market/orders/' + encodeURIComponent(oid)), {
+                        method: 'PATCH',
+                        headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, authHeaders()),
+                        body: JSON.stringify({ status: 'closed', takedownReason: reason }),
+                    }).then(function (r) {
+                        return r.json().catch(function () { return {}; }).then(function (data) {
+                            if (!r.ok) throw new Error(apiErrorText(data, '下架失败'));
+                            closeOrderDetail();
+                            return fetchOrders();
+                        });
+                    }).catch(function (e) {
+                        takedownBtn.disabled = false;
+                        return askConfirm({
+                            title: '下架失败',
+                            message: (e && e.message) || '下架失败',
+                            confirmText: '确定',
+                            notice: true,
+                        });
+                    });
+                });
+            });
+        }
     }
 
     function openOrderDetail(orderId) {
         var order = state.orders.find(function (o) { return o.id === orderId; });
-        if (!order || !el.detailBackdrop) return;
-        renderOrderDetail(order);
-        el.detailBackdrop.hidden = false;
-        syncBodyScrollLock();
-        if (el.detailClose) el.detailClose.focus();
+        if (!el.detailBackdrop) return;
+        if (order) {
+            renderOrderDetail(order);
+            el.detailBackdrop.hidden = false;
+            syncBodyScrollLock();
+            if (el.detailClose) el.detailClose.focus();
+        }
+        fetch(joinUrl('/api/market/orders/' + encodeURIComponent(orderId)), {
+            headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
+        }).then(function (r) {
+            return r.json().catch(function () { return {}; }).then(function (data) {
+                if (!r.ok || !data.order) return;
+                var shown = mergeOrderIntoState(data.order) || data.order;
+                if (el.detailBackdrop && !el.detailBackdrop.hidden) {
+                    renderOrderDetail(shown);
+                }
+            });
+        }).catch(function () { /* ignore */ });
+        if (!order) return;
         if (!isOwnOrder(order) && order.orderType === 'sell') {
             fetchMyBuyerPurchaseForOrder(orderId).then(function (purchase) {
                 if (!purchase) return;
@@ -1589,6 +2152,27 @@
                 }
             }).catch(function () { /* ignore */ });
         }
+    }
+
+    function openListingDetail(order, options) {
+        if (!order || !el.detailBackdrop) return;
+        var opts = options || {};
+        renderOrderDetail(order, opts);
+        el.detailBackdrop.hidden = false;
+        syncBodyScrollLock();
+        if (el.detailClose) el.detailClose.focus();
+        if (!order.id) return;
+        fetch(joinUrl('/api/market/orders/' + encodeURIComponent(order.id)), {
+            headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
+        }).then(function (r) {
+            return r.json().catch(function () { return {}; }).then(function (data) {
+                if (!r.ok || !data.order) return;
+                var shown = mergeOrderIntoState(data.order) || data.order;
+                if (el.detailBackdrop && !el.detailBackdrop.hidden) {
+                    renderOrderDetail(shown, opts);
+                }
+            });
+        }).catch(function () { /* ignore */ });
     }
 
     function closeOrderDetail() {
@@ -1619,9 +2203,7 @@
             if (typeof window.openLoginDrawer === 'function') window.openLoginDrawer();
             return;
         }
-        ensureRsiBindThen(function () {
-            requireFlowAck('publish', openCreateModal);
-        });
+        ensureRsiBindThen(openCreateModal);
     }
 
     function openCreateModal() {
@@ -1656,6 +2238,44 @@
         });
     }
 
+    function listingTermsRequired() {
+        return !state.editingOrderId && !!(el.listingTermsChk && el.listingTermsWrap && !el.listingTermsWrap.hidden);
+    }
+
+    function showListingTermsHint() {
+        if (el.listingTermsWrap) {
+            el.listingTermsWrap.classList.add('is-error');
+        }
+        if (el.listingTermsChk) el.listingTermsChk.focus();
+        var msg = '请先勾选服务与风险告知后再生成单据';
+        if (el.listingTermsHint) {
+            el.listingTermsHint.textContent = msg;
+            el.listingTermsHint.hidden = false;
+        }
+        if (el.formError) {
+            el.formError.textContent = msg;
+            el.formError.hidden = false;
+        }
+    }
+
+    function clearListingTermsHint() {
+        if (el.listingTermsWrap) el.listingTermsWrap.classList.remove('is-error');
+        if (el.listingTermsHint) {
+            el.listingTermsHint.hidden = true;
+            el.listingTermsHint.textContent = '';
+        }
+    }
+
+    function syncListingSubmitEnabled() {
+        if (!el.btnSubmit) return;
+        var needChk = listingTermsRequired();
+        var ready = !needChk || !!(el.listingTermsChk && el.listingTermsChk.checked);
+        el.btnSubmit.disabled = false;
+        el.btnSubmit.classList.toggle('is-locked', needChk && !ready);
+        el.btnSubmit.setAttribute('aria-disabled', needChk && !ready ? 'true' : 'false');
+        if (ready) clearListingTermsHint();
+    }
+
     function setEditModalUi(isEdit) {
         if (el.modalTitle) el.modalTitle.textContent = isEdit ? '编辑挂单' : '发布挂单';
         if (el.btnSubmit) el.btnSubmit.textContent = isEdit ? '保存修改' : '生成单据';
@@ -1663,6 +2283,9 @@
         setSegLocked(el.segOrderType, isEdit);
         if (el.tradeTypeField) el.tradeTypeField.classList.toggle('is-field-locked', isEdit);
         if (el.orderTypeField) el.orderTypeField.classList.toggle('is-field-locked', isEdit);
+        if (el.listingTermsWrap) el.listingTermsWrap.hidden = !!isEdit;
+        if (el.listingTermsChk && !isEdit) el.listingTermsChk.checked = false;
+        syncListingSubmitEnabled();
     }
 
     async function openEditModal(order) {
@@ -1825,7 +2448,6 @@
         if (state.create.autoImage) return state.create.autoImage;
         var it = currentItem();
         if (it && isHqPointsItem(it)) return hqPointsImageUrl();
-        if (it && it.componentId) return componentImageUrl(it.componentId);
         return '';
     }
 
@@ -1834,7 +2456,7 @@
         var src = displayImageSrc();
         var hasUser = !!state.create.userImage;
         var hasExisting = !!state.create.existingImage;
-        var hasAuto = !!(state.create.autoImage || (it && isHqPointsItem(it)) || (it && it.componentId && !isHqPointsItem(it)));
+        var hasAuto = !!(state.create.autoImage || (it && isHqPointsItem(it)));
         if (el.imageRemove) el.imageRemove.hidden = !(hasUser || hasExisting);
         if (el.imagePlaceholder) el.imagePlaceholder.hidden = !!src;
         if (el.itemPreviewType) {
@@ -1853,10 +2475,10 @@
         }
         el.imagePreviewImg.hidden = false;
         el.imagePreviewImg.onerror = function () {
-            if (!hasUser && !hasAuto) {
-                el.imagePreviewImg.hidden = true;
-                if (el.imagePlaceholder) el.imagePlaceholder.hidden = false;
-            }
+            el.imagePreviewImg.onerror = null;
+            el.imagePreviewImg.hidden = true;
+            el.imagePreviewImg.removeAttribute('src');
+            if (el.imagePlaceholder) el.imagePlaceholder.hidden = false;
         };
         el.imagePreviewImg.src = src;
     }
@@ -1867,7 +2489,6 @@
         if (state.create.barterWantAutoImage) return state.create.barterWantAutoImage;
         var want = currentWantItem();
         if (want && isHqPointsItem(want)) return hqPointsImageUrl();
-        if (want && want.componentId) return componentImageUrl(want.componentId);
         return '';
     }
 
@@ -1876,7 +2497,7 @@
         var src = displayWantImageSrc();
         var hasUser = !!state.create.barterWantUserImage;
         var hasExisting = !!state.create.barterWantExistingImage;
-        var hasAuto = !!(state.create.barterWantAutoImage || (want && isHqPointsItem(want)) || (want && want.componentId && !isHqPointsItem(want)));
+        var hasAuto = !!(state.create.barterWantAutoImage || (want && isHqPointsItem(want)));
         if (el.wantImageRemove) el.wantImageRemove.hidden = !(hasUser || hasExisting);
         if (el.wantImagePlaceholder) el.wantImagePlaceholder.hidden = !!src;
         if (el.wantItemPreviewType) {
@@ -1895,10 +2516,10 @@
         }
         el.wantImagePreviewImg.hidden = false;
         el.wantImagePreviewImg.onerror = function () {
-            if (!hasUser && !hasAuto) {
-                el.wantImagePreviewImg.hidden = true;
-                if (el.wantImagePlaceholder) el.wantImagePlaceholder.hidden = false;
-            }
+            el.wantImagePreviewImg.onerror = null;
+            el.wantImagePreviewImg.hidden = true;
+            el.wantImagePreviewImg.removeAttribute('src');
+            if (el.wantImagePlaceholder) el.wantImagePlaceholder.hidden = false;
         };
         el.wantImagePreviewImg.src = src;
     }
@@ -2324,8 +2945,12 @@
     }
 
     async function submitOrder() {
+        if (el.formError) el.formError.hidden = true;
+        if (!state.editingOrderId && (!el.listingTermsChk || !el.listingTermsChk.checked)) {
+            showListingTermsHint();
+            return;
+        }
         if (!el.formError) return;
-        el.formError.hidden = true;
         readFormIntoState();
         var c = state.create;
         if (!c.location || !c.location.name) {
@@ -2403,7 +3028,10 @@
             note: c.itemInfo || '',
             contact: c.contact || '',
         };
-        if (el.btnSubmit) el.btnSubmit.disabled = true;
+        if (el.btnSubmit) {
+            el.btnSubmit.disabled = true;
+            el.btnSubmit.classList.add('is-locked');
+        }
         try {
             if (state.editingOrderId) {
                 var patchBody = {
@@ -2453,7 +3081,7 @@
             el.formError.textContent = (e && e.message) || '生成单据失败，稍后再试';
             el.formError.hidden = false;
         } finally {
-            if (el.btnSubmit) el.btnSubmit.disabled = false;
+            syncListingSubmitEnabled();
         }
     }
 
@@ -2498,6 +3126,37 @@
                 if (id) openOrderDetail(id);
             });
         }
+        if (el.pager) {
+            el.pager.addEventListener('click', function (ev) {
+                var btn = ev.target.closest('[data-page]');
+                if (!btn || btn.disabled) return;
+                var raw = btn.getAttribute('data-page');
+                var size = PAGE_SIZES.indexOf(state.pageSize) >= 0 ? state.pageSize : 20;
+                var pages = Math.max(1, Math.ceil(state.orders.length / size) || 1);
+                var next = state.page;
+                if (raw === 'prev') next -= 1;
+                else if (raw === 'next') next += 1;
+                else next = Number(raw) || 1;
+                if (next < 1) next = 1;
+                if (next > pages) next = pages;
+                if (next === state.page) return;
+                state.page = next;
+                renderGrid();
+            });
+            el.pager.addEventListener('change', function (ev) {
+                var sel = ev.target.closest('#marketPageSize');
+                if (!sel) return;
+                var n = Number(sel.value);
+                if (PAGE_SIZES.indexOf(n) < 0) return;
+                state.pageSize = n;
+                state.page = 1;
+                try { localStorage.setItem(PAGE_SIZE_KEY, String(n)); } catch (e) { /* ignore */ }
+                renderGrid();
+            });
+        }
+        if (el.termsGuideBtn) {
+            el.termsGuideBtn.addEventListener('click', openTermsGuide);
+        }
         if (el.flowGuideBtn) {
             el.flowGuideBtn.addEventListener('click', openFlowGuide);
         }
@@ -2510,6 +3169,25 @@
         if (el.flowClose) el.flowClose.addEventListener('click', function () {
             closeFlowGuide(false);
         });
+        if (el.termsClose) el.termsClose.addEventListener('click', function () {
+            closeTermsGuide(false);
+        });
+        if (el.termsAckBtn) {
+            el.termsAckBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                ackForcedTerms();
+            });
+        }
+        if (el.termsChk) {
+            el.termsChk.addEventListener('change', syncTermsAckBtn);
+        }
+        if (el.termsBackdrop) {
+            el.termsBackdrop.addEventListener('click', function (ev) {
+                if (ev.target !== el.termsBackdrop) return;
+                if (isTermsForced()) return;
+                closeTermsGuide(false);
+            });
+        }
         if (el.flowAckBtn) {
             el.flowAckBtn.addEventListener('click', function (ev) {
                 ev.stopPropagation();
@@ -2532,6 +3210,11 @@
                 closeConfirmModal(false);
                 return;
             }
+            if (el.termsBackdrop && !el.termsBackdrop.hidden) {
+                ev.preventDefault();
+                closeTermsGuide(false);
+                return;
+            }
             if (el.flowBackdrop && !el.flowBackdrop.hidden) {
                 closeFlowGuide(false);
                 return;
@@ -2542,7 +3225,22 @@
         if (!document.body.classList.contains('market-trades-body')) {
             if (el.confirmClose) el.confirmClose.addEventListener('click', function () { closeConfirmModal(false); });
             if (el.confirmCancel) el.confirmCancel.addEventListener('click', function () { closeConfirmModal(false); });
-            if (el.confirmOk) el.confirmOk.addEventListener('click', function () { closeConfirmModal(true); });
+            if (el.confirmOk) el.confirmOk.addEventListener('click', submitConfirmModal);
+            if (el.confirmPromptInput) {
+                el.confirmPromptInput.addEventListener('input', function () {
+                    el.confirmPromptInput.removeAttribute('aria-invalid');
+                    if (el.confirmPromptError) {
+                        el.confirmPromptError.hidden = true;
+                        el.confirmPromptError.textContent = '';
+                    }
+                });
+                el.confirmPromptInput.addEventListener('keydown', function (ev) {
+                    if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) {
+                        ev.preventDefault();
+                        submitConfirmModal();
+                    }
+                });
+            }
             if (el.confirmBackdrop) {
                 el.confirmBackdrop.addEventListener('click', function (ev) {
                     if (ev.target === el.confirmBackdrop) closeConfirmModal(false);
@@ -2558,6 +3256,16 @@
             });
         }
         if (el.btnSubmit) el.btnSubmit.addEventListener('click', submitOrder);
+        if (el.listingTermsChk) {
+            el.listingTermsChk.addEventListener('change', syncListingSubmitEnabled);
+        }
+        if (el.listingTermsLink) {
+            el.listingTermsLink.addEventListener('click', function (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                openTermsGuide();
+            });
+        }
 
         function bindSeg(container, key, attr) {
             if (!container) return;
@@ -2793,6 +3501,7 @@
         el.cats = $('marketCats');
         el.grid = $('marketGrid');
         el.gridEmpty = $('marketGridEmpty');
+        el.pager = $('marketPager');
         el.btnCreate = $('marketBtnCreate');
         el.modalBackdrop = $('marketModalBackdrop');
         el.modal = el.modalBackdrop ? el.modalBackdrop.querySelector('.market-modal') : null;
@@ -2803,17 +3512,31 @@
         el.detailBody = $('marketDetailBody');
         el.detailClose = $('marketDetailClose');
         el.confirmBackdrop = $('marketConfirmBackdrop');
+        el.confirmModal = el.confirmBackdrop ? el.confirmBackdrop.querySelector('.market-confirm') : null;
         el.confirmTitle = $('marketConfirmTitle');
         el.confirmMessage = $('marketConfirmMessage');
         el.confirmClose = $('marketConfirmClose');
         el.confirmCancel = $('marketConfirmCancel');
         el.confirmOk = $('marketConfirmOk');
+        el.confirmPromptWrap = $('marketConfirmPromptWrap');
+        el.confirmPromptLabel = $('marketConfirmPromptLabel');
+        el.confirmPromptInput = $('marketConfirmPromptInput');
+        el.confirmPromptHint = $('marketConfirmPromptHint');
+        el.confirmPromptError = $('marketConfirmPromptError');
+        el.termsBackdrop = $('marketTermsBackdrop');
+        el.termsClose = $('marketTermsClose');
+        el.termsBody = $('marketTermsBody');
+        el.termsForceFoot = $('marketTermsForceFoot');
+        el.termsAckBtn = $('marketTermsAckBtn');
+        el.termsChk = $('marketTermsChk');
+        el.termsGuideBtn = $('marketTermsGuideBtn');
         el.flowBackdrop = $('marketFlowBackdrop');
         el.flowClose = $('marketFlowClose');
         el.flowGuideBtn = $('marketFlowGuideBtn');
         el.flowForceFoot = $('marketFlowForceFoot');
         el.flowForceHint = $('marketFlowForceHint');
         el.flowAckBtn = $('marketFlowAckBtn');
+        el.flowMuteChk = $('marketFlowMuteChk');
         el.modalClose = $('marketModalClose');
         el.modalCancel = $('marketModalCancel');
         el.segTradeType = $('marketSegTradeType');
@@ -2857,21 +3580,32 @@
         el.wantImageRemove = $('marketWantImageRemove');
         el.wantItemPreviewType = $('marketWantItemPreviewType');
         el.btnSubmit = $('marketBtnSubmit');
+        el.listingTermsWrap = $('marketListingTermsWrap');
+        el.listingTermsChk = $('marketListingTermsChk');
+        el.listingTermsLink = $('marketListingTermsLink');
+        el.listingTermsHint = $('marketListingTermsHint');
         el.formError = $('marketFormError');
     }
 
     function init() {
         cacheElements();
+        state.pageSize = readPageSize();
         wireEvents();
         initHeroParallax();
         window.UssMarket = {
             openEditModal: openEditModal,
             renderManageOrderCardHtml: renderManageOrderCardHtml,
+            openListingDetail: openListingDetail,
             cardMediaHtml: cardMediaHtml,
             primaryCategory: primaryCategory,
             formatQualityBrief: formatQualityBrief,
             primaryItemName: primaryItemName,
             formatPrice: formatPrice,
+            formatDateMinute: formatDateMinute,
+            formatDateShort: formatDateShort,
+            formatDateYmd: formatDateYmd,
+            dateTimeHtml: dateTimeHtml,
+            timeLineHtml: timeLineHtml,
         };
         if (document.body.classList.contains('market-trades-body')) {
             return;

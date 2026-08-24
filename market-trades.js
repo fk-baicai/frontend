@@ -15,6 +15,9 @@
         cancelled: '已取消',
     };
 
+    var VALID_TABS = { sell: 1, buy: 1, purchases: 1, incoming: 1, reviews: 1 };
+    var TAB_STORAGE_KEY = 'ussMarketTradesTab';
+
     var state = {
         tab: 'sell',
         orders: [],
@@ -101,6 +104,83 @@
         return d + ' 天';
     }
 
+    function formatDateYmd(iso) {
+        if (window.UssMarket && typeof window.UssMarket.formatDateYmd === 'function') {
+            return window.UssMarket.formatDateYmd(iso);
+        }
+        if (!iso) return '';
+        var t = Date.parse(String(iso));
+        if (!Number.isFinite(t)) return '';
+        var d = new Date(t);
+        return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    }
+
+    function dateDayHtml(iso, extraClass) {
+        var day = formatDateYmd(iso);
+        if (!day) return '';
+        return (
+            '<time' + (extraClass ? ' class="' + extraClass + '"' : '') +
+            ' datetime="' + escapeHtml(String(iso)) + '">' +
+            escapeHtml(day) +
+            '</time>'
+        );
+    }
+
+    function formatDateMinute(iso) {
+        if (window.UssMarket && typeof window.UssMarket.formatDateMinute === 'function') {
+            return window.UssMarket.formatDateMinute(iso);
+        }
+        if (!iso) return '';
+        var t = Date.parse(String(iso));
+        if (!Number.isFinite(t)) return '';
+        var d = new Date(t);
+        function pad(n) { return n < 10 ? '0' + n : String(n); }
+        return (
+            d.getFullYear() +
+            '-' + pad(d.getMonth() + 1) +
+            '-' + pad(d.getDate()) +
+            ' ' + pad(d.getHours()) +
+            ':' + pad(d.getMinutes())
+        );
+    }
+
+    function dateTimeHtml(iso, extraClass) {
+        if (window.UssMarket && typeof window.UssMarket.dateTimeHtml === 'function') {
+            return window.UssMarket.dateTimeHtml(iso, extraClass);
+        }
+        var full = formatDateMinute(iso);
+        if (!full) return '';
+        return (
+            '<time' + (extraClass ? ' class="' + extraClass + '"' : '') +
+            ' datetime="' + escapeHtml(String(iso)) +
+            '" title="' + escapeHtml(full) + '">' +
+            escapeHtml(full) +
+            '</time>'
+        );
+    }
+
+    function timeLineHtml(label, iso) {
+        if (window.UssMarket && typeof window.UssMarket.timeLineHtml === 'function') {
+            return window.UssMarket.timeLineHtml(label, iso);
+        }
+        var stamp = dateTimeHtml(iso);
+        if (!stamp) return '';
+        return (
+            '<p class="market-time-line">' +
+            '<span class="market-time-line__label">' + escapeHtml(label) + '</span>' +
+            stamp +
+            '</p>'
+        );
+    }
+
+    function buyerReviewAt(p) {
+        return p.reviewAt || (p.reviewRating ? (p.completedAt || p.updatedAt) : '');
+    }
+
+    function sellerReviewAt(p) {
+        return p.sellerReviewAt || (p.sellerReviewRating ? (p.completedAt || p.updatedAt) : '');
+    }
+
     function showGate(msg) {
         if (!el.gate) return;
         el.gate.textContent = msg || '请先登录';
@@ -120,6 +200,30 @@
             btn.classList.toggle('is-active', active);
             btn.setAttribute('aria-selected', active ? 'true' : 'false');
         });
+    }
+
+    function persistTabToUrl() {
+        try {
+            var url = new URL(window.location.href);
+            if (url.searchParams.get('tab') !== state.tab) {
+                url.searchParams.set('tab', state.tab);
+                window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+            }
+            window.sessionStorage.setItem(TAB_STORAGE_KEY, state.tab);
+        } catch (e) { /* ignore */ }
+    }
+
+    function setActiveTab(tab, options) {
+        var next = VALID_TABS[tab] ? tab : 'sell';
+        var silent = options && options.silent;
+        if (state.tab === next) {
+            persistTabToUrl();
+            return;
+        }
+        state.tab = next;
+        syncTabs();
+        persistTabToUrl();
+        if (!silent) loadTabData();
     }
 
     async function fetchMyOrders(orderType) {
@@ -211,6 +315,16 @@
             } else if (state.tab === 'purchases') {
                 state.orders = [];
                 state.purchases = await fetchPurchases('buyer');
+            } else if (state.tab === 'reviews') {
+                var buyerList = await fetchPurchases('buyer');
+                var sellerList = await fetchPurchases('seller');
+                var seen = {};
+                state.orders = [];
+                state.purchases = buyerList.concat(sellerList).filter(function (p) {
+                    if (!p || p.status !== 'completed' || seen[p.id]) return false;
+                    seen[p.id] = true;
+                    return true;
+                });
             } else {
                 state.orders = [];
                 state.purchases = await fetchPurchases('seller');
@@ -239,7 +353,8 @@
             '<div class="market-trades-row__main">' +
             '<h3 class="market-trades-row__title">' + escapeHtml(primaryItemName(o)) + '</h3>' +
             '<p class="market-trades-row__meta">' + escapeHtml(formatPrice(o)) + ' · ×' + escapeHtml((o.items[0] && o.items[0].quantity) || 1) +
-            ' · ' + escapeHtml(loc) + ' · 剩余 ' + escapeHtml(formatExpires(o.expiresAt)) + '</p>' +
+            ' · ' + escapeHtml(loc) + ' · 剩余 ' + escapeHtml(formatExpires(o.expiresAt)) +
+            '</p>' +
             '<span class="market-trades-row__status">' + escapeHtml(status) + '</span>' +
             '</div>' +
             '<div class="market-trades-row__actions">' +
@@ -255,6 +370,18 @@
 
     function findPurchase(id) {
         return state.purchases.find(function (p) { return p && p.id === id; }) || null;
+    }
+
+    function openReadonlyListing(order) {
+        if (!order) {
+            window.alert('暂无商品快照，无法查看详情');
+            return;
+        }
+        if (window.UssMarket && typeof window.UssMarket.openListingDetail === 'function') {
+            window.UssMarket.openListingDetail(order, { readOnly: true, unlockSellerContact: true });
+            return;
+        }
+        window.alert('无法打开商品详情');
     }
 
     function proofUploadBtnHtml(purchaseId, proofType, done, label) {
@@ -289,7 +416,7 @@
                 actions = '<button type="button" class="market-btn market-btn--accent market-trades-btn-approve" data-purchase-id="' + escapeHtml(p.id) + '">确认交易</button>' +
                     '<button type="button" class="market-btn market-trades-btn-cancel-purchase" data-purchase-id="' + escapeHtml(p.id) + '">拒绝</button>';
             } else {
-                actions = '<span class="market-trades-wait-hint">等待卖家确认交易…</span>' +
+                actions = '<span class="market-trades-wait-hint">等待卖家确认交易</span>' +
                     '<button type="button" class="market-btn market-trades-btn-cancel-purchase" data-purchase-id="' + escapeHtml(p.id) + '">取消购买</button>';
             }
         } else if (p.status === 'approved') {
@@ -305,9 +432,12 @@
                     actions += cancelPurchaseBtnHtml(p.id, '取消订单');
                 }
             } else {
+                var autoHint = p.autoCompleteAt
+                    ? '等待买家确认完成（到期将自动成交）'
+                    : '等待买家确认完成（3 天未操作将自动完成）';
                 actions =
                     proofUploadBtnHtml(p.id, 'seller', p.sellerProofImageUrl, '上传交易凭证') +
-                    '<span class="market-trades-wait-hint">等待买家确认完成（3 天未操作将自动完成）</span>';
+                    '<span class="market-trades-wait-hint">' + autoHint + '</span>';
                 if (canCancelPurchase(p, 'seller')) {
                     actions += cancelPurchaseBtnHtml(p.id, '取消订单');
                 }
@@ -316,13 +446,196 @@
             if (p.completedBy === 'auto') {
                 actions = '<span class="market-trades-wait-hint">系统已自动完成交易</span>';
             }
-            if (p.reviewRating) {
-                actions += '<span class="market-trades-wait-hint">买家评价：' + escapeHtml(p.reviewRating) + ' 星</span>';
+            if (!p.reviewRating && role === 'buyer') {
+                actions += reviewFormHtml(p.id, 'buyer');
+            }
+            if (!p.sellerReviewRating && role === 'seller') {
+                actions += reviewFormHtml(p.id, 'seller');
             }
         } else if (p.status === 'cancelled') {
-            actions = '<button type="button" class="market-btn market-trades-btn-delete-purchase" data-purchase-id="' + escapeHtml(p.id) + '">删除</button>';
+            actions = '<span class="market-trades-wait-hint">订单已取消</span>' +
+                '<button type="button" class="market-btn market-trades-btn-delete-purchase" data-purchase-id="' + escapeHtml(p.id) + '">删除</button>';
         }
         return actions;
+    }
+
+    function reviewFormHtml(purchaseId, role) {
+        return (
+            '<form class="market-trades-review-form" data-purchase-id="' + escapeHtml(purchaseId) + '" data-review-role="' + escapeHtml(role) + '">' +
+            '<label>评分 <select name="rating">' +
+            '<option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>' +
+            '</select></label>' +
+            '<input type="text" name="text" maxlength="200" placeholder="评价（选填）">' +
+            '<button type="submit" class="market-btn market-btn--accent">提交评价</button>' +
+            '</form>'
+        );
+    }
+
+    function reviewStarsHtml(rating) {
+        var n = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
+        var html = '<span class="market-trades-review__stars" aria-label="' + n + '星">';
+        var i;
+        for (i = 1; i <= 5; i++) {
+            html += '<span' + (i <= n ? ' class="is-on"' : '') + ' aria-hidden="true">★</span>';
+        }
+        return html + '</span>';
+    }
+
+    function fallbackAvatar() {
+        return window.USS_DEFAULT_AVATAR || 'default-avatar.webp';
+    }
+
+    function partyName(p, who) {
+        if (who === 'buyer') return p.buyerDisplayName || p.buyerBindingId || '—';
+        return p.sellerDisplayName || p.sellerBindingId || '—';
+    }
+
+    function partyAvatarUrl(p, who) {
+        var fromApi;
+        if (who === 'buyer') {
+            fromApi = p.buyerAvatarUrl || null;
+        } else {
+            var order = p && p.order;
+            var seller = order && order.seller;
+            fromApi =
+                p.sellerAvatarUrl ||
+                (seller && seller.avatarUrl) ||
+                (order && order.avatarUrl) ||
+                null;
+        }
+        if (fromApi) return fromApi;
+        var sess = loadSession();
+        var sessBid = sess && sess.bindingId != null ? String(sess.bindingId).trim().toLowerCase() : '';
+        var partyBid = who === 'buyer'
+            ? String(p.buyerBindingId || p.buyerDisplayName || '').trim().toLowerCase()
+            : String(p.sellerBindingId || p.sellerDisplayName || '').trim().toLowerCase();
+        if (sessBid && partyBid && sessBid === partyBid) {
+            return sess.avatarUrl || sess.rsiCitizenAvatarSourceUrl || null;
+        }
+        return null;
+    }
+
+    function partyChipHtml(name, avatarUrl) {
+        var src = mediaUrl(avatarUrl) || fallbackAvatar();
+        return (
+            '<span class="market-trades-person">' +
+            '<img class="market-trades-person__avatar" src="' + escapeHtml(src) + '" alt="" onerror="this.onerror=null;this.src=\'' + escapeHtml(fallbackAvatar()) + '\'">' +
+            '<span class="market-trades-person__name">' + escapeHtml(name || '—') + '</span>' +
+            '</span>'
+        );
+    }
+
+    function reviewQuoteHtml(label, name, avatarUrl, rating, text, formHtml, at) {
+        var timeHtml = dateDayHtml(at, 'market-trades-review__time');
+        var src = mediaUrl(avatarUrl) || fallbackAvatar();
+        var inner = formHtml
+            ? formHtml
+            : (rating
+                ? reviewStarsHtml(rating) + (text ? '<span class="market-trades-review__quote">' + escapeHtml(text) + '</span>' : '')
+                : '<span class="market-trades-review__empty">暂无</span>');
+        return (
+            '<div class="market-trades-review__side">' +
+            '<span class="market-trades-review__who">' +
+            '<span class="market-trades-review__who-main">' +
+            '<img class="market-trades-person__avatar" src="' + escapeHtml(src) + '" alt="" onerror="this.onerror=null;this.src=\'' + escapeHtml(fallbackAvatar()) + '\'">' +
+            '<span class="market-trades-review__who-label">' + escapeHtml(label) + '</span>' +
+            '<span class="market-trades-review__who-name">' + escapeHtml(name || '—') + '</span>' +
+            '</span>' +
+            (timeHtml || '') +
+            '</span>' +
+            '<div class="market-trades-review__content">' + inner + '</div>' +
+            '</div>'
+        );
+    }
+
+    function reviewEntryHtml(p, role) {
+        var order = p.order || {};
+        var title = primaryItemName(order);
+        var buyerForm = !p.reviewRating && role === 'buyer' ? reviewFormHtml(p.id, 'buyer') : '';
+        var sellerForm = !p.sellerReviewRating && role === 'seller' ? reviewFormHtml(p.id, 'seller') : '';
+        var buyerName = partyName(p, 'buyer');
+        var sellerName = partyName(p, 'seller');
+        return (
+            '<article class="market-card market-card--purchase market-card--review" data-purchase-id="' + escapeHtml(p.id) + '" role="listitem">' +
+            '<div class="market-card__media">' +
+            purchaseCardMediaHtml(order) +
+            '</div>' +
+            '<div class="market-card__info">' +
+            '<div class="market-card__text">' +
+            '<span class="market-card__cat">' + purchaseCardMetaLine(order, p.quantity) + '</span>' +
+            '<h2 class="market-card__title">' + escapeHtml(title) + '</h2>' +
+            '<p class="market-card__price">' + escapeHtml(formatPrice(order, p.quantity || 1)) + '</p>' +
+            '</div>' +
+            '</div>' +
+            '<div class="market-trades-review__meta">' +
+            '<p class="market-trades-review__party">' +
+            '<span class="market-trades-review__party-k">卖家</span>' +
+            partyChipHtml(sellerName, partyAvatarUrl(p, 'seller')) +
+            '</p>' +
+            '<div class="market-trades-review__quotes">' +
+            reviewQuoteHtml('买家评价', buyerName, partyAvatarUrl(p, 'buyer'), p.reviewRating, p.reviewText, buyerForm, buyerReviewAt(p)) +
+            reviewQuoteHtml('回复', sellerName, partyAvatarUrl(p, 'seller'), p.sellerReviewRating, p.sellerReviewText, sellerForm, sellerReviewAt(p)) +
+            '</div>' +
+            '</div>' +
+            '</article>'
+        );
+    }
+
+    function mediaUrl(rel) {
+        if (!rel) return '';
+        var s = String(rel);
+        if (/^https?:\/\//i.test(s) || /^data:/i.test(s)) return s;
+        if (window.UssAuthApi && typeof window.UssAuthApi.resolveAssetUrl === 'function') {
+            var u = window.UssAuthApi.resolveAssetUrl(s);
+            if (u) return u;
+        }
+        return joinUrl(s.charAt(0) === '/' ? s : '/' + s);
+    }
+
+    function proofThumbHtml(url, alt, iso) {
+        var src = mediaUrl(url);
+        if (!src) return '';
+        var dayHtml = dateDayHtml(iso);
+        return (
+            '<figure class="market-trades-proof-fig">' +
+            '<button type="button" class="market-trades-proof-thumb" data-proof-lightbox="1" data-src="' +
+            escapeHtml(src) +
+            '" title="点击查看大图" aria-label="' +
+            escapeHtml(alt) +
+            '">' +
+            '<img src="' + escapeHtml(src) + '" alt="' + escapeHtml(alt) + '">' +
+            '</button>' +
+            '<figcaption class="market-trades-proof-time">' +
+            '<span class="market-trades-proof-k">' + escapeHtml(alt) + '</span>' +
+            (dayHtml || '') +
+            '</figcaption>' +
+            '</figure>'
+        );
+    }
+
+    function proofThumbsHtml(p) {
+        var html = '<div class="market-trades-proof-thumbs">';
+        if (p.buyerTransferProofUrl) {
+            html += proofThumbHtml(p.buyerTransferProofUrl, '买家凭证', p.buyerTransferProofAt);
+        } else {
+            html += '<span class="market-trades-wait-hint">买家凭证未传</span>';
+        }
+        if (p.sellerProofImageUrl) {
+            html += proofThumbHtml(p.sellerProofImageUrl, '卖家凭证', p.sellerProofAt);
+        } else {
+            html += '<span class="market-trades-wait-hint">卖家凭证未传</span>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function openProofLightbox(src) {
+        if (!src) return;
+        if (window.UssCommunityImageLightbox && typeof window.UssCommunityImageLightbox.open === 'function') {
+            window.UssCommunityImageLightbox.open(src);
+            return;
+        }
+        window.open(src, '_blank', 'noopener,noreferrer');
     }
 
     function purchaseCardMediaHtml(order) {
@@ -357,13 +670,13 @@
         var order = p.order || {};
         var title = primaryItemName(order);
         var price = formatPrice(order, p.quantity || 1);
-        var party = role === 'seller'
-            ? ('买家：' + (p.buyerBindingId || '—'))
-            : ('卖家：' + (p.sellerBindingId || '—'));
+        var partyHtml = role === 'seller'
+            ? ('<span class="market-card__purchase-party-k">买家</span>' + partyChipHtml(partyName(p, 'buyer'), partyAvatarUrl(p, 'buyer')))
+            : ('<span class="market-card__purchase-party-k">卖家</span>' + partyChipHtml(partyName(p, 'seller'), partyAvatarUrl(p, 'seller')));
         if (role === 'buyer') {
             var sellerTrades = sellerTradeCountFromOrder(order);
             if (sellerTrades != null) {
-                party += ' · 交易：' + sellerTrades;
+                partyHtml += '<span class="market-card__purchase-party-extra">交易：' + escapeHtml(String(sellerTrades)) + '</span>';
             }
         }
         var status = PURCHASE_STATUS_LABEL[p.status] || p.status;
@@ -383,10 +696,11 @@
             '</div>' +
             '</div>' +
             '<div class="market-card__purchase-meta">' +
-            '<p class="market-card__purchase-party">' + escapeHtml(party) + '</p>' +
+            '<p class="market-card__purchase-party">' + partyHtml + '</p>' +
             purchaseProofSummaryHtml(p, role) +
+            (p.status === 'completed' || p.buyerTransferProofUrl || p.sellerProofImageUrl ? proofThumbsHtml(p) : '') +
             '</div>' +
-            '<div class="market-card__purchase-actions">' + actions + '</div>' +
+            (actions ? '<div class="market-card__purchase-actions">' + actions + '</div>' : '') +
             '</article>'
         );
     }
@@ -422,6 +736,22 @@
                 return;
             }
             html = state.orders.map(orderCardHtml).join('');
+        } else if (state.tab === 'reviews') {
+            el.panel.className = 'market-trades-panel market-trades-grid';
+            if (!state.purchases.length) {
+                if (el.empty) {
+                    el.empty.hidden = false;
+                    el.empty.textContent = '暂无已完成交易可评价';
+                }
+                el.panel.innerHTML = '';
+                return;
+            }
+            html = state.purchases.map(function (p) {
+                var sess = loadSession();
+                var myBid = sess && sess.bindingId ? String(sess.bindingId).toLowerCase() : '';
+                var cardRole = String(p.sellerBindingId || '').toLowerCase() === myBid ? 'seller' : 'buyer';
+                return reviewEntryHtml(p, cardRole);
+            }).join('');
         } else {
             el.panel.className = 'market-trades-panel market-trades-grid';
             var role = state.tab === 'incoming' ? 'seller' : 'buyer';
@@ -433,7 +763,9 @@
                 el.panel.innerHTML = '';
                 return;
             }
-            html = state.purchases.map(function (p) { return purchaseCardHtml(p, role); }).join('');
+            html = state.purchases.map(function (p) {
+                return purchaseCardHtml(p, role);
+            }).join('');
         }
         if (el.empty) el.empty.hidden = true;
         el.panel.innerHTML = html;
@@ -458,12 +790,14 @@
         try {
             var params = new URLSearchParams(window.location.search);
             var tab = params.get('tab');
-            if (tab === 'sell' || tab === 'buy' || tab === 'purchases' || tab === 'incoming') {
-                state.tab = tab;
+            if (!VALID_TABS[tab]) {
+                try { tab = window.sessionStorage.getItem(TAB_STORAGE_KEY); } catch (e1) { tab = ''; }
             }
+            if (VALID_TABS[tab]) state.tab = tab;
             var highlight = params.get('highlight');
             if (highlight) state.highlightPurchaseId = String(highlight).trim();
         } catch (e) { /* ignore */ }
+        persistTabToUrl();
     }
 
     function findOrder(id) {
@@ -622,6 +956,8 @@
                 el.confirmCancel.hidden = notice;
                 el.confirmCancel.textContent = opts.cancelText || '再想想';
             }
+            if (el.confirmPromptWrap) el.confirmPromptWrap.hidden = true;
+            if (el.confirmModal) el.confirmModal.classList.remove('market-confirm--prompt');
             el.confirmBackdrop.hidden = false;
             if (notice) el.confirmOk.focus();
             else if (el.confirmCancel) el.confirmCancel.focus();
@@ -632,9 +968,7 @@
         if (el.tabs) {
             el.tabs.forEach(function (btn) {
                 btn.addEventListener('click', function () {
-                    state.tab = btn.getAttribute('data-tab') || 'sell';
-                    syncTabs();
-                    loadTabData();
+                    setActiveTab(btn.getAttribute('data-tab') || 'sell');
                 });
             });
         }
@@ -668,7 +1002,36 @@
                 };
                 reader.readAsDataURL(file);
             });
+            el.panel.addEventListener('submit', function (ev) {
+                var form = ev.target.closest('.market-trades-review-form');
+                if (!form) return;
+                ev.preventDefault();
+                var pid = form.getAttribute('data-purchase-id');
+                var role = form.getAttribute('data-review-role');
+                var ratingEl = form.querySelector('[name="rating"]');
+                var textEl = form.querySelector('[name="text"]');
+                var rating = Number(ratingEl && ratingEl.value);
+                var text = textEl ? String(textEl.value || '').trim() : '';
+                var body = role === 'seller'
+                    ? { sellerReviewRating: rating, sellerReviewText: text }
+                    : { reviewRating: rating, reviewText: text };
+                patchPurchase(pid, body).then(loadTabData).catch(function (e) {
+                    window.alert((e && e.message) || '评价失败');
+                });
+            });
             el.panel.addEventListener('click', function (ev) {
+                var proofLink = ev.target.closest('[data-proof-lightbox]');
+                if (proofLink) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    var src = proofLink.getAttribute('data-src') || proofLink.getAttribute('href') || '';
+                    if (!src) {
+                        var proofImg = proofLink.querySelector('img');
+                        src = (proofImg && (proofImg.currentSrc || proofImg.src)) || '';
+                    }
+                    openProofLightbox(src);
+                    return;
+                }
                 var editBtn = ev.target.closest('.market-trades-btn-edit');
                 if (editBtn) {
                     openOrderEditor(editBtn.getAttribute('data-order-id'));
@@ -777,6 +1140,27 @@
                             window.alert((e && e.message) || '取消失败');
                         });
                     });
+                    return;
+                }
+                var itemBtn = ev.target.closest('[data-open-purchase-detail]');
+                if (itemBtn) {
+                    ev.preventDefault();
+                    var pItem = findPurchase(itemBtn.getAttribute('data-open-purchase-detail'));
+                    openReadonlyListing(pItem && pItem.order);
+                    return;
+                }
+                if (ev.target.closest('button, a, input, select, textarea, label, form')) return;
+                var manageCard = ev.target.closest('.market-card--manage');
+                if (manageCard) {
+                    var oidOpen = manageCard.getAttribute('data-order-id');
+                    var listing = state.orders.find(function (o) { return o && String(o.id) === String(oidOpen); });
+                    openReadonlyListing(listing);
+                    return;
+                }
+                var purchaseCard = ev.target.closest('.market-card--purchase');
+                if (purchaseCard) {
+                    var pCard = findPurchase(purchaseCard.getAttribute('data-purchase-id'));
+                    openReadonlyListing(pCard && pCard.order);
                 }
             });
         }
@@ -810,6 +1194,11 @@
             ev.preventDefault();
             closeConfirmModal(false);
         });
+        window.addEventListener('popstate', function () {
+            applyRouteFromUrl();
+            syncTabs();
+            loadTabData();
+        });
     }
 
     function cacheElements() {
@@ -828,11 +1217,13 @@
         el.completeReview = $('marketTradesReviewText');
         el.completeError = $('marketTradesCompleteError');
         el.confirmBackdrop = $('marketConfirmBackdrop');
+        el.confirmModal = el.confirmBackdrop ? el.confirmBackdrop.querySelector('.market-confirm') : null;
         el.confirmTitle = $('marketConfirmTitle');
         el.confirmMessage = $('marketConfirmMessage');
         el.confirmClose = $('marketConfirmClose');
         el.confirmCancel = $('marketConfirmCancel');
         el.confirmOk = $('marketConfirmOk');
+        el.confirmPromptWrap = $('marketConfirmPromptWrap');
     }
 
     function init() {

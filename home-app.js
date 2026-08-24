@@ -559,6 +559,7 @@
         let settingsRsiIssueCooldownTimer = null;
         let settingsRsiBindPollTimer = null;
         let settingsRsiBindPollInFlight = false;
+        let settingsRsiConfirmInFlight = false;
         let settingsRsiPendingHandle = '';
 
         function maskAccountEmail(email) {
@@ -789,10 +790,32 @@
             }
         }
 
+        function settingsRsiConfirmBindBtn() {
+            return document.getElementById('settingsRsiConfirmBindBtn');
+        }
+
+        function setSettingsRsiConfirmLoading(isLoading) {
+            const btn = settingsRsiConfirmBindBtn();
+            if (!btn) return;
+            if (isLoading) {
+                btn.disabled = true;
+                btn.classList.add('rsi-submit-btn--loading');
+                btn.setAttribute('aria-busy', 'true');
+                btn.innerHTML =
+                    '<span class="rsi-btn-spinner" aria-hidden="true"></span><span class="rsi-btn-spinner-text">验证中…</span>';
+                return;
+            }
+            btn.disabled = false;
+            btn.classList.remove('rsi-submit-btn--loading');
+            btn.removeAttribute('aria-busy');
+            btn.textContent = '确认绑定';
+        }
+
         async function submitRsiBindConfirm(opts) {
             opts = opts || {};
             const auto = !!opts.auto;
             if (auto && settingsRsiBindPollInFlight) return;
+            if (!auto && settingsRsiConfirmInFlight) return;
             if (!auto) clearAccountSettingsRsiHint();
             const sess = loadAuthSession();
             if (!sess || !sess.token) {
@@ -817,6 +840,11 @@
                 return;
             }
             if (auto) settingsRsiBindPollInFlight = true;
+            else {
+                settingsRsiConfirmInFlight = true;
+                setSettingsRsiConfirmLoading(true);
+                setAccountSettingsRsiHint('正在读取 RSI 公民页并核对验证码，请稍候…', true);
+            }
             try {
                 const res = await window.UssAuthApi.confirmRsiBind(sess.token, handle);
                 stopSettingsRsiBindPoll();
@@ -839,6 +867,11 @@
                 }
             } finally {
                 if (auto) settingsRsiBindPollInFlight = false;
+                else {
+                    settingsRsiConfirmInFlight = false;
+                    const nextSess = loadAuthSession();
+                    if (!(nextSess && nextSess.rsiBindLocked)) setSettingsRsiConfirmLoading(false);
+                }
             }
         }
 
@@ -981,7 +1014,9 @@
             if (!backdrop) return;
             backdrop.hidden = false;
             backdrop.onclick = function (e) {
-                if (e.target === backdrop) closeAccountSettings();
+                if (e.target !== backdrop) return;
+                if (accountSettingsPanel === 'rsi') return;
+                closeAccountSettings();
             };
             updatePageScrollLock();
         }

@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"></noscript>
-    <link rel="stylesheet" href="market.css?v=76">
+    <link rel="stylesheet" href="market.css?v=92">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -181,6 +181,15 @@
                             <h1 class="market-head__title">星巢贸易</h1>
                             <p class="market-head__sub">资金置换 · 物品互换</p>
                         </div>
+                        <div class="market-head__guides">
+                        <button type="button" class="market-flow-guide" id="marketTermsGuideBtn" aria-label="服务说明与风险告知" title="风险告知">
+                            <span class="market-flow-guide__icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                            <span class="market-flow-guide__label">风险告知</span>
+                        </button>
                         <button type="button" class="market-flow-guide" id="marketFlowGuideBtn" aria-label="交易流程：买家与卖家分步指引" title="交易流程">
                             <span class="market-flow-guide__icon" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none">
@@ -191,6 +200,7 @@
                             </span>
                             <span class="market-flow-guide__label">交易流程</span>
                         </button>
+                        </div>
                     </div>
                     <div class="market-head__actions">
                         <div class="market-head__cta">
@@ -214,6 +224,7 @@
 
             <div class="market-grid" id="marketGrid" role="list"></div>
             <p class="market-empty" id="marketGridEmpty" hidden>暂无订单</p>
+            <div class="market-pager" id="marketPager" hidden></div>
         </div>
     </main>
 
@@ -396,9 +407,16 @@
 
                 <p class="market-form-error" id="marketFormError" hidden></p>
             </div>
-            <footer class="market-modal__foot">
-                <button type="button" class="market-btn" id="marketModalCancel">取消</button>
-                <button type="button" class="market-btn market-btn--accent" id="marketBtnSubmit">生成单据</button>
+            <footer class="market-modal__foot market-modal__foot--listing">
+                <label class="market-listing-terms" id="marketListingTermsWrap" for="marketListingTermsChk">
+                    <input type="checkbox" id="marketListingTermsChk">
+                    <span>我已阅读并同意<a href="#" id="marketListingTermsLink">服务与风险告知</a>，知晓平台仅做信息展示，交易风险由本人自行承担。</span>
+                </label>
+                <p class="market-listing-terms-hint" id="marketListingTermsHint" hidden>请先勾选服务与风险告知后再生成单据</p>
+                <div class="market-modal__foot-actions">
+                    <button type="button" class="market-btn" id="marketModalCancel">取消</button>
+                    <button type="button" class="market-btn market-btn--accent is-locked" id="marketBtnSubmit" aria-disabled="true">生成单据</button>
+                </div>
             </footer>
         </div>
     </div>
@@ -421,10 +439,67 @@
             </header>
             <div class="market-confirm__body">
                 <p class="market-confirm__message" id="marketConfirmMessage"></p>
+                <div class="market-field market-confirm__prompt" id="marketConfirmPromptWrap" hidden>
+                    <label class="market-field__label" for="marketConfirmPromptInput" id="marketConfirmPromptLabel">下架理由</label>
+                    <textarea id="marketConfirmPromptInput" class="market-control" rows="3" maxlength="200" placeholder="请填写下架理由" aria-describedby="marketConfirmPromptHint marketConfirmPromptError"></textarea>
+                    <p class="market-field__hint" id="marketConfirmPromptHint">最多 200 字，买家可见。</p>
+                    <p class="market-form-error" id="marketConfirmPromptError" hidden></p>
+                </div>
             </div>
             <footer class="market-modal__foot market-confirm__foot">
                 <button type="button" class="market-btn" id="marketConfirmCancel">再想想</button>
                 <button type="button" class="market-btn market-btn--accent" id="marketConfirmOk">确认</button>
+            </footer>
+        </div>
+    </div>
+
+    <div id="marketTermsBackdrop" class="market-modal-backdrop" hidden>
+        <div class="market-modal market-terms-modal" role="dialog" aria-modal="true" aria-labelledby="marketTermsTitle">
+            <header class="market-flow-modal__head">
+                <div class="market-flow-modal__head-text">
+                    <p class="market-flow-modal__eyebrow">STAR NEST TRADE</p>
+                    <h2 class="market-flow-modal__title" id="marketTermsTitle">服务说明与风险告知</h2>
+                </div>
+                <button type="button" class="market-modal__close" id="marketTermsClose" aria-label="关闭">&times;</button>
+            </header>
+            <div class="market-terms-modal__body" id="marketTermsBody">
+                <p class="market-terms-welcome">欢迎使用星巢贸易。使用前请阅读以下告知，勾选即代表你理解并同意本平台的服务规则与风险提示。如不认同，请不要使用发布、交易相关功能。</p>
+                <div class="market-flow-modal__lead-card" role="note">
+                    <span class="market-flow-modal__lead-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    </span>
+                    <p class="market-flow-modal__lead">星巢贸易是星际公民玩家自发搭建的<strong>玩家信息交流平台</strong>（<a href="https://ussxc.org" target="_blank" rel="noopener noreferrer">ussxc.org</a>）。我们只提供挂单展示、物品求购、任务招募的信息发布板块。本平台<strong>不参与玩家私下对接、不做交易担保、不代管 AUEC / 游戏道具，不会介入游戏内物品交付过程</strong>。所有物品互换、以物换 AUEC、任务结算，全部发生在《星际公民》游戏内，由玩家双方自行沟通完成。</p>
+                </div>
+                <ol class="market-terms-list">
+                    <li>
+                        <h3>仅限游戏虚拟内容</h3>
+                        <p>本网站只用于游戏内虚拟道具、AUEC、游戏任务劳务交换。<strong>严禁任何现实金钱、实物交易行为</strong>。所有交互仅限游戏虚拟数据，和现实财物无关。</p>
+                    </li>
+                    <li>
+                        <h3>玩家之间交易风险需要自己留意</h3>
+                        <p>所有挂单、招募信息均由其他玩家自行发布。平台无法逐一核验每一条信息的真假，没办法核实对方是否会履约。在和其他玩家进行交换、接取任务时，请你自行甄别对方，警惕骗单、毁约、虚假信息等情况。一切玩家之间产生的纠纷、损失，由参与的玩家双方自行协商处理，平台不承担赔付、调解、追偿义务。</p>
+                    </li>
+                    <li>
+                        <h3>请遵守游戏官方规则</h3>
+                        <p>请各位玩家留意 CIG 官方用户协议。因玩家私下交互行为，造成游戏账号警告、封禁、道具回收等情况，相关后果由账号持有人自行承担。</p>
+                    </li>
+                    <li>
+                        <h3>用户发布内容责任</h3>
+                        <p>每位玩家对自己发布的挂单、招募内容真实性自行负责。平台收到举报后会处理违规内容，但不会对全部内容做全量审核。</p>
+                    </li>
+                    <li>
+                        <h3>关于平台本身</h3>
+                        <p>本项目为玩家爱好者搭建的非商业项目，我们不承诺网站永久不间断运行，会不定期维护升级。因网站访问问题带来的间接损失，平台不承担责任。平台有权更新本告知条款，更新后在网站公示即生效，继续使用代表接受最新版本。</p>
+                    </li>
+                </ol>
+                <p class="market-terms-severability">若本协议部分条款失效，不影响其余条款效力。</p>
+            </div>
+            <footer class="market-terms-modal__foot" id="marketTermsForceFoot">
+                <label class="market-terms-check" for="marketTermsChk">
+                    <input type="checkbox" id="marketTermsChk">
+                    <span>我已阅读并充分理解以上服务与风险告知，知晓平台仅做信息展示，交易风险由本人自行把控，同意使用星巢贸易平台相关功能。</span>
+                </label>
+                <button type="button" class="market-btn market-btn--accent market-flow-modal__ack" id="marketTermsAckBtn" disabled>请先勾选同意</button>
             </footer>
         </div>
     </div>
@@ -571,8 +646,14 @@
                 </div>
             </div>
             <footer class="market-flow-modal__foot" id="marketFlowForceFoot" hidden>
-                <p class="market-flow-modal__force-hint" id="marketFlowForceHint">首次操作前请完整阅读买家与卖家流程</p>
-                <button type="button" class="market-btn market-btn--accent market-flow-modal__ack" id="marketFlowAckBtn" disabled aria-live="polite">请阅读（10）</button>
+                <div class="market-flow-modal__force-copy">
+                    <p class="market-flow-modal__force-hint" id="marketFlowForceHint">首次操作前请完整阅读买家与卖家流程</p>
+                    <label class="market-flow-modal__mute" for="marketFlowMuteChk">
+                        <input type="checkbox" id="marketFlowMuteChk">
+                        <span>不在弹出</span>
+                    </label>
+                </div>
+                <button type="button" class="market-btn market-btn--accent market-flow-modal__ack" id="marketFlowAckBtn" disabled aria-live="polite">请阅读（5）</button>
             </footer>
         </div>
     </div>
@@ -585,12 +666,12 @@
     <script src="auth-session-sync.js" defer></script>
     <script defer src="rsi-client.js"></script>
     <script defer src="rsi-sync.js"></script>
-    <script defer src="home-app.js?v=20260823d"></script>
+    <script defer src="home-app.js?v=20260824b"></script>
     <script src="nav-dropdown.js" defer></script>
     <script src="nav-auth-tools.js" defer></script>
     <script src="site-footer.js" defer></script>
     <script src="community-image-lightbox.js" defer></script>
-    <script src="market-notify.js?v=3" defer></script>
-    <script src="market.js?v=60" defer></script>
+    <script src="market-notify.js?v=4" defer></script>
+    <script src="market.js?v=75" defer></script>
 </body>
 </html>

@@ -159,6 +159,14 @@
                     url: tradesUrl('purchases', p.id),
                 });
             }
+            if (prev && prev.status === 'pending' && p.status === 'cancelled' && p.cancelledBy === 'seller') {
+                alerts.push({
+                    kind: 'buyer',
+                    title: '卖家拒绝本次提交购买',
+                    body: primaryItemName(p.order) + ' 的购买请求已被拒绝',
+                    url: tradesUrl('purchases', p.id),
+                });
+            }
         });
 
         rememberPurchases(nextPurchases, buyerList);

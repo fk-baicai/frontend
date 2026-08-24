@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"></noscript>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="market.css?v=76">
+    <link rel="stylesheet" href="market.css?v=92">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <script src="auth-config.js"></script>
     <script>
@@ -177,6 +177,7 @@
                 <button type="button" class="market-trades-tab" data-tab="buy" role="tab">求购挂单</button>
                 <button type="button" class="market-trades-tab" data-tab="purchases" role="tab">我的购买</button>
                 <button type="button" class="market-trades-tab" data-tab="incoming" role="tab">收到订单</button>
+                <button type="button" class="market-trades-tab" data-tab="reviews" role="tab">评价</button>
             </div>
 
             <div class="market-trades-panel market-trades-grid" id="marketTradesPanel" role="tabpanel"></div>
@@ -352,9 +353,16 @@
 
                 <p class="market-form-error" id="marketFormError" hidden></p>
             </div>
-            <footer class="market-modal__foot">
-                <button type="button" class="market-btn" id="marketModalCancel">取消</button>
-                <button type="button" class="market-btn market-btn--accent" id="marketBtnSubmit">保存修改</button>
+            <footer class="market-modal__foot market-modal__foot--listing">
+                <label class="market-listing-terms" id="marketListingTermsWrap" for="marketListingTermsChk" hidden>
+                    <input type="checkbox" id="marketListingTermsChk">
+                    <span>我已阅读并同意<a href="#" id="marketListingTermsLink">服务与风险告知</a>，知晓平台仅做信息展示，交易风险由本人自行承担。</span>
+                </label>
+                <p class="market-listing-terms-hint" id="marketListingTermsHint" hidden>请先勾选服务与风险告知后再生成单据</p>
+                <div class="market-modal__foot-actions">
+                    <button type="button" class="market-btn" id="marketModalCancel">取消</button>
+                    <button type="button" class="market-btn market-btn--accent" id="marketBtnSubmit">保存修改</button>
+                </div>
             </footer>
         </div>
     </div>
@@ -390,6 +398,16 @@
         </div>
     </div>
 
+    <div id="marketDetailBackdrop" class="market-modal-backdrop market-detail-backdrop" hidden>
+        <div class="market-modal market-detail" role="dialog" aria-modal="true" aria-labelledby="marketDetailTitle">
+            <header class="market-modal__head">
+                <h2 class="market-modal__title" id="marketDetailTitle">商品详情</h2>
+                <button type="button" class="market-modal__close" id="marketDetailClose" aria-label="关闭">&times;</button>
+            </header>
+            <div class="market-detail__body" id="marketDetailBody"></div>
+        </div>
+    </div>
+
     <div id="marketConfirmBackdrop" class="market-modal-backdrop market-confirm-backdrop" hidden>
         <div class="market-modal market-confirm" role="dialog" aria-modal="true" aria-labelledby="marketConfirmTitle" aria-describedby="marketConfirmMessage">
             <header class="market-modal__head">
@@ -398,6 +416,12 @@
             </header>
             <div class="market-confirm__body">
                 <p class="market-confirm__message" id="marketConfirmMessage"></p>
+                <div class="market-field market-confirm__prompt" id="marketConfirmPromptWrap" hidden>
+                    <label class="market-field__label" for="marketConfirmPromptInput" id="marketConfirmPromptLabel">下架理由</label>
+                    <textarea id="marketConfirmPromptInput" class="market-control" rows="3" maxlength="200" placeholder="请填写下架理由" aria-describedby="marketConfirmPromptHint marketConfirmPromptError"></textarea>
+                    <p class="market-field__hint" id="marketConfirmPromptHint">最多 200 字，买家可见。</p>
+                    <p class="market-form-error" id="marketConfirmPromptError" hidden></p>
+                </div>
             </div>
             <footer class="market-modal__foot market-confirm__foot">
                 <button type="button" class="market-btn" id="marketConfirmCancel">再想想</button>
@@ -414,12 +438,13 @@
     <script src="auth-session-sync.js" defer></script>
     <script defer src="rsi-client.js"></script>
     <script defer src="rsi-sync.js"></script>
-    <script defer src="home-app.js?v=20260823d"></script>
+    <script defer src="home-app.js?v=20260824b"></script>
     <script src="nav-dropdown.js" defer></script>
     <script src="nav-auth-tools.js" defer></script>
     <script src="site-footer.js" defer></script>
-    <script src="market-notify.js?v=3" defer></script>
-    <script src="market.js?v=60" defer></script>
-    <script src="market-trades.js?v=16" defer></script>
+    <script src="community-image-lightbox.js" defer></script>
+    <script src="market-notify.js?v=4" defer></script>
+    <script src="market.js?v=75" defer></script>
+    <script src="market-trades.js?v=28" defer></script>
 </body>
 </html>
