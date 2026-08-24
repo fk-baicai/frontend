@@ -2976,9 +2976,7 @@ html:has(body.market-body) {
 }
 
 .market-seller-card__review-reply-stars {
-    display: flex;
-    gap: 0.05rem;
-    margin-bottom: 0.15rem;
+    display: none;
 }
 
 .market-seller-card__review-reply-text {

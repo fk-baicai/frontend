@@ -178,7 +178,7 @@
     }
 
     function sellerReviewAt(p) {
-        return p.sellerReviewAt || (p.sellerReviewRating ? (p.completedAt || p.updatedAt) : '');
+        return p.sellerReviewAt || (String(p.sellerReviewText || '').trim() ? (p.completedAt || p.updatedAt) : '');
     }
 
     function showGate(msg) {
@@ -449,7 +449,7 @@
             if (!p.reviewRating && role === 'buyer') {
                 actions += reviewFormHtml(p.id, 'buyer');
             }
-            if (!p.sellerReviewRating && role === 'seller') {
+            if (!p.sellerReviewText && !p.sellerReviewAt && role === 'seller') {
                 actions += reviewFormHtml(p.id, 'seller');
             }
         } else if (p.status === 'cancelled') {
@@ -460,13 +460,16 @@
     }
 
     function reviewFormHtml(purchaseId, role) {
+        var isSeller = role === 'seller';
         return (
             '<form class="market-trades-review-form" data-purchase-id="' + escapeHtml(purchaseId) + '" data-review-role="' + escapeHtml(role) + '">' +
-            '<label>评分 <select name="rating">' +
-            '<option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>' +
-            '</select></label>' +
-            '<input type="text" name="text" maxlength="200" placeholder="评价（选填）">' +
-            '<button type="submit" class="market-btn market-btn--accent">提交评价</button>' +
+            (isSeller
+                ? ''
+                : '<label>评分 <select name="rating">' +
+                  '<option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>' +
+                  '</select></label>') +
+            '<input type="text" name="text" maxlength="200" placeholder="' + (isSeller ? '回复买家评价' : '评价（选填）') + '">' +
+            '<button type="submit" class="market-btn market-btn--accent">' + (isSeller ? '提交回复' : '提交评价') + '</button>' +
             '</form>'
         );
     }
@@ -525,14 +528,20 @@
         );
     }
 
-    function reviewQuoteHtml(label, name, avatarUrl, rating, text, formHtml, at) {
+    function reviewQuoteHtml(label, name, avatarUrl, rating, text, formHtml, at, opts) {
         var timeHtml = dateDayHtml(at, 'market-trades-review__time');
         var src = mediaUrl(avatarUrl) || fallbackAvatar();
-        var inner = formHtml
-            ? formHtml
-            : (rating
-                ? reviewStarsHtml(rating) + (text ? '<span class="market-trades-review__quote">' + escapeHtml(text) + '</span>' : '')
-                : '<span class="market-trades-review__empty">暂无</span>');
+        var showStars = !(opts && opts.showStars === false);
+        var inner;
+        if (formHtml) {
+            inner = formHtml;
+        } else if (showStars && rating) {
+            inner = reviewStarsHtml(rating) + (text ? '<span class="market-trades-review__quote">' + escapeHtml(text) + '</span>' : '');
+        } else if (text) {
+            inner = '<span class="market-trades-review__quote">' + escapeHtml(text) + '</span>';
+        } else {
+            inner = '<span class="market-trades-review__empty">暂无</span>';
+        }
         return (
             '<div class="market-trades-review__side">' +
             '<span class="market-trades-review__who">' +
@@ -552,7 +561,7 @@
         var order = p.order || {};
         var title = primaryItemName(order);
         var buyerForm = !p.reviewRating && role === 'buyer' ? reviewFormHtml(p.id, 'buyer') : '';
-        var sellerForm = !p.sellerReviewRating && role === 'seller' ? reviewFormHtml(p.id, 'seller') : '';
+        var sellerForm = !p.sellerReviewText && !p.sellerReviewAt && role === 'seller' ? reviewFormHtml(p.id, 'seller') : '';
         var buyerName = partyName(p, 'buyer');
         var sellerName = partyName(p, 'seller');
         return (
@@ -574,7 +583,7 @@
             '</p>' +
             '<div class="market-trades-review__quotes">' +
             reviewQuoteHtml('买家评价', buyerName, partyAvatarUrl(p, 'buyer'), p.reviewRating, p.reviewText, buyerForm, buyerReviewAt(p)) +
-            reviewQuoteHtml('回复', sellerName, partyAvatarUrl(p, 'seller'), p.sellerReviewRating, p.sellerReviewText, sellerForm, sellerReviewAt(p)) +
+            reviewQuoteHtml('回复', sellerName, partyAvatarUrl(p, 'seller'), null, p.sellerReviewText, sellerForm, sellerReviewAt(p), { showStars: false }) +
             '</div>' +
             '</div>' +
             '</article>'
@@ -1012,9 +1021,16 @@
                 var textEl = form.querySelector('[name="text"]');
                 var rating = Number(ratingEl && ratingEl.value);
                 var text = textEl ? String(textEl.value || '').trim() : '';
-                var body = role === 'seller'
-                    ? { sellerReviewRating: rating, sellerReviewText: text }
-                    : { reviewRating: rating, reviewText: text };
+                var body;
+                if (role === 'seller') {
+                    if (!text) {
+                        window.alert('请填写回复内容');
+                        return;
+                    }
+                    body = { sellerReviewText: text };
+                } else {
+                    body = { reviewRating: rating, reviewText: text };
+                }
                 patchPurchase(pid, body).then(loadTabData).catch(function (e) {
                     window.alert((e && e.message) || '评价失败');
                 });

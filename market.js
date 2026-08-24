@@ -1495,15 +1495,12 @@
 
     function reviewHasSellerReply(r) {
         if (!r) return false;
-        var text = String(r.sellerReplyText || r.sellerReviewText || '').trim();
-        var rating = r.sellerReplyRating != null ? r.sellerReplyRating : r.sellerReviewRating;
-        return !!(text || rating != null);
+        return !!String(r.sellerReplyText || r.sellerReviewText || '').trim();
     }
 
     function sellerReviewReplyHtml(r) {
         if (!reviewHasSellerReply(r)) return '';
         var text = String(r.sellerReplyText || r.sellerReviewText || '').trim();
-        var rating = r.sellerReplyRating != null ? r.sellerReplyRating : r.sellerReviewRating;
         var at = r.sellerReplyAt || r.sellerReviewAt;
         var timeHtml = formatDateMinute(at)
             ? dateTimeHtml(at, 'market-seller-card__review-time')
@@ -1511,8 +1508,7 @@
         return (
             '<div class="market-seller-card__review-reply is-collapsed">' +
             '<div class="market-seller-card__review-reply-body" hidden>' +
-            (rating != null ? '<div class="market-seller-card__review-reply-stars">' + renderStars(rating) + '</div>' : '') +
-            (text ? '<p class="market-seller-card__review-reply-text">' + escapeHtml(text) + '</p>' : '') +
+            '<p class="market-seller-card__review-reply-text">' + escapeHtml(text) + '</p>' +
             timeHtml +
             '</div>' +
             '</div>'
