@@ -816,15 +816,23 @@ html:not(.auth-session-cached) .auth-fleet-only {
 .drawer-org-no-fleet {
  width: 100%;
  margin: calc(0.12rem * var(--dps, 1)) 0 0;
- padding-top: calc(0.5rem * var(--dps, 1));
+ padding: calc(0.45rem * var(--dps, 1)) calc(0.2rem * var(--dps, 1)) calc(0.35rem * var(--dps, 1));
  border-top: 1px solid rgba(95, 184, 255, 0.16);
  font-family: var(--font-mono, Consolas, 'Courier New', monospace);
  font-size: calc(0.72rem * var(--dps, 1));
  font-weight: 600;
- letter-spacing: 0.05em;
+ letter-spacing: 0.06em;
  text-transform: uppercase;
- color: #ff5555;
+ color: #ff3b30;
+ text-shadow: none;
  line-height: 1.5;
+ background: repeating-linear-gradient(
+  0deg,
+  transparent,
+  transparent 2px,
+  rgba(0, 0, 0, 0.22) 2px,
+  rgba(0, 0, 0, 0.22) 3px
+ );
 }
 
 .drawer-org-ranking .drawer-org-rank-svg path {
@@ -1301,7 +1309,7 @@ html:not(.auth-session-cached) .auth-fleet-only {
 }
 
 .rsi-form-hint--info {
- color: rgba(200, 220, 235, 0.82);
+ color: #8ee0ff;
 }
 
 .rsi-check {
@@ -2071,6 +2079,11 @@ html:not(.auth-session-cached) .auth-fleet-only {
     flex-direction: column;
     align-items: flex-start;
     gap: calc(0.28rem * var(--dps, 1));
+}
+
+/* 非舰队成员（Civilian / hasFleetPrivilege=false）不展示签到入口 */
+html:not(.auth-fleet-member) #drawerCheckinLink {
+ display: none;
 }
 
 /* 舰队下方：签到纯文字（非按钮块） */

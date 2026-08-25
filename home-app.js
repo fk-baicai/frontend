@@ -5020,6 +5020,12 @@
                     }
                 }
                 fillOrgFleetBlock(sess);
+                var chkL = document.getElementById('drawerCheckinLink');
+                if (chkL) {
+                    var fleetOk = canAccessFleetMemberAreas();
+                    chkL.hidden = !fleetOk;
+                    chkL.style.display = fleetOk ? '' : 'none';
+                }
                 var admL = document.getElementById('drawerAdminLink');
                 if (admL) {
                     admL.style.display = sess && sess.isAdmin ? 'block' : 'none';
@@ -5443,7 +5449,6 @@
                         sessionDays: 7,
                     }
                 );
-                clearRegisterFormHint();
                 document.getElementById('regBindingId').value = '';
                 document.getElementById('regEmail').value = '';
                 document.getElementById('regPassword').value = '';
@@ -5451,11 +5456,18 @@
                 const loginPasswordEl = document.getElementById('loginPassword');
                 if (loginEmailEl) loginEmailEl.value = email;
                 if (loginPasswordEl) loginPasswordEl.value = '';
-                switchAuthTab('login');
-                syncAuthFloatFields();
-                setLoginFormHint('注册成功，请登录', true);
-                resetRegisterSubmitBtn();
-                refreshLoginDrawerView();
+                if (regBtn) {
+                    regBtn.disabled = true;
+                    regBtn.textContent = '注册成功';
+                }
+                setRegisterFormHint('注册成功，请登录', true);
+                setTimeout(function () {
+                    switchAuthTab('login');
+                    syncAuthFloatFields();
+                    setLoginFormHint('注册成功，请登录', true);
+                    resetRegisterSubmitBtn();
+                    refreshLoginDrawerView();
+                }, AUTH_BUTTON_FEEDBACK_MS);
             } catch (e) {
                 if (
                     e &&

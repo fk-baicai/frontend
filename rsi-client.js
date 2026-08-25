@@ -122,18 +122,31 @@
             rsiOrgRankSlots: 0,
             rsiOrgRankTotal: 0,
         };
-        var orgA = doc.querySelector('a.value[href="' + REQUIRED_ORG_HREF + '"]');
+        var orgA = doc.querySelector('.main-org a.value[href*="/orgs/"]');
+        if (!orgA) orgA = doc.querySelector('.main-org a[href*="/orgs/"]');
+        if (!orgA) {
+            var links = doc.querySelectorAll('a.value[href*="/orgs/"]');
+            for (var li = 0; li < links.length; li++) {
+                if (links[li].closest && links[li].closest('.affiliation, .affiliations')) continue;
+                orgA = links[li];
+                break;
+            }
+        }
         if (!orgA) return empty;
 
         var rsiOrgName = normalizeBlockText(orgA.textContent);
-        var href = String(orgA.getAttribute('href') || REQUIRED_ORG_HREF).trim();
-        if (href.indexOf('/') !== 0) href = '/' + href;
-        var rsiOrgHref = href;
-        var m = href.match(/\/orgs\/([^/?#]+)/i);
+        var href = String(orgA.getAttribute('href') || '').trim();
+        if (href && href.indexOf('/') !== 0) href = '/' + href;
+        var rsiOrgHref = href || null;
+        var m = href.match(/\/(?:en\/)?orgs\/([^/?#]+)/i);
         var rsiOrgSid = m ? m[1] : '';
 
         var rsiOrgLogoUrl = null;
-        if (rsiOrgSid) {
+        var thumbLogo = doc.querySelector('.main-org .thumb img');
+        if (thumbLogo) {
+            rsiOrgLogoUrl = resolveRsiUrl(thumbLogo.getAttribute('src') || thumbLogo.getAttribute('data-src'));
+        }
+        if (!rsiOrgLogoUrl && rsiOrgSid) {
             var imgs = doc.querySelectorAll('img[src*="' + rsiOrgSid + '"]');
             for (var ii = 0; ii < imgs.length; ii++) {
                 var s = String(imgs[ii].getAttribute('src') || '');
