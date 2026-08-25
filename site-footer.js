@@ -95,7 +95,7 @@
 
     if (!document.querySelector('script[src*="market-notify.js"]')) {
         var notifyScript = document.createElement('script');
-        notifyScript.src = 'market-notify.js?v=5';
+        notifyScript.src = 'market-notify.js?v=6';
         notifyScript.defer = true;
         notifyScript.setAttribute('data-uss-market-notify', '1');
         document.body.appendChild(notifyScript);

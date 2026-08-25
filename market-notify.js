@@ -67,14 +67,15 @@
     function loadState() {
         try {
             var raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return { initialized: false, purchases: {} };
+            if (!raw) return { initialized: false, purchases: {}, chats: {} };
             var data = JSON.parse(raw);
             return {
                 initialized: !!data.initialized,
                 purchases: data.purchases && typeof data.purchases === 'object' ? data.purchases : {},
+                chats: data.chats && typeof data.chats === 'object' ? data.chats : {},
             };
         } catch (e) {
-            return { initialized: false, purchases: {} };
+            return { initialized: false, purchases: {}, chats: {} };
         }
     }
 
@@ -83,6 +84,7 @@
             localStorage.setItem(STORAGE_KEY, JSON.stringify({
                 initialized: !!state.initialized,
                 purchases: state.purchases || {},
+                chats: state.chats || {},
             }));
         } catch (e) { /* ignore */ }
     }
@@ -103,7 +105,19 @@
         });
     }
 
-    function collectMarketAlerts(state, buyerList, sellerList) {
+    function sellerChatPings(list) {
+        return (list || []).filter(function (t) {
+            return t && t.purchaseId && t.myRole === 'seller' && t.hasBuyerMessage;
+        });
+    }
+
+    function rememberChats(map, list) {
+        sellerChatPings(list).forEach(function (t) {
+            map[t.purchaseId] = true;
+        });
+    }
+
+    function collectMarketAlerts(state, buyerList, sellerList, chatThreads) {
         var alerts = [];
         var nextPurchases = {};
         if (state && state.purchases && typeof state.purchases === 'object') {
@@ -111,11 +125,18 @@
                 nextPurchases[k] = state.purchases[k];
             });
         }
+        var nextChats = {};
+        if (state && state.chats && typeof state.chats === 'object') {
+            Object.keys(state.chats).forEach(function (k) {
+                nextChats[k] = state.chats[k];
+            });
+        }
         var initialized = !!(state && state.initialized);
 
         if (!initialized) {
             rememberPurchases(nextPurchases, buyerList);
             rememberPurchases(nextPurchases, sellerList);
+            rememberChats(nextChats, chatThreads);
             var pending = (sellerList || []).filter(function (p) {
                 return p && p.status === 'pending';
             });
@@ -131,7 +152,21 @@
                     url: tradesUrl('incoming', pending[0].id),
                 });
             }
-            return { alerts: alerts, state: { initialized: true, purchases: nextPurchases } };
+            var firstChats = sellerChatPings(chatThreads);
+            if (firstChats.length) {
+                alerts.push({
+                    kind: 'seller',
+                    sticky: true,
+                    purchaseId: 'chat:' + firstChats[0].purchaseId,
+                    title: '买家发来消息',
+                    body: firstChats.length === 1
+                        ? '商品：' + (firstChats[0].itemName || '交易沟通')
+                        : '你有 ' + firstChats.length + ' 条买家消息待查看',
+                    url: tradesUrl('chat', firstChats[0].purchaseId),
+                    actionLabel: '查看聊天',
+                });
+            }
+            return { alerts: alerts, state: { initialized: true, purchases: nextPurchases, chats: nextChats } };
         }
 
         (sellerList || []).forEach(function (p) {
@@ -169,9 +204,23 @@
             }
         });
 
+        sellerChatPings(chatThreads).forEach(function (t) {
+            if (state.chats && state.chats[t.purchaseId]) return;
+            alerts.push({
+                kind: 'seller',
+                sticky: true,
+                purchaseId: 'chat:' + t.purchaseId,
+                title: '买家发来消息',
+                body: '商品：' + (t.itemName || '交易沟通'),
+                url: tradesUrl('chat', t.purchaseId),
+                actionLabel: '查看聊天',
+            });
+        });
+
         rememberPurchases(nextPurchases, buyerList);
         rememberPurchases(nextPurchases, sellerList);
-        return { alerts: alerts, state: { initialized: true, purchases: nextPurchases } };
+        rememberChats(nextChats, chatThreads);
+        return { alerts: alerts, state: { initialized: true, purchases: nextPurchases, chats: nextChats } };
     }
 
     function canNotify() {
@@ -292,6 +341,7 @@
             purchaseId: alert.purchaseId || '',
             title: alert.title || '收到购买请求',
             body: alert.body || '',
+            actionLabel: alert.actionLabel || '',
             url: alert.url || tradesUrl('incoming'),
         });
         saveSticky(list);
@@ -345,6 +395,10 @@
         var next = [];
         loadSticky().forEach(function (item) {
             var pid = item && item.purchaseId != null ? String(item.purchaseId) : '';
+            if (pid.indexOf('chat:') === 0) {
+                next.push(item);
+                return;
+            }
             if (pid && !pending[pid]) {
                 dismissStickyByPurchaseId(pid);
                 return;
@@ -495,12 +549,21 @@
         return Array.isArray(data.purchases) ? data.purchases : [];
     }
 
-    function applyAlerts(buyerList, sellerList) {
-        var result = collectMarketAlerts(loadState(), buyerList, sellerList);
+    function applyAlerts(buyerList, sellerList, chatThreads) {
+        var result = collectMarketAlerts(loadState(), buyerList, sellerList, chatThreads);
         saveState(result.state);
         pruneStickyToasts(sellerList);
         (result.alerts || []).forEach(emitAlert);
         return result.alerts;
+    }
+
+    async function fetchChatThreads() {
+        var r = await fetch(joinUrl('/api/market/chat/threads'), {
+            headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
+        });
+        var data = await r.json().catch(function () { return {}; });
+        if (!r.ok) return [];
+        return Array.isArray(data.threads) ? data.threads : [];
     }
 
     async function pollOnce() {
@@ -509,7 +572,8 @@
         pollInFlight = (async function () {
             var buyerList = await fetchPurchases('buyer');
             var sellerList = await fetchPurchases('seller');
-            return applyAlerts(buyerList, sellerList);
+            var chatThreads = await fetchChatThreads();
+            return applyAlerts(buyerList, sellerList, chatThreads);
         })().catch(function () {
             return [];
         }).finally(function () {

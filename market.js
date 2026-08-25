@@ -1721,17 +1721,6 @@
         }) || null;
     }
 
-    async function sendPurchaseNudge(orderId) {
-        var r = await fetch(joinUrl('/api/market/purchases/nudge'), {
-            method: 'POST',
-            headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, authHeaders()),
-            body: JSON.stringify({ orderId: orderId }),
-        });
-        var data = await r.json().catch(function () { return {}; });
-        if (!r.ok) throw new Error((data && data.message) || '强提醒发送失败');
-        return data;
-    }
-
     function mergeOrderIntoState(nextOrder) {
         if (!nextOrder || !nextOrder.id) return null;
         var idx = state.orders.findIndex(function (o) { return o && o.id === nextOrder.id; });
@@ -1754,11 +1743,11 @@
 
     function setPurchaseSubmittedUi(order, submitted) {
         var hint = document.getElementById('marketDetailPurchaseHint');
-        var nudgeBtn = document.getElementById('marketDetailNudgeBtn');
+        var contactBtn = document.getElementById('marketDetailContactBtn');
         var purchaseBtn = document.getElementById('marketDetailPurchaseBtn');
         var qtyPicker = document.getElementById('marketDetailQtyPicker');
         if (hint) hint.hidden = !submitted;
-        if (nudgeBtn) nudgeBtn.hidden = !submitted;
+        if (contactBtn) contactBtn.hidden = !submitted;
         if (qtyPicker) qtyPicker.hidden = !!submitted;
         if (!purchaseBtn || !submitted) return;
         purchaseBtn.disabled = true;
@@ -1833,8 +1822,10 @@
                 '<div class="market-detail__actions-end">' +
                 (canPurchase
                     ? (
-                        '<p class="market-detail__hint" id="marketDetailPurchaseHint"' + (showPurchaseHint ? '' : ' hidden') + '>请等待卖家确认交易，或点击「强提醒」、自行联系卖家。</p>' +
-                        '<button type="button" class="market-btn market-detail__nudge" id="marketDetailNudgeBtn" data-order-id="' + escapeHtml(order.id) + '"' + (showPurchaseHint ? '' : ' hidden') + '>强提醒</button>' +
+                        '<p class="market-detail__hint" id="marketDetailPurchaseHint"' + (showPurchaseHint ? '' : ' hidden') + '>请等待卖家确认交易，或点击「联系」与卖家沟通。</p>' +
+                        '<button type="button" class="market-btn market-detail__nudge" id="marketDetailContactBtn" data-order-id="' + escapeHtml(order.id) + '"' +
+                        (options.purchaseId ? ' data-purchase-id="' + escapeHtml(options.purchaseId) + '"' : '') +
+                        (showPurchaseHint ? '' : ' hidden') + '>联系</button>' +
                         '<button type="button" class="market-btn market-btn--accent" id="marketDetailPurchaseBtn" data-order-id="' + escapeHtml(order.id) + '">' +
                         (order.tradeType === 'barter' ? '确认互换意向' : '提交购买') +
                         '</button>'
@@ -1950,29 +1941,40 @@
                 }
             });
         });
-        var nudgeBtn = document.getElementById('marketDetailNudgeBtn');
-        if (nudgeBtn) {
-            nudgeBtn.addEventListener('click', function (ev) {
+        var contactBtn = document.getElementById('marketDetailContactBtn');
+        if (contactBtn) {
+            contactBtn.addEventListener('click', function (ev) {
                 ev.stopPropagation();
-                var oid = nudgeBtn.getAttribute('data-order-id') || '';
-                if (!oid) return;
-                nudgeBtn.disabled = true;
-                sendPurchaseNudge(oid).then(function () {
-                    return askConfirm({
-                        title: '强提醒',
-                        message: '已发送强提醒，请等待卖家确认交易。',
-                        confirmText: '确定',
-                        notice: true,
+                var oid = contactBtn.getAttribute('data-order-id') || '';
+                var pid = contactBtn.getAttribute('data-purchase-id') || '';
+                function openChat(purchase) {
+                    if (!purchase || !window.UssMarketChat) return;
+                    window.UssMarketChat.open({
+                        purchaseId: purchase.id,
+                        itemName: primaryItemName(purchase.order || order),
+                        peerName: (purchase.sellerDisplayName || getSeller(purchase.order || order).bindingId || ''),
+                        myRole: 'buyer',
                     });
+                }
+                if (pid && window.UssMarketChat) {
+                    openChat({ id: pid, order: order, sellerDisplayName: getSeller(order).bindingId });
+                    return;
+                }
+                if (!oid) return;
+                contactBtn.disabled = true;
+                fetchMyBuyerPurchaseForOrder(oid).then(function (purchase) {
+                    if (!purchase) throw new Error('暂无进行中的交易');
+                    contactBtn.setAttribute('data-purchase-id', purchase.id);
+                    openChat(purchase);
                 }).catch(function (e) {
                     return askConfirm({
-                        title: '强提醒',
-                        message: (e && e.message) || '强提醒发送失败',
+                        title: '联系卖家',
+                        message: (e && e.message) || '无法打开聊天',
                         confirmText: '确定',
                         notice: true,
                     });
                 }).finally(function () {
-                    nudgeBtn.disabled = false;
+                    contactBtn.disabled = false;
                 });
             });
         }
@@ -2041,7 +2043,11 @@
                     submitPurchase(oid, buyQty).then(function (data) {
                         var next = data && data.purchase && data.purchase.order;
                         var shown = next ? mergeOrderIntoState(next) || order : order;
-                        renderOrderDetail(shown, { showPurchaseHint: true, unlockSellerContact: true });
+                        renderOrderDetail(shown, {
+                            showPurchaseHint: true,
+                            unlockSellerContact: true,
+                            purchaseId: data.purchase && data.purchase.id,
+                        });
                         setPurchaseSubmittedUi(shown, true);
                         if (window.UssMarketNotify && typeof window.UssMarketNotify.push === 'function') {
                             window.UssMarketNotify.push({
@@ -2136,15 +2142,16 @@
                 if (!purchase) return;
                 var shown = purchase.order ? (mergeOrderIntoState(purchase.order) || order) : order;
                 renderOrderDetail(shown, {
-                    showPurchaseHint: purchase.status === 'pending',
+                    showPurchaseHint: purchase.status === 'pending' || purchase.status === 'approved',
                     unlockSellerContact: true,
+                    purchaseId: purchase.id,
                 });
                 setPurchaseSubmittedUi(shown, true);
-                if (purchase.status !== 'pending') {
+                if (purchase.status !== 'pending' && purchase.status !== 'approved') {
                     var hint = document.getElementById('marketDetailPurchaseHint');
-                    var nudgeBtn = document.getElementById('marketDetailNudgeBtn');
+                    var contactBtn = document.getElementById('marketDetailContactBtn');
                     if (hint) hint.hidden = true;
-                    if (nudgeBtn) nudgeBtn.hidden = true;
+                    if (contactBtn) contactBtn.hidden = true;
                 }
             }).catch(function () { /* ignore */ });
         }

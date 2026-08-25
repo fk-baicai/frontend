@@ -15,13 +15,14 @@
         cancelled: '已取消',
     };
 
-    var VALID_TABS = { sell: 1, buy: 1, purchases: 1, incoming: 1, reviews: 1 };
+    var VALID_TABS = { sell: 1, buy: 1, purchases: 1, incoming: 1, chat: 1, reviews: 1 };
     var TAB_STORAGE_KEY = 'ussMarketTradesTab';
 
     var state = {
         tab: 'sell',
         orders: [],
         purchases: [],
+        chatThreads: [],
         loading: false,
         userStats: null,
         completingPurchaseId: null,
@@ -247,6 +248,15 @@
         return Array.isArray(data.purchases) ? data.purchases : [];
     }
 
+    async function fetchChatThreads() {
+        var r = await fetch(joinUrl('/api/market/chat/threads'), {
+            headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
+        });
+        var data = await r.json().catch(function () { return {}; });
+        if (!r.ok) throw new Error((data && data.message) || '加载聊天失败');
+        return Array.isArray(data.threads) ? data.threads : [];
+    }
+
     async function fetchMyStats() {
         var r = await fetch(joinUrl('/api/market/my/stats'), {
             headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
@@ -309,12 +319,19 @@
             if (state.tab === 'sell') {
                 state.orders = await fetchMyOrders('sell');
                 state.purchases = [];
+                state.chatThreads = [];
             } else if (state.tab === 'buy') {
                 state.orders = await fetchMyOrders('buy');
                 state.purchases = [];
+                state.chatThreads = [];
             } else if (state.tab === 'purchases') {
                 state.orders = [];
                 state.purchases = await fetchPurchases('buyer');
+                state.chatThreads = [];
+            } else if (state.tab === 'chat') {
+                state.orders = [];
+                state.purchases = [];
+                state.chatThreads = await fetchChatThreads();
             } else if (state.tab === 'reviews') {
                 var buyerList = await fetchPurchases('buyer');
                 var sellerList = await fetchPurchases('seller');
@@ -325,13 +342,16 @@
                     seen[p.id] = true;
                     return true;
                 });
+                state.chatThreads = [];
             } else {
                 state.orders = [];
                 state.purchases = await fetchPurchases('seller');
+                state.chatThreads = [];
             }
         } catch (e) {
             state.orders = [];
             state.purchases = [];
+            state.chatThreads = [];
             if (el.empty) {
                 el.empty.hidden = false;
                 el.empty.textContent = (e && e.message) || '加载失败';
@@ -409,14 +429,57 @@
         return '<button type="button" class="market-btn market-trades-btn-cancel-purchase" data-purchase-id="' + escapeHtml(purchaseId) + '">' + escapeHtml(label) + '</button>';
     }
 
+    function contactBtnHtml(p) {
+        if (!p || (p.status !== 'pending' && p.status !== 'approved')) return '';
+        return '<button type="button" class="market-btn market-detail__nudge market-trades-btn-chat" data-purchase-id="' + escapeHtml(p.id) + '">联系</button>';
+    }
+
+    function openPurchaseChat(p) {
+        if (!p || !window.UssMarketChat) return;
+        var sess = loadSession() || {};
+        var myBid = String(sess.bindingId || '').toLowerCase();
+        var myRole = String(p.sellerBindingId || '').toLowerCase() === myBid ? 'seller' : 'buyer';
+        window.UssMarketChat.open({
+            purchaseId: p.id,
+            itemName: primaryItemName(p.order || {}),
+            peerName: myRole === 'seller' ? partyName(p, 'buyer') : partyName(p, 'seller'),
+            myRole: myRole,
+            snapshot: p.status !== 'pending' && p.status !== 'approved',
+        });
+    }
+
+    function chatThreadHtml(t) {
+        var roleLabel = t.myRole === 'seller' ? '买家' : '卖家';
+        var status = PURCHASE_STATUS_LABEL[t.status] || (t.snapshot ? '已结束' : t.status || '');
+        var preview = t.lastText ? t.lastText : '尚未发言';
+        var snap = t.snapshot ? '<span class="market-chat-thread__snap">快照</span>' : '';
+        return (
+            '<article class="market-chat-thread" data-purchase-id="' + escapeHtml(t.purchaseId) + '" role="listitem">' +
+            '<div>' +
+            '<h3 class="market-chat-thread__title">' + escapeHtml(t.itemName || '未命名商品') + snap + '</h3>' +
+            '<p class="market-chat-thread__meta">' + escapeHtml(roleLabel) + ' ' + escapeHtml(t.peerBindingId || '—') +
+            ' · ' + escapeHtml(status) + '</p>' +
+            '<p class="market-chat-thread__preview">' + escapeHtml(preview) + '</p>' +
+            '</div>' +
+            '<div class="market-chat-thread__actions">' +
+            '<button type="button" class="market-btn market-detail__nudge market-trades-btn-chat" data-purchase-id="' + escapeHtml(t.purchaseId) + '">' +
+            (t.snapshot ? '查看' : '打开') + '</button>' +
+            '<button type="button" class="market-btn market-trades-btn-chat-delete" data-purchase-id="' + escapeHtml(t.purchaseId) + '">删除</button>' +
+            '</div>' +
+            '</article>'
+        );
+    }
+
     function buildPurchaseActions(p, role) {
         var actions = '';
         if (p.status === 'pending') {
             if (role === 'seller') {
                 actions = '<button type="button" class="market-btn market-btn--accent market-trades-btn-approve" data-purchase-id="' + escapeHtml(p.id) + '">确认交易</button>' +
+                    contactBtnHtml(p) +
                     '<button type="button" class="market-btn market-trades-btn-cancel-purchase" data-purchase-id="' + escapeHtml(p.id) + '">拒绝</button>';
             } else {
                 actions = '<span class="market-trades-wait-hint">等待卖家确认交易</span>' +
+                    contactBtnHtml(p) +
                     '<button type="button" class="market-btn market-trades-btn-cancel-purchase" data-purchase-id="' + escapeHtml(p.id) + '">取消购买</button>';
             }
         } else if (p.status === 'approved') {
@@ -425,6 +488,7 @@
                     ? '<span class="market-trades-proof-done">卖家交易凭证已上传</span>'
                     : '<span class="market-trades-wait-hint">等待卖家上传交易凭证…</span>';
                 actions =
+                    contactBtnHtml(p) +
                     proofUploadBtnHtml(p.id, 'transfer', p.buyerTransferProofUrl, '上传转账截图') +
                     sellerProofHint +
                     '<button type="button" class="market-btn market-btn--accent market-trades-btn-complete-open" data-purchase-id="' + escapeHtml(p.id) + '">完成交易</button>';
@@ -436,6 +500,7 @@
                     ? '等待买家确认完成（到期将自动成交）'
                     : '等待买家确认完成（3 天未操作将自动完成）';
                 actions =
+                    contactBtnHtml(p) +
                     proofUploadBtnHtml(p.id, 'seller', p.sellerProofImageUrl, '上传交易凭证') +
                     '<span class="market-trades-wait-hint">' + autoHint + '</span>';
                 if (canCancelPurchase(p, 'seller')) {
@@ -745,6 +810,17 @@
                 return;
             }
             html = state.orders.map(orderCardHtml).join('');
+        } else if (state.tab === 'chat') {
+            el.panel.className = 'market-trades-panel';
+            if (!state.chatThreads.length) {
+                if (el.empty) {
+                    el.empty.hidden = false;
+                    el.empty.textContent = '暂无交易聊天';
+                }
+                el.panel.innerHTML = '';
+                return;
+            }
+            html = state.chatThreads.map(chatThreadHtml).join('');
         } else if (state.tab === 'reviews') {
             el.panel.className = 'market-trades-panel market-trades-grid';
             if (!state.purchases.length) {
@@ -1053,6 +1129,58 @@
                     openOrderEditor(editBtn.getAttribute('data-order-id'));
                     return;
                 }
+                var chatDelBtn = ev.target.closest('.market-trades-btn-chat-delete');
+                if (chatDelBtn) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    var delId = chatDelBtn.getAttribute('data-purchase-id') || '';
+                    if (!delId) return;
+                    askConfirm({
+                        title: '删除聊天快照',
+                        message: '删除后你将不再看到这条记录，对方仍可查看。确定删除？',
+                        confirmText: '删除',
+                    }).then(function (ok) {
+                        if (!ok) return;
+                        return fetch(joinUrl('/api/market/chat/threads/' + encodeURIComponent(delId)), {
+                            method: 'DELETE',
+                            headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
+                        }).then(function (r) {
+                            return r.json().catch(function () { return {}; }).then(function (data) {
+                                if (!r.ok) throw new Error((data && data.message) || '删除失败');
+                                if (window.UssMarketChat && typeof window.UssMarketChat.close === 'function') {
+                                    window.UssMarketChat.close();
+                                }
+                                return loadTabData();
+                            });
+                        });
+                    }).catch(function (e) {
+                        window.alert((e && e.message) || '删除失败');
+                    });
+                    return;
+                }
+                var chatBtn = ev.target.closest('.market-trades-btn-chat');
+                var chatRow = ev.target.closest('.market-chat-thread');
+                if (chatBtn || chatRow) {
+                    var chatId = (chatBtn && chatBtn.getAttribute('data-purchase-id')) || (chatRow && chatRow.getAttribute('data-purchase-id')) || '';
+                    if (!chatId) return;
+                    var fromPurchase = findPurchase(chatId);
+                    if (fromPurchase) {
+                        openPurchaseChat(fromPurchase);
+                        return;
+                    }
+                    var thread = (state.chatThreads || []).find(function (t) { return t && t.purchaseId === chatId; });
+                    if (thread && window.UssMarketChat) {
+                        window.UssMarketChat.open({
+                            purchaseId: thread.purchaseId,
+                            itemName: thread.itemName,
+                            peerName: thread.peerBindingId,
+                            myRole: thread.myRole,
+                            snapshot: !!thread.snapshot,
+                            canSend: thread.canSend !== false && !thread.snapshot,
+                        });
+                    }
+                    return;
+                }
                 var closeBtn = ev.target.closest('.market-trades-btn-close');
                 if (closeBtn) {
                     var oid = closeBtn.getAttribute('data-order-id');
@@ -1214,6 +1342,9 @@
             applyRouteFromUrl();
             syncTabs();
             loadTabData();
+        });
+        window.addEventListener('uss-market-chat-deleted', function () {
+            if (state.tab === 'chat') loadTabData();
         });
     }
 
