@@ -250,6 +250,68 @@ body.exec-hangar-body::before {
     animation: exec-insert-glow 1.6s ease-in-out infinite;
 }
 
+.exec-notify-mount {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    margin: -0.35rem 0 1.1rem;
+}
+
+.exec-notify-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    cursor: pointer;
+    user-select: none;
+    color: rgba(200, 220, 235, 0.82);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+}
+
+.exec-notify-toggle__input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.exec-notify-toggle__track {
+    position: relative;
+    width: 2.35rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    background: rgba(8, 22, 37, 0.88);
+    border: 1px solid rgba(95, 184, 255, 0.28);
+    flex-shrink: 0;
+}
+
+.exec-notify-toggle__knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 0.95rem;
+    height: 0.95rem;
+    border-radius: 50%;
+    background: rgba(200, 220, 235, 0.55);
+    transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.exec-notify-toggle__input:checked + .exec-notify-toggle__track {
+    border-color: rgba(57, 255, 154, 0.55);
+    background: rgba(20, 70, 48, 0.75);
+}
+
+.exec-notify-toggle__input:checked + .exec-notify-toggle__track .exec-notify-toggle__knob {
+    transform: translateX(1.05rem);
+    background: #39ff9a;
+}
+
+.exec-notify-toggle__input:focus-visible + .exec-notify-toggle__track {
+    box-shadow: 0 0 0 2px rgba(57, 255, 154, 0.35);
+}
+
 .exec-insert-banner[data-state='cooldown'] {
     letter-spacing: 0.14em;
     border-color: rgba(255, 120, 40, 0.62);

@@ -95,9 +95,16 @@
 
     if (!document.querySelector('script[src*="market-notify.js"]')) {
         var notifyScript = document.createElement('script');
-        notifyScript.src = 'market-notify.js?v=4';
+        notifyScript.src = 'market-notify.js?v=5';
         notifyScript.defer = true;
         notifyScript.setAttribute('data-uss-market-notify', '1');
         document.body.appendChild(notifyScript);
+    }
+    if (!document.querySelector('script[src*="exec-hangar-notify.js"]')) {
+        var hangarNotify = document.createElement('script');
+        hangarNotify.src = 'exec-hangar-notify.js?v=2';
+        hangarNotify.defer = true;
+        hangarNotify.setAttribute('data-uss-hangar-notify', '1');
+        document.body.appendChild(hangarNotify);
     }
 })();

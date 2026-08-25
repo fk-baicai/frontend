@@ -178,13 +178,14 @@
         return typeof Notification !== 'undefined' && Notification.permission === 'granted';
     }
 
-    function showNative(title, body, url) {
+    function showNative(title, body, url, kind) {
         if (!canNotify()) return;
         try {
-            var n = new Notification('星巢贸易 · ' + String(title || ''), {
+            var prefix = kind === 'hangar' ? '行政机库 · ' : '星巢贸易 · ';
+            var n = new Notification(prefix + String(title || ''), {
                 body: body,
                 icon: '/favicon-48x48.png',
-                tag: 'uss-market-' + String(title || '') + '-' + String(body || ''),
+                tag: kind === 'hangar' ? 'uss-hangar-insert' : 'uss-market-' + String(title || '') + '-' + String(body || ''),
             });
             n.onclick = function () {
                 try { global.focus(); } catch (e1) { /* ignore */ }
@@ -202,9 +203,11 @@
             '.mkt-notify-card.is-out{transform:translateX(112%);opacity:0}' +
             '.mkt-notify-card__bar{background:#5fb8ff}' +
             '.mkt-notify-card--seller .mkt-notify-card__bar{background:#f78f1e}' +
+            '.mkt-notify-card--hangar .mkt-notify-card__bar{background:#39ff9a}' +
             '.mkt-notify-card__body{padding:.85rem .2rem .95rem .9rem;min-width:0}' +
             '.mkt-notify-card__kicker{margin:0 0 .12rem;font-size:.625rem;font-weight:700;letter-spacing:.16em;color:rgba(92,228,255,.72)}' +
             '.mkt-notify-card--seller .mkt-notify-card__kicker{color:rgba(247,143,30,.88)}' +
+            '.mkt-notify-card--hangar .mkt-notify-card__kicker{color:rgba(57,255,154,.88)}' +
             '.mkt-notify-card__title{margin:0;font-size:.9375rem;font-weight:700;color:#fff;line-height:1.3}' +
             '.mkt-notify-card__text{margin:.35rem 0 .7rem;font-size:.8125rem;line-height:1.45;color:rgba(200,220,235,.78)}' +
             '.mkt-notify-card__action{display:inline-flex;align-items:center;min-height:44px;padding:0;font-size:.75rem;font-weight:700;letter-spacing:.04em;color:#8ee0ff;text-decoration:none}' +
@@ -213,6 +216,7 @@
             '.mkt-notify-card__close:hover,.mkt-notify-card__close:focus-visible{color:#fff;outline:none}' +
             '.mkt-notify-card__timer{position:absolute;left:0;right:0;bottom:0;height:2px;background:rgba(95,184,255,.38);transform-origin:left center;animation:mkt-notify-timer 8s linear forwards}' +
             '.mkt-notify-card--seller .mkt-notify-card__timer{background:rgba(247,143,30,.5)}' +
+            '.mkt-notify-card--hangar .mkt-notify-card__timer{background:rgba(57,255,154,.5)}' +
             '.mkt-notify-card--sticky .mkt-notify-card__timer{display:none;animation:none}' +
             '@keyframes mkt-notify-timer{to{transform:scaleX(0)}}' +
             '@media (max-width:640px){.mkt-notify-stack{right:.75rem;bottom:.75rem;width:calc(100vw - 1.5rem)}}' +
@@ -247,6 +251,7 @@
         if (!alert) return false;
         if (alert.sticky === false) return false;
         if (alert.sticky) return true;
+        if (alert.kind === 'hangar') return false;
         return alert.kind === 'seller';
     }
 
@@ -376,8 +381,8 @@
             if (!victim) break;
             dismissToast(victim);
         }
-        var kind = alert.kind === 'seller' ? 'seller' : 'buyer';
-        var url = alert.url || 'market-trades.html';
+        var kind = alert.kind === 'seller' ? 'seller' : alert.kind === 'hangar' ? 'hangar' : 'buyer';
+        var url = alert.url || (kind === 'hangar' ? '/executive-hangar' : 'market-trades.html');
         var card = document.createElement('article');
         var id = 'mkt-notify-' + (++toastUid);
         card.id = id;
@@ -390,10 +395,14 @@
         card.innerHTML =
             '<div class="mkt-notify-card__bar" aria-hidden="true"></div>' +
             '<div class="mkt-notify-card__body">' +
-            '<p class="mkt-notify-card__kicker">STAR NEST TRADE</p>' +
-            '<h3 class="mkt-notify-card__title">' + escapeHtml(alert.title || '交易提醒') + '</h3>' +
+            '<p class="mkt-notify-card__kicker">' +
+            (kind === 'hangar' ? 'EXEC HANGAR' : 'STAR NEST TRADE') +
+            '</p>' +
+            '<h3 class="mkt-notify-card__title">' + escapeHtml(alert.title || (kind === 'hangar' ? '机库提醒' : '交易提醒')) + '</h3>' +
             '<p class="mkt-notify-card__text">' + escapeHtml(alert.body || '') + '</p>' +
-            '<a class="mkt-notify-card__action" href="' + escapeHtml(url) + '">查看订单</a>' +
+            '<a class="mkt-notify-card__action" href="' + escapeHtml(url) + '">' +
+            escapeHtml(alert.actionLabel || (kind === 'hangar' ? '打开行政机库' : '查看订单')) +
+            '</a>' +
             '</div>' +
             '<button type="button" class="mkt-notify-card__close" aria-label="关闭提醒">&times;</button>' +
             (sticky ? '' : '<span class="mkt-notify-card__timer" aria-hidden="true"></span>');
@@ -442,18 +451,20 @@
 
     function emitAlert(alert) {
         showToast(alert);
-        showNative(alert.title, alert.body, alert.url);
+        showNative(alert.title, alert.body, alert.url, alert.kind);
     }
 
     function push(alert) {
         if (!alert) return;
+        var kind = alert.kind === 'seller' ? 'seller' : alert.kind === 'hangar' ? 'hangar' : 'buyer';
         emitAlert({
-            kind: alert.kind === 'seller' ? 'seller' : 'buyer',
-            sticky: !!alert.sticky || alert.kind === 'seller',
+            kind: kind,
+            sticky: kind === 'hangar' ? false : !!alert.sticky || kind === 'seller',
             purchaseId: alert.purchaseId || '',
-            title: alert.title || '交易提醒',
+            title: alert.title || (kind === 'hangar' ? '机库提醒' : '交易提醒'),
             body: alert.body || '',
-            url: alert.url || 'market-trades.html',
+            url: alert.url || (kind === 'hangar' ? '/executive-hangar' : 'market-trades.html'),
+            actionLabel: alert.actionLabel || '',
         });
     }
 

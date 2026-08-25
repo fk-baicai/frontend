@@ -490,7 +490,11 @@
 
     function tick() {
         if (anchorStartTime == null) return;
-        render(computeLocal(localElapsedMs()));
+        var state = computeLocal(localElapsedMs());
+        render(state);
+        if (window.UssExecHangarNotify && typeof window.UssExecHangarNotify.applyCanInsert === 'function') {
+            window.UssExecHangarNotify.applyCanInsert(!!state.canInsert);
+        }
     }
 
     function applyExecHangarPayload(data) {
