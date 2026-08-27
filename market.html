@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"></noscript>
-    <link rel="stylesheet" href="market.css?v=101">
+    <link rel="stylesheet" href="market.css?v=102">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -289,7 +289,7 @@
                                         <button type="button" class="is-active" data-trade-type="currency">资金置换</button>
                                         <button type="button" data-trade-type="barter">物品互换</button>
                                     </div>
-                                    <p class="market-field__hint" id="marketHqPointsHint" hidden>超级管理员：互换中可在一侧输入「积分」，表示 USS 总部签到积分。成交后只增减对方积分，你的账户不扣减。</p>
+                                    <p class="market-field__hint" id="marketHqPointsHint" hidden>超级管理员：互换中可在一侧输入「积分」，表示签到积分。成交后只增减对方积分，你的账户不扣减。</p>
                                 </div>
                                 <div class="market-field market-field--inline" id="marketOrderTypeField">
                                     <span class="market-field__label">单据方向</span>
@@ -339,7 +339,12 @@
                                     <span class="market-field__label" id="marketQtyLabel">数量</span>
                                     <input type="number" id="marketQtyInput" class="market-control" min="1" step="1" value="1">
                                 </label>
+                                <label class="market-inline-field" id="marketWantQtyField" hidden>
+                                    <span class="market-field__label" id="marketWantQtyLabel">换取数量</span>
+                                    <input type="number" id="marketWantQtyInput" class="market-control" min="1" step="1" value="1">
+                                </label>
                             </div>
+                            <p class="market-field__hint" id="marketBarterQtyHint" hidden>单次互换比例：左边是给出数量（积分数），右边是换取件数。例如 10 积分换 2 件。</p>
 
                             <div class="market-field">
                                 <span class="market-field__label">每日交易时段</span>
@@ -397,14 +402,10 @@
                                     </select>
                                 </label>
                             </div>
-                            <div class="market-row-2 market-row-2--controls">
+                            <div class="market-field">
                                 <label class="market-inline-field" for="marketWantQualityInput">
                                     <span class="market-field__label">换取品质</span>
                                     <input type="number" id="marketWantQualityInput" class="market-control" min="0" max="1000" step="1" value="500">
-                                </label>
-                                <label class="market-inline-field" for="marketWantQtyInput">
-                                    <span class="market-field__label" id="marketWantQtyLabel">换取数量</span>
-                                    <input type="number" id="marketWantQtyInput" class="market-control" min="1" step="1" value="1">
                                 </label>
                             </div>
                         </div>
@@ -670,7 +671,7 @@
     <script src="api-error.js?v=3" defer></script>
     <script src="auth-api.js" defer></script>
     <script src="auth-session-sync.js" defer></script>
-    <script defer src="rsi-client.js?v=20260825e"></script>
+    <script defer src="rsi-client.js?v=20260827b"></script>
     <script defer src="rsi-sync.js"></script>
     <script defer src="home-app.js?v=20260825d"></script>
     <script src="nav-dropdown.js" defer></script>
@@ -679,6 +680,6 @@
     <script src="community-image-lightbox.js" defer></script>
     <script src="market-notify.js?v=6" defer></script>
     <script src="market-chat.js?v=2" defer></script>
-    <script src="market.js?v=81" defer></script>
+    <script src="market.js?v=82" defer></script>
 </body>
 </html>

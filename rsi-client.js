@@ -314,7 +314,6 @@
 
     function isUnusableCitizenAvatarUrl(url, rankIconUrl) {
         if (!url) return true;
-        if (isRsiDefaultAvatarUrl(url)) return true;
         if (isRsiRankBadgeAssetUrl(url, rankIconUrl)) return true;
         return false;
     }
@@ -333,12 +332,13 @@
 
     function scoreCitizenAvatarUrl(url) {
         if (isOrgLogoAssetUrl(url)) return 0;
+        if (isRsiDefaultAvatarUrl(url)) return 48;
         var u = String(url || '').toLowerCase();
         if (/heap_infobox/.test(u)) return 95;
         if (/heap_thumb/.test(u)) return 35;
         if (/\.thumb\.|\/thumb\/|\/thumb\./.test(u)) return 90;
         if (/avatar|profile/.test(u)) return 70;
-        if (/\.(jpe?g|png|webp|gif|avif)(\?|#|$)/.test(u)) return 50;
+        if (/\.(jpe?g|png|webp|gif|avif)(\?|#|$)/.test(u)) return 45;
         return 20;
     }
 

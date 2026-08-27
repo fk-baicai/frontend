@@ -367,8 +367,14 @@
             '<span class="market-footer-chip" title="交易位置"><span class="market-footer-chip__k">位置</span>' +
             escapeHtml(loc) +
             '</span>' +
-            '<span class="market-footer-chip market-footer-chip--qty" title="可购数量"><span class="market-footer-chip__k">数量</span>' +
-            escapeHtml(String(qty)) +
+            '<span class="market-footer-chip market-footer-chip--qty" title="单次数量"><span class="market-footer-chip__k">' +
+            (order.tradeType === 'barter' ? '比例' : '数量') +
+            '</span>' +
+            escapeHtml(
+                order.tradeType === 'barter'
+                    ? String(itemSwapQty(it0)) + ':' + String(itemSwapQty((order.items && order.items[1]) || {}))
+                    : String(qty)
+            ) +
             '</span>';
         var manageCls = opts.manage ? ' market-card__footer--manage' : '';
         return (
@@ -454,7 +460,7 @@
         if (!it) return false;
         if (String(it.componentId || '').trim() === 'uss-hq-points') return true;
         var n = String(it.name || it.nameZh || '').replace(/\s+/g, '');
-        return n === '积分' || n === 'USS总部积分' || n === 'USS总部签到积分';
+        return n === '积分' || n === '签到积分' || n === 'USS总部积分' || n === 'USS总部签到积分';
     }
 
     function isHqPointsListing(order) {
@@ -466,10 +472,10 @@
         return {
             id_item: 'uss-hq-points',
             name: '积分',
-            name_zh: 'USS总部签到积分',
+            name_zh: '签到积分',
             name_en: 'HQ Check-in Points',
             type: 'hq_points',
-            type_label_zh: 'USS总部签到积分',
+            type_label_zh: '签到积分',
             _hqPoints: true,
         };
     }
@@ -488,15 +494,40 @@
         if (!isHqPointsItem(it) && String(it.name || '').trim() !== '积分') return it;
         it.componentId = 'uss-hq-points';
         it.name = '积分';
-        it.nameZh = 'USS总部签到积分';
+        it.nameZh = '签到积分';
         it.categoryGroup = 'hq_points';
-        it.typeLabel = 'USS总部签到积分';
+        it.typeLabel = '签到积分';
         return it;
+    }
+
+    function itemPublicName(it) {
+        if (!it) return '';
+        if (isHqPointsItem(it)) return '签到积分';
+        return String(it.nameZh || it.name || '').trim();
+    }
+
+    function itemSwapQty(it) {
+        if (!it) return 1;
+        if (isHqPointsItem(it)) return Math.max(1, parseInt(it.hqPointsAmount || it.quantity, 10) || 1);
+        return Math.max(1, parseInt(it.quantity, 10) || 1);
+    }
+
+    function listingHeadline(order) {
+        if (order && order.tradeType === 'barter') {
+            var offerName = itemPublicName((order.items && order.items[0]) || {});
+            var wantName = itemPublicName((order.items && order.items[1]) || {});
+            if (offerName && wantName) return offerName + ' 互换 ' + wantName;
+            return offerName || wantName || '物品互换';
+        }
+        return primaryItemName(order);
     }
 
     function formatQualityBrief(order) {
         var it = (order.items && order.items[0]) || {};
-        if (isHqPointsItem(it)) return 'USS总部签到积分 ×' + String(it.hqPointsAmount || it.quantity || 1);
+        if (order && order.tradeType === 'barter') {
+            var want = (order.items && order.items[1]) || {};
+            return '×' + String(itemSwapQty(it)) + ' → ×' + String(itemSwapQty(want));
+        }
         return '品质 ' + itemQuality(it);
     }
 
@@ -504,15 +535,7 @@
         if (order.tradeType === 'barter') {
             var want = (order.items && order.items[1]) || {};
             var offer = (order.items && order.items[0]) || {};
-            if (isHqPointsItem(want)) {
-                return '换取 积分 ×' + String(want.hqPointsAmount || want.quantity || 1);
-            }
-            if (isHqPointsItem(offer)) {
-                return '给出 积分 ×' + String(offer.hqPointsAmount || 1);
-            }
-            var wantName = want.nameZh || want.name;
-            if (wantName) return '换取 ' + wantName;
-            return '物品置换';
+            return '给出 ×' + String(itemSwapQty(offer)) + ' · 换取 ×' + String(itemSwapQty(want));
         }
         var item = (order.items && order.items[0]) || {};
         if (item.pricePerUnit == null) return '面议';
@@ -537,8 +560,7 @@
     }
 
     function wantItemName(order) {
-        var it = (order.items && order.items[1]) || {};
-        return it.nameZh || it.name || '';
+        return itemPublicName((order.items && order.items[1]) || {});
     }
 
     function wantImageSrc(order) {
@@ -642,7 +664,7 @@
 
     function primaryItemName(order) {
         var it = (order.items && order.items[0]) || {};
-        return it.nameZh || it.name || '未填物品';
+        return itemPublicName(it) || '未填物品';
     }
 
     function primaryCategory(order) {
@@ -1312,7 +1334,7 @@
                 '<div class="market-card__info">' +
                 '<div class="market-card__text">' +
                 '<span class="market-card__cat">' + catLine + '</span>' +
-                '<h2 class="market-card__title">' + escapeHtml(primaryItemName(o)) +
+                '<h2 class="market-card__title">' + escapeHtml(listingHeadline(o)) +
                 (o.tradeType !== 'barter' && o.items.length > 1 ? ' 等' + o.items.length + '件' : '') + '</h2>' +
                 '<p class="market-card__price' + priceClass + '">' + escapeHtml(formatPrice(o)) + '</p>' +
                 '</div>' +
@@ -1342,7 +1364,7 @@
             '<div class="market-card__info">' +
             '<div class="market-card__text">' +
             '<span class="market-card__cat">' + catLine + '</span>' +
-            '<h2 class="market-card__title">' + escapeHtml(primaryItemName(o)) +
+            '<h2 class="market-card__title">' + escapeHtml(listingHeadline(o)) +
             (o.tradeType !== 'barter' && o.items.length > 1 ? ' 等' + o.items.length + '件' : '') + '</h2>' +
             '<p class="market-card__price' + priceClass + '">' + escapeHtml(formatPrice(o)) + '</p>' +
             '</div>' +
@@ -1848,7 +1870,7 @@
             '</div>' +
             '<div class="market-detail__main">' +
             '<p class="market-detail__cat">' + escapeHtml(categoryLabel(it0.categoryGroup)) + '</p>' +
-            '<h3 class="market-detail__title">' + escapeHtml(primaryItemName(order)) + '</h3>' +
+            '<h3 class="market-detail__title">' + escapeHtml(listingHeadline(order)) + '</h3>' +
             '<p class="market-detail__price' + priceClass + '" id="marketDetailPriceLine">' + escapeHtml(formatPrice(order)) + '</p>' +
             '<dl class="market-detail__dl">' +
             (isHqPointsItem(it0)
@@ -2320,7 +2342,8 @@
                 nameZh: it0.nameZh || null,
                 categoryGroup: it0.categoryGroup || null,
                 typeLabel: '',
-                quantity: it0.quantity || 1,
+                quantity: isHqPointsItem(it0) ? (it0.hqPointsAmount || it0.quantity || 1) : (it0.quantity || 1),
+                hqPointsAmount: it0.hqPointsAmount,
                 pricePerUnit: it0.pricePerUnit != null ? it0.pricePerUnit : '',
                 quality: itemQuality(it0),
             }],
@@ -2333,7 +2356,8 @@
                 nameZh: it1.nameZh || null,
                 categoryGroup: it1.categoryGroup || null,
                 typeLabel: '',
-                quantity: it1.quantity || 1,
+                quantity: isHqPointsItem(it1) ? (it1.hqPointsAmount || it1.quantity || 1) : (it1.quantity || 1),
+                hqPointsAmount: it1.hqPointsAmount,
                 quality: itemQuality(it1),
             },
             barterWantCategoryGroup: it1.categoryGroup || '',
@@ -2399,11 +2423,15 @@
     function syncHqPointsFormHints() {
         var offerPts = isHqPointsItem(currentItem());
         var wantPts = isHqPointsItem(currentWantItem());
+        var isBarter = state.create.tradeType === 'barter';
         if (el.hqPointsHint) {
-            el.hqPointsHint.hidden = !(isSuperAdminSession() && state.create.tradeType === 'barter');
+            el.hqPointsHint.hidden = !(isSuperAdminSession() && isBarter);
         }
-        if (el.qtyLabel) el.qtyLabel.textContent = offerPts ? '积分数' : '数量';
+        if (el.qtyLabel) el.qtyLabel.textContent = offerPts ? '积分数' : (isBarter ? '给出数量' : '数量');
         if (el.wantQtyLabel) el.wantQtyLabel.textContent = wantPts ? '积分数' : '换取数量';
+        if (el.wantQtyField) el.wantQtyField.hidden = !isBarter;
+        if (el.barterQtyHint) el.barterQtyHint.hidden = !isBarter;
+        if (el.qtyPriceRow) el.qtyPriceRow.classList.toggle('market-row-2--barter-qty', isBarter);
     }
 
     function syncCreateFormUi() {
@@ -2561,8 +2589,8 @@
         if (picked && (picked._hqPoints || String(picked.id_item || picked.componentId || '') === 'uss-hq-points')) {
             want.componentId = 'uss-hq-points';
             want.name = '积分';
-            want.nameZh = 'USS总部签到积分';
-            want.typeLabel = 'USS总部签到积分';
+            want.nameZh = '签到积分';
+            want.typeLabel = '签到积分';
             want.categoryGroup = 'hq_points';
             state.create.barterWantCategoryGroup = 'hq_points';
             if (el.wantCategorySelect) el.wantCategorySelect.value = 'hq_points';
@@ -2612,8 +2640,8 @@
         if (picked && (picked._hqPoints || String(picked.id_item || picked.componentId || '') === 'uss-hq-points')) {
             it.componentId = 'uss-hq-points';
             it.name = '积分';
-            it.nameZh = 'USS总部签到积分';
-            it.typeLabel = 'USS总部签到积分';
+            it.nameZh = '签到积分';
+            it.typeLabel = '签到积分';
             it.categoryGroup = 'hq_points';
             state.create.categoryGroup = 'hq_points';
             if (el.categorySelect) el.categorySelect.value = 'hq_points';
@@ -2676,7 +2704,10 @@
     function readFormIntoState() {
         var c = state.create;
         var it = currentItem();
-        if (el.qtyInput) it.quantity = Math.max(1, parseInt(el.qtyInput.value, 10) || 1);
+        if (el.qtyInput) {
+            it.quantity = Math.max(1, parseInt(el.qtyInput.value, 10) || 1);
+            if (isHqPointsItem(it)) it.hqPointsAmount = it.quantity;
+        }
         if (el.priceInput) it.pricePerUnit = el.priceInput.value;
         if (el.categorySelect) {
             c.categoryGroup = el.categorySelect.value || '';
@@ -2690,7 +2721,10 @@
         if (c.tradeType === 'barter') {
             var want = currentWantItem();
             if (el.wantItemInput) want.name = el.wantItemInput.value.trim();
-            if (el.wantQtyInput) want.quantity = Math.max(1, parseInt(el.wantQtyInput.value, 10) || 1);
+            if (el.wantQtyInput) {
+                want.quantity = Math.max(1, parseInt(el.wantQtyInput.value, 10) || 1);
+                if (isHqPointsItem(want)) want.hqPointsAmount = want.quantity;
+            }
             if (el.wantCategorySelect) {
                 c.barterWantCategoryGroup = el.wantCategorySelect.value || '';
                 want.categoryGroup = c.barterWantCategoryGroup || want.categoryGroup;
@@ -3567,13 +3601,16 @@
         el.imageRemove = $('marketImageRemove');
         el.qtyInput = $('marketQtyInput');
         el.qtyLabel = $('marketQtyLabel');
+        el.qtyPriceRow = $('marketQtyPriceRow');
         el.priceInput = $('marketPriceInput');
         el.priceField = $('marketPriceField');
         el.hqPointsHint = $('marketHqPointsHint');
+        el.barterQtyHint = $('marketBarterQtyHint');
         el.wantItemInput = $('marketWantItemInput');
         el.wantItemSuggest = $('marketWantItemSuggest');
         el.wantCategorySelect = $('marketWantCategorySelect');
         el.wantQualityInput = $('marketWantQualityInput');
+        el.wantQtyField = $('marketWantQtyField');
         el.wantQtyInput = $('marketWantQtyInput');
         el.wantQtyLabel = $('marketWantQtyLabel');
         el.wantImageInput = $('marketWantImageInput');
