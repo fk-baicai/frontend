@@ -2109,6 +2109,9 @@
                 state.group = group === 'equipment' ? 'fps_weapon' : group;
             }
             if (type && group !== 'module') state.type = type;
+            if (!type && state.group && DEFAULT_TYPE_BY_GROUP[state.group]) {
+                state.type = DEFAULT_TYPE_BY_GROUP[state.group];
+            }
             if (!group && type) {
                 var inferred = inferGroupFromTypeKey(type);
                 if (inferred) state.group = inferred;
@@ -2138,7 +2141,14 @@
     function ensureTypeInGroup() {
         var filtered = typesForGroup(state.group);
         var keys = typeKeysForGroup(state.group, filtered);
-        if (!keys.length) return;
+        if (!keys.length) {
+            var fallbackOrder = TYPE_ORDER_BY_GROUP[state.group] || [];
+            var fallbackType = DEFAULT_TYPE_BY_GROUP[state.group] || fallbackOrder[0];
+            if (fallbackType && fallbackOrder.indexOf(state.type) < 0 && fallbackType !== state.type) {
+                state.type = fallbackType;
+            }
+            return;
+        }
         var live = keys.filter(function (key) {
             return filtered[key] && Number(filtered[key].count) > 0;
         });
@@ -4881,6 +4891,8 @@
             var typesRes = await fetch(apiUrl(typesUrl));
             var typesData = await typesRes.json();
             if (typesData.ok && typesData.types) {
+                var prevType = state.type;
+                var prevGroup = state.group;
                 var normalized = normalizeCategoriesPayload(typesData.types, typesData.groups);
                 state.types = normalized.types;
                 state.groups = normalized.groups;
@@ -4890,6 +4902,9 @@
                 renderGroupTabs();
                 renderTabs();
                 updateUrlState();
+                if (state.type !== prevType || state.group !== prevGroup) {
+                    loadList();
+                }
             }
         } catch (e) {
             /* ignore */
