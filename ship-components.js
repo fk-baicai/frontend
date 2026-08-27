@@ -399,10 +399,35 @@
         }
     }
 
+    function normalizeSizeKey(size) {
+        var s = String(size == null ? '' : size).trim();
+        if (!s) return '';
+        var prefixed = s.match(/^s\s*0*(\d+)$/i);
+        if (prefixed) return String(parseInt(prefixed[1], 10));
+        if (/^\d+$/.test(s)) return String(parseInt(s, 10));
+        return '';
+    }
+
+    function uniqueSizeKeys(values) {
+        var seen = Object.create(null);
+        var out = [];
+        (values || []).forEach(function (val) {
+            var key = normalizeSizeKey(val);
+            if (key === '') return;
+            if (seen[key]) return;
+            seen[key] = 1;
+            out.push(key);
+        });
+        out.sort(function (a, b) {
+            return Number(a) - Number(b);
+        });
+        return out;
+    }
+
     function facetOptionList(key) {
         var facets = state.facets || {};
         var fromApi = [];
-        if (key === 'size') fromApi = facets.sizes || [];
+        if (key === 'size') fromApi = uniqueSizeKeys(facets.sizes || []);
         else if (key === 'grade') fromApi = facets.grades || [];
         else if (key === 'class') fromApi = facets.classes || [];
         else if (key === 'damage_type') fromApi = facets.damage_types || [];
@@ -420,15 +445,10 @@
             seen[val] = 1;
             out.push(val);
         });
-        if (key === 'size') {
-            out.sort(function (a, b) {
-                return Number(a) - Number(b);
-            });
-        } else {
-            out.sort(function (a, b) {
-                return String(a).localeCompare(String(b), 'zh-CN');
-            });
-        }
+        if (key === 'size') return uniqueSizeKeys(out);
+        out.sort(function (a, b) {
+            return String(a).localeCompare(String(b), 'zh-CN');
+        });
         return out;
     }
 
