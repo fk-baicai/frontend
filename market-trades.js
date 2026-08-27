@@ -506,6 +506,11 @@
                 if (canCancelPurchase(p, 'seller')) {
                     actions += cancelPurchaseBtnHtml(p.id, '取消订单');
                 }
+                if (p.order && (p.order.giftListing || (p.order.items && p.order.items[0] && p.order.items[0].categoryGroup === 'gift'))) {
+                    actions += p.giftLinkSentAt
+                        ? '<button type="button" class="market-btn market-trades-btn-gift-mail" data-purchase-id="' + escapeHtml(p.id) + '">重发兑换邮件</button>'
+                        : '<button type="button" class="market-btn market-btn--accent market-trades-btn-gift-mail" data-purchase-id="' + escapeHtml(p.id) + '">发送兑换邮件</button>';
+                }
             }
         } else if (p.status === 'completed') {
             if (p.completedBy === 'auto') {
@@ -1257,6 +1262,22 @@
                         if (!ok) return;
                         patchPurchase(pidA, { status: 'approved' }).then(loadTabData).catch(function (e) {
                             window.alert((e && e.message) || '操作失败');
+                        });
+                    });
+                    return;
+                }
+                var giftMailBtn = ev.target.closest('.market-trades-btn-gift-mail');
+                if (giftMailBtn) {
+                    var pidG = giftMailBtn.getAttribute('data-purchase-id');
+                    if (!pidG) return;
+                    askConfirm({
+                        title: '发送兑换链接',
+                        message: '将把礼物兑换链接发送到买家已验证邮箱。链接不会出现在网页上。',
+                        confirmText: '确认发送',
+                    }).then(function (ok) {
+                        if (!ok) return;
+                        patchPurchase(pidG, { sendGiftLink: true }).then(loadTabData).catch(function (e) {
+                            window.alert((e && e.message) || '发送失败');
                         });
                     });
                     return;

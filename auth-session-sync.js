@@ -236,6 +236,7 @@
             token: token,
             bindingId: nextBindingId,
             email: user.email != null ? user.email : prev.email,
+            emailVerified: user.emailVerified !== undefined ? !!user.emailVerified : !!prev.emailVerified,
             loginAt: prev.loginAt || new Date().toISOString(),
             sessionDays: prev.sessionDays !== undefined ? prev.sessionDays : undefined,
             expiresAt:

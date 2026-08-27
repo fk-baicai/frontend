@@ -7,6 +7,8 @@
     var AUTH_KEY = 'ussHangzhouAuthSession';
     var API_BASE = (typeof window !== 'undefined' && window.USS_AUTH_API_BASE) || 'http://127.0.0.1:3789';
 
+    var catalogTypeGroup = {};
+
     var TYPE_TO_NAV_GROUP = (function () {
         var map = {};
         var groups = {
@@ -46,6 +48,7 @@
         fps_magazine: '武器配件',
         fps_armor: '个人护甲',
         hq_points: '签到积分',
+        gift: '礼物',
     };
 
     var CATEGORY_GROUPS = [
@@ -55,6 +58,7 @@
         { id: 'fps_weapon', label: '个人武器' },
         { id: 'fps_magazine', label: '武器配件' },
         { id: 'fps_armor', label: '个人护甲' },
+        { id: 'gift', label: '礼物' },
         { id: 'other', label: '其他' },
     ];
 
@@ -83,10 +87,28 @@
         'Levski': '列夫斯基',
         'Orbituary': '轨道讣闻站',
         'Dudley & Daughters': '达德利父女空间站',
+        'Patch City': '补丁城',
+        "Jackson's Swap": '杰克森交易站',
+        'Pyro Gateway': '派罗星门',
+        'Stanton Gateway': '斯坦顿星门',
+        'HUR-L1 Green Glade Station': '赫-L1 绿色林地站',
+        'HUR-L2 Faithful Dream Station': '赫-L2 坚贞梦想站',
+        'HUR-L3 Thundering Express Station': '赫-L3 雷霆快车站',
+        'HUR-L4 Melodic Fields Station': '赫-L4 旋律领域站',
         'HUR-L5 High Course Station': '赫-L5 高速路线站',
-        'ARC-L1 Wide Forest Station': '弧-L1 广袤森林站',
-        'MIC-L5 Modern Icarus Station': '微-L5 现代伊卡洛斯站',
         'CRU-L1 Ambitious Dream Station': '十-L1 雄心伟梦站',
+        'CRU-L4 Shallow Fields Station': '十-L4 轻浅田野站',
+        'CRU-L5 Beautiful Glen Station': '十-L5 美丽峡谷站',
+        'ARC-L1 Wide Forest Station': '弧-L1 广袤森林站',
+        'ARC-L2 Lively Pathway Station': '弧-L2 活力小径站',
+        'ARC-L3 Modern Express Station': '弧-L3 摩登快车站',
+        'ARC-L4 Faint Glen Station': '弧-L4 黯淡幽谷站',
+        'ARC-L5 Yellow Core Station': '弧-L5 黄色核心站',
+        'MIC-L1 Shallow Frontier Station': '微-L1 浅边站',
+        'MIC-L2 Long Forest Station': '微-L2 长林站',
+        'MIC-L3 Endless Odyssey Station': '微-L3 无尽漫游站',
+        'MIC-L4 Red Crossroads Station': '微-L4 红色十字路口站',
+        'MIC-L5 Modern Icarus Station': '微-L5 现代伊卡洛斯站',
     };
 
     var SYSTEM_ZH = {
@@ -95,24 +117,64 @@
         Nyx: '尼克斯',
     };
 
+    var PLANET_ZH = {
+        Hurston: '赫斯顿',
+        Crusader: '十字军',
+        ArcCorp: '弧陆',
+        microTech: '微技',
+        MicroTech: '微技',
+        Yela: '耶拉',
+        'Pyro I': '派罗 I',
+        'Pyro IV': '派罗 IV',
+        'Pyro V': '派罗 V',
+        Bloom: '盛放星',
+        Delamar: '德拉玛',
+    };
+
     var MAJOR_STATIONS = [
-        { name: '奥丽莎空间站', nameEn: 'Port Olisar', system: 'Stanton' },
-        { name: '特雷斯勒空间站', nameEn: 'Port Tressler', system: 'Stanton' },
-        { name: '埃弗勒斯空间站', nameEn: 'Everus Harbor', system: 'Stanton' },
-        { name: '拜基尼空间站', nameEn: 'Baijini Point', system: 'Stanton' },
-        { name: '炽天使空间站', nameEn: 'Seraphim Station', system: 'Stanton' },
-        { name: '死局空间站', nameEn: 'Checkmate Station', system: 'Pyro' },
-        { name: '废墟空间站', nameEn: 'Ruin Station', system: 'Pyro' },
-        { name: '煤气灯空间站', nameEn: 'Gaslight', system: 'Pyro' },
-        { name: '鼠巢空间站', nameEn: "Rat's Nest", system: 'Pyro' },
-        { name: '终局空间站', nameEn: 'Endgame', system: 'Pyro' },
-        { name: '星光服务站', nameEn: 'Starlight Service Station', system: 'Pyro' },
-        { name: '六角湾', nameEn: 'Grim HEX', system: 'Stanton' },
-        { name: '奥里森', nameEn: 'Orison', system: 'Stanton' },
-        { name: '罗威尔', nameEn: 'Lorville', system: 'Stanton' },
-        { name: '18区', nameEn: 'Area18', system: 'Stanton' },
-        { name: '新巴贝奇', nameEn: 'New Babbage', system: 'Stanton' },
-        { name: '列夫斯基', nameEn: 'Levski', system: 'Nyx' },
+        { name: '埃弗勒斯空间站', nameEn: 'Everus Harbor', system: 'Stanton', planet: 'Hurston' },
+        { name: '罗威尔', nameEn: 'Lorville', system: 'Stanton', planet: 'Hurston' },
+        { name: '赫-L1 绿色林地站', nameEn: 'HUR-L1 Green Glade Station', system: 'Stanton', planet: 'Hurston' },
+        { name: '赫-L2 坚贞梦想站', nameEn: 'HUR-L2 Faithful Dream Station', system: 'Stanton', planet: 'Hurston' },
+        { name: '赫-L3 雷霆快车站', nameEn: 'HUR-L3 Thundering Express Station', system: 'Stanton', planet: 'Hurston' },
+        { name: '赫-L4 旋律领域站', nameEn: 'HUR-L4 Melodic Fields Station', system: 'Stanton', planet: 'Hurston' },
+        { name: '赫-L5 高速路线站', nameEn: 'HUR-L5 High Course Station', system: 'Stanton', planet: 'Hurston' },
+        { name: '炽天使空间站', nameEn: 'Seraphim Station', system: 'Stanton', planet: 'Crusader' },
+        { name: '奥丽莎空间站', nameEn: 'Port Olisar', system: 'Stanton', planet: 'Crusader' },
+        { name: '奥里森', nameEn: 'Orison', system: 'Stanton', planet: 'Crusader' },
+        { name: '十-L1 雄心伟梦站', nameEn: 'CRU-L1 Ambitious Dream Station', system: 'Stanton', planet: 'Crusader' },
+        { name: '十-L4 轻浅田野站', nameEn: 'CRU-L4 Shallow Fields Station', system: 'Stanton', planet: 'Crusader' },
+        { name: '十-L5 美丽峡谷站', nameEn: 'CRU-L5 Beautiful Glen Station', system: 'Stanton', planet: 'Crusader' },
+        { name: '六角湾', nameEn: 'Grim HEX', system: 'Stanton', planet: 'Yela' },
+        { name: '拜基尼空间站', nameEn: 'Baijini Point', system: 'Stanton', planet: 'ArcCorp' },
+        { name: '18区', nameEn: 'Area18', system: 'Stanton', planet: 'ArcCorp' },
+        { name: '弧-L1 广袤森林站', nameEn: 'ARC-L1 Wide Forest Station', system: 'Stanton', planet: 'ArcCorp' },
+        { name: '弧-L2 活力小径站', nameEn: 'ARC-L2 Lively Pathway Station', system: 'Stanton', planet: 'ArcCorp' },
+        { name: '弧-L3 摩登快车站', nameEn: 'ARC-L3 Modern Express Station', system: 'Stanton', planet: 'ArcCorp' },
+        { name: '弧-L4 黯淡幽谷站', nameEn: 'ARC-L4 Faint Glen Station', system: 'Stanton', planet: 'ArcCorp' },
+        { name: '弧-L5 黄色核心站', nameEn: 'ARC-L5 Yellow Core Station', system: 'Stanton', planet: 'ArcCorp' },
+        { name: '特雷斯勒空间站', nameEn: 'Port Tressler', system: 'Stanton', planet: 'microTech' },
+        { name: '新巴贝奇', nameEn: 'New Babbage', system: 'Stanton', planet: 'microTech' },
+        { name: '微-L1 浅边站', nameEn: 'MIC-L1 Shallow Frontier Station', system: 'Stanton', planet: 'microTech' },
+        { name: '微-L2 长林站', nameEn: 'MIC-L2 Long Forest Station', system: 'Stanton', planet: 'microTech' },
+        { name: '微-L3 无尽漫游站', nameEn: 'MIC-L3 Endless Odyssey Station', system: 'Stanton', planet: 'microTech' },
+        { name: '微-L4 红色十字路口站', nameEn: 'MIC-L4 Red Crossroads Station', system: 'Stanton', planet: 'microTech' },
+        { name: '微-L5 现代伊卡洛斯站', nameEn: 'MIC-L5 Modern Icarus Station', system: 'Stanton', planet: 'microTech' },
+        { name: '派罗星门', nameEn: 'Pyro Gateway', system: 'Stanton', planet: '' },
+        { name: '死局空间站', nameEn: 'Checkmate Station', system: 'Pyro', planet: 'Pyro I' },
+        { name: '废墟空间站', nameEn: 'Ruin Station', system: 'Pyro', planet: 'Pyro IV' },
+        { name: '煤气灯空间站', nameEn: 'Gaslight', system: 'Pyro', planet: 'Pyro V' },
+        { name: '轨道讣闻站', nameEn: 'Orbituary', system: 'Pyro', planet: 'Pyro V' },
+        { name: '鼠巢空间站', nameEn: "Rat's Nest", system: 'Pyro', planet: 'Pyro V' },
+        { name: '终局空间站', nameEn: 'Endgame', system: 'Pyro', planet: 'Pyro I' },
+        { name: '星光服务站', nameEn: 'Starlight Service Station', system: 'Pyro', planet: '' },
+        { name: '补丁城', nameEn: 'Patch City', system: 'Pyro', planet: '' },
+        { name: '达德利父女空间站', nameEn: 'Dudley & Daughters', system: 'Pyro', planet: '' },
+        { name: '杰克森交易站', nameEn: "Jackson's Swap", system: 'Pyro', planet: '' },
+        { name: '斯坦顿星门', nameEn: 'Stanton Gateway', system: 'Pyro', planet: '' },
+        { name: '列夫斯基', nameEn: 'Levski', system: 'Nyx', planet: 'Delamar' },
+        { name: '派罗星门', nameEn: 'Pyro Gateway', system: 'Nyx', planet: '' },
+        { name: '斯坦顿星门', nameEn: 'Stanton Gateway', system: 'Nyx', planet: '' },
     ];
 
     var CART_SVG =
@@ -175,7 +237,7 @@
             itemInfo: '',
             contact: '',
             location: null,
-            items: [{ componentId: null, name: '', categoryGroup: null, typeLabel: '', quantity: 1, pricePerUnit: '', quality: DEFAULT_QUALITY }],
+            items: [{ componentId: null, name: '', categoryGroup: null, typeLabel: '', quantity: 1, swapGiveQty: 1, pricePerUnit: '', quality: DEFAULT_QUALITY, giftRedeemUrls: [''] }],
             autoImage: null,
             userImage: null,
             existingImage: null,
@@ -366,16 +428,13 @@
         var rightChips =
             '<span class="market-footer-chip" title="交易位置"><span class="market-footer-chip__k">位置</span>' +
             escapeHtml(loc) +
-            '</span>' +
-            '<span class="market-footer-chip market-footer-chip--qty" title="单次数量"><span class="market-footer-chip__k">' +
-            (order.tradeType === 'barter' ? '比例' : '数量') +
-            '</span>' +
-            escapeHtml(
-                order.tradeType === 'barter'
-                    ? String(itemSwapQty(it0)) + ':' + String(itemSwapQty((order.items && order.items[1]) || {}))
-                    : String(qty)
-            ) +
             '</span>';
+        if (order.tradeType !== 'barter') {
+            rightChips +=
+                '<span class="market-footer-chip market-footer-chip--qty" title="单次数量"><span class="market-footer-chip__k">数量</span>' +
+                escapeHtml(String(qty)) +
+                '</span>';
+        }
         var manageCls = opts.manage ? ' market-card__footer--manage' : '';
         return (
             '<div class="market-card__footer' +
@@ -400,8 +459,44 @@
         );
     }
 
+    function marketGroupFromRaw(raw) {
+        if (raw === 'mining' || raw === 'salvage' || raw === 'fuel_nozzle' || raw === 'module') {
+            return 'other';
+        }
+        return raw || null;
+    }
+
     function inferNavGroupFromType(typeKey) {
-        return TYPE_TO_NAV_GROUP[String(typeKey || '').trim()] || null;
+        var t = String(typeKey || '').trim();
+        if (!t) return null;
+        return marketGroupFromRaw(catalogTypeGroup[t] || TYPE_TO_NAV_GROUP[t] || null);
+    }
+
+    function uniqueSuggestItems(items) {
+        var seen = Object.create(null);
+        var out = [];
+        (items || []).forEach(function (it) {
+            var id = String((it && (it.id_item || it.uuid || it.componentId)) || '');
+            if (!id || seen[id]) return;
+            seen[id] = 1;
+            out.push(it);
+        });
+        return out;
+    }
+
+    function loadComponentCatalogTypes() {
+        fetch(joinUrl('/api/sc/components/types'))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var types = (data && data.types) || {};
+                var next = {};
+                Object.keys(types).forEach(function (k) {
+                    var t = types[k];
+                    if (t && t.group) next[k] = t.group;
+                });
+                catalogTypeGroup = next;
+            })
+            .catch(function () { /* 沿用静态映射 */ });
     }
 
     function itemDisplayName(it) {
@@ -454,6 +549,24 @@
     function isPrivilegedSession() {
         var s = loadSession();
         return !!(s && (s.isSuperAdmin || s.isAdmin));
+    }
+
+    function isGiftItem(it) {
+        if (!it) return false;
+        if (String(it.componentId || '').trim() === 'uss-gift') return true;
+        return String(it.categoryGroup || '').trim() === 'gift';
+    }
+
+    function isGiftListing(order) {
+        if (!order || order.tradeType !== 'barter') return false;
+        if (order.giftListing) return true;
+        if (!order.items) return false;
+        return isGiftItem(order.items[0]);
+    }
+
+    function sessionEmailVerified() {
+        var s = loadSession();
+        return !!(s && s.emailVerified);
     }
 
     function isHqPointsItem(it) {
@@ -1792,7 +1905,10 @@
         var priceClass = order.tradeType === 'barter' ? ' market-detail__price--barter' : '';
         var loc = (order.location && order.location.name) || '未指定地点';
         var sys = order.location && order.location.system ? SYSTEM_ZH[order.location.system] || order.location.system : '';
-        var locLine = sys ? loc + '（' + sys + '）' : loc;
+        var planet = order.location && order.location.planet
+            ? (PLANET_ZH[order.location.planet] || order.location.planet)
+            : '';
+        var locLine = [sys, planet, loc].filter(Boolean).join(' · ') || loc;
         var note = order.note ? String(order.note).trim() : '';
         var partyLabel = order.tradeType === 'barter' ? '发布者信息' : (order.orderType === 'buy' ? '收购方信息' : '出售者信息');
         var it1 = (order.items && order.items[1]) || {};
@@ -2059,6 +2175,20 @@
                     window.alert('无权限');
                     return;
                 }
+                if (isGiftListing(order) && !sessionEmailVerified()) {
+                    askConfirm({
+                        title: '需要验证邮箱',
+                        message: '换取礼物前须先在账户设置中验证邮箱，兑换链接只会发到已验证邮箱。',
+                        confirmText: '去验证',
+                    }).then(function (ok) {
+                        if (!ok) return;
+                        if (typeof window.openAccountSettings === 'function') window.openAccountSettings();
+                        if (typeof window.showAccountSettingsPanel === 'function') {
+                            window.showAccountSettingsPanel('verifyEmail');
+                        }
+                    });
+                    return;
+                }
                 var buyQty = qtyInput ? clampDetailQty(qtyInput.value) : 1;
                 requireMarketAck('purchase', function () {
                     purchaseBtn.disabled = true;
@@ -2270,17 +2400,54 @@
     function showListingTermsHint() {
         if (el.listingTermsWrap) {
             el.listingTermsWrap.classList.add('is-error');
+            el.listingTermsWrap.classList.add('is-required-miss');
         }
-        if (el.listingTermsChk) el.listingTermsChk.focus();
-        var msg = '请先勾选服务与风险告知后再生成单据';
+        failRequired('请先勾选服务与风险告知后再生成单据', el.listingTermsChk);
         if (el.listingTermsHint) {
-            el.listingTermsHint.textContent = msg;
+            el.listingTermsHint.textContent = '请先勾选服务与风险告知后再生成单据';
             el.listingTermsHint.hidden = false;
         }
+    }
+
+    function clearRequiredMarks() {
+        var root = el.formRoot || (el.modal && el.modal.querySelector('.market-form'));
+        if (!root) return;
+        root.querySelectorAll('.is-required-miss').forEach(function (n) {
+            n.classList.remove('is-required-miss');
+        });
+        if (el.listingTermsWrap) el.listingTermsWrap.classList.remove('is-required-miss');
+    }
+
+    function failRequired(message, focusEl) {
+        clearRequiredMarks();
         if (el.formError) {
-            el.formError.textContent = msg;
+            el.formError.textContent = message;
             el.formError.hidden = false;
         }
+        if (!focusEl) return false;
+        var wrap = focusEl.closest
+            ? (focusEl.closest('.market-inline-field')
+                || focusEl.closest('.market-field')
+                || focusEl.closest('.market-gift-links')
+                || focusEl.closest('.market-listing-terms'))
+            : null;
+        if (wrap) wrap.classList.add('is-required-miss');
+        try {
+            focusEl.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+        } catch (e) {
+            try { focusEl.scrollIntoView(true); } catch (e2) {}
+        }
+        window.setTimeout(function () {
+            try {
+                if (typeof focusEl.focus === 'function') focusEl.focus({ preventScroll: true });
+            } catch (e3) {
+                try { focusEl.focus(); } catch (e4) {}
+            }
+            if (typeof focusEl.select === 'function' && focusEl.type !== 'checkbox') {
+                try { focusEl.select(); } catch (e5) {}
+            }
+        }, 80);
+        return false;
     }
 
     function clearListingTermsHint() {
@@ -2335,6 +2502,7 @@
                 id: order.location.id || null,
                 name: order.location.name || '',
                 system: order.location.system || null,
+                planet: order.location.planet || null,
             } : null,
             items: [{
                 componentId: it0.componentId || null,
@@ -2343,9 +2511,13 @@
                 categoryGroup: it0.categoryGroup || null,
                 typeLabel: '',
                 quantity: isHqPointsItem(it0) ? (it0.hqPointsAmount || it0.quantity || 1) : (it0.quantity || 1),
+                swapGiveQty: it0.swapGiveQty || 1,
                 hqPointsAmount: it0.hqPointsAmount,
                 pricePerUnit: it0.pricePerUnit != null ? it0.pricePerUnit : '',
                 quality: itemQuality(it0),
+                giftRedeemUrls: Array.isArray(it0.giftRedeemUrls) && it0.giftRedeemUrls.length
+                    ? it0.giftRedeemUrls.slice()
+                    : (it0.giftRedeemUrl ? [it0.giftRedeemUrl] : ['']),
             }],
             autoImage: null,
             userImage: null,
@@ -2395,7 +2567,7 @@
             itemInfo: '',
             contact: accountEmail(),
             location: null,
-            items: [{ componentId: null, name: '', categoryGroup: null, typeLabel: '', quantity: 1, pricePerUnit: '', quality: DEFAULT_QUALITY }],
+            items: [{ componentId: null, name: '', categoryGroup: null, typeLabel: '', quantity: 1, swapGiveQty: 1, pricePerUnit: '', quality: DEFAULT_QUALITY, giftRedeemUrls: [''] }],
             autoImage: null,
             userImage: null,
             existingImage: null,
@@ -2430,8 +2602,79 @@
         if (el.qtyLabel) el.qtyLabel.textContent = offerPts ? '积分数' : (isBarter ? '给出数量' : '数量');
         if (el.wantQtyLabel) el.wantQtyLabel.textContent = wantPts ? '积分数' : '换取数量';
         if (el.wantQtyField) el.wantQtyField.hidden = !isBarter;
-        if (el.barterQtyHint) el.barterQtyHint.hidden = !isBarter;
-        if (el.qtyPriceRow) el.qtyPriceRow.classList.toggle('market-row-2--barter-qty', isBarter);
+        var giftOn = isBarter && (state.create.categoryGroup === 'gift' || isGiftItem(currentItem()));
+        var showStock = isBarter && !offerPts;
+        if (el.stockField) el.stockField.hidden = !showStock;
+        if (el.giveQtyField) el.giveQtyField.hidden = !!(isBarter && giftOn);
+        var qtyWrap = el.qtyInput && el.qtyInput.closest('.market-inline-field');
+        if (qtyWrap) qtyWrap.hidden = !!(isBarter && giftOn);
+        if (el.qtyInput && isBarter && giftOn) {
+            el.qtyInput.value = '1';
+            currentItem().swapGiveQty = 1;
+        }
+        if (el.barterQtyHint) {
+            el.barterQtyHint.hidden = !isBarter;
+            if (isBarter && giftOn) {
+                el.barterQtyHint.textContent = '我方总数等于链接条数。对方每次只能换走 1 份（消耗 1 条链接），不会一次拿走全部。';
+            } else if (isBarter) {
+                el.barterQtyHint.textContent = '我方总数是库存。给出数量 / 换取数量是单次比例，例如库存 10、给出 5、换取 4，则可成交 2 次。';
+            }
+        }
+        if (el.qtyPriceRow) el.qtyPriceRow.classList.toggle('market-row-2--barter-qty', isBarter && showStock);
+    }
+
+    var GIFT_MAX_URLS = 30;
+
+    function giftUrlsOf(it) {
+        if (!it) return [''];
+        if (Array.isArray(it.giftRedeemUrls) && it.giftRedeemUrls.length) return it.giftRedeemUrls.slice();
+        if (it.giftRedeemUrl) return [String(it.giftRedeemUrl)];
+        return [''];
+    }
+
+    function resizeGiftUrls(it, n) {
+        n = Math.max(1, Math.min(GIFT_MAX_URLS, Math.floor(Number(n) || 1)));
+        var urls = giftUrlsOf(it);
+        while (urls.length < n) urls.push('');
+        urls.length = n;
+        it.giftRedeemUrls = urls;
+        it.quantity = n;
+        it.swapGiveQty = 1;
+        return n;
+    }
+
+    function renderGiftLinksList() {
+        if (!el.giftLinksList) return;
+        var it = currentItem();
+        var n = Math.max(1, parseInt(it && it.quantity, 10) || giftUrlsOf(it).length || 1);
+        n = resizeGiftUrls(it, n);
+        el.giftLinksList.innerHTML = it.giftRedeemUrls.map(function (url, i) {
+            return '<input type="url" class="market-control" data-gift-url-idx="' + i + '" maxlength="2048" placeholder="链接 ' + (i + 1) + '" autocomplete="off" spellcheck="false" value="' + String(url || '').replace(/"/g, '&quot;') + '">';
+        }).join('');
+    }
+
+    function readGiftLinksFromDom() {
+        var it = currentItem();
+        if (!el.giftLinksList || !it) return;
+        var inputs = el.giftLinksList.querySelectorAll('[data-gift-url-idx]');
+        if (!inputs.length) return;
+        it.giftRedeemUrls = Array.prototype.map.call(inputs, function (inp) {
+            return String(inp.value || '').trim();
+        });
+    }
+
+    function syncGiftFormUi() {
+        var isBarter = state.create.tradeType === 'barter';
+        var admin = isSuperAdminSession();
+        var giftOn = isBarter && admin && (state.create.categoryGroup === 'gift' || isGiftItem(currentItem()));
+        if (el.giftCategoryOption) el.giftCategoryOption.hidden = !(isBarter && admin);
+        if (el.giftField) el.giftField.hidden = !giftOn;
+        if (el.giftHint) el.giftHint.hidden = !(isBarter && admin);
+        if (giftOn) {
+            var it = currentItem();
+            if (el.stockInput) el.stockInput.value = it.quantity || 1;
+            renderGiftLinksList();
+        }
     }
 
     function syncCreateFormUi() {
@@ -2462,11 +2705,21 @@
         if (el.wantCategorySelect) el.wantCategorySelect.value = c.barterWantCategoryGroup || want.categoryGroup || '';
         if (el.wantQualityInput) el.wantQualityInput.value = itemQuality(want);
         if (el.qtyInput) {
-            el.qtyInput.value = isHqPointsItem(it) ? (it.hqPointsAmount || it.quantity || 1) : (it.quantity || 1);
+            if (isHqPointsItem(it)) {
+                el.qtyInput.value = it.hqPointsAmount || it.quantity || 1;
+            } else if (isBarter) {
+                el.qtyInput.value = it.swapGiveQty || 1;
+            } else {
+                el.qtyInput.value = it.quantity || 1;
+            }
+        }
+        if (el.stockInput) {
+            el.stockInput.value = it.quantity || 1;
         }
         if (el.wantQtyInput) {
             el.wantQtyInput.value = isHqPointsItem(want) ? (want.hqPointsAmount || want.quantity || 1) : (want.quantity || 1);
         }
+        syncGiftFormUi();
         renderProductImage(it);
         renderWantProductImage(want);
         syncHqPointsFormHints();
@@ -2705,8 +2958,23 @@
         var c = state.create;
         var it = currentItem();
         if (el.qtyInput) {
-            it.quantity = Math.max(1, parseInt(el.qtyInput.value, 10) || 1);
-            if (isHqPointsItem(it)) it.hqPointsAmount = it.quantity;
+            var qv = Math.max(1, parseInt(el.qtyInput.value, 10) || 1);
+            if (isHqPointsItem(it)) {
+                it.quantity = qv;
+                it.hqPointsAmount = qv;
+            } else if (c.categoryGroup === 'gift' || isGiftItem(it)) {
+                it.swapGiveQty = 1;
+            } else if (c.tradeType === 'barter') {
+                it.swapGiveQty = qv;
+            } else {
+                it.quantity = qv;
+            }
+        }
+        if (el.stockInput && c.tradeType === 'barter' && !isHqPointsItem(it)) {
+            it.quantity = Math.max(1, parseInt(el.stockInput.value, 10) || 1);
+            if (c.categoryGroup === 'gift' || isGiftItem(it)) {
+                resizeGiftUrls(it, it.quantity);
+            }
         }
         if (el.priceInput) it.pricePerUnit = el.priceInput.value;
         if (el.categorySelect) {
@@ -2718,6 +2986,12 @@
         if (el.tradeTimeEnd) c.tradeTimeEnd = el.tradeTimeEnd.value || '21:00';
         if (el.itemInfoInput) c.itemInfo = el.itemInfoInput.value.trim();
         if (el.contactInput) c.contact = el.contactInput.value.trim();
+        readGiftLinksFromDom();
+        if (c.categoryGroup === 'gift') {
+            it.categoryGroup = 'gift';
+            it.componentId = 'uss-gift';
+            it.typeLabel = '礼物';
+        }
         if (c.tradeType === 'barter') {
             var want = currentWantItem();
             if (el.wantItemInput) want.name = el.wantItemInput.value.trim();
@@ -2774,7 +3048,7 @@
             });
             var data = await r.json().catch(function () { return {}; });
             if (!r.ok || data.ok === false) return cb(withHqPointsSuggest(q, []));
-            cb(withHqPointsSuggest(q, Array.isArray(data.items) ? data.items : []));
+            cb(withHqPointsSuggest(q, uniqueSuggestItems(Array.isArray(data.items) ? data.items : [])));
         } catch (e) {
             if (e && e.name === 'AbortError') return;
             cb(withHqPointsSuggest(q, []));
@@ -2823,7 +3097,7 @@
             });
             var data = await r.json().catch(function () { return {}; });
             if (!r.ok || data.ok === false) return cb(withHqPointsSuggest(q, []));
-            cb(withHqPointsSuggest(q, Array.isArray(data.items) ? data.items : []));
+            cb(withHqPointsSuggest(q, uniqueSuggestItems(Array.isArray(data.items) ? data.items : [])));
         } catch (e) {
             if (e && e.name === 'AbortError') return;
             cb(withHqPointsSuggest(q, []));
@@ -2864,10 +3138,13 @@
         var needle = String(q || '').trim().toLowerCase();
         if (!needle) return MAJOR_STATIONS.slice();
         return MAJOR_STATIONS.filter(function (s) {
+            var planetZh = PLANET_ZH[s.planet] || s.planet || '';
             return (
                 String(s.name || '').indexOf(q) !== -1 ||
                 String(s.nameEn || '').toLowerCase().indexOf(needle) !== -1 ||
-                String(SYSTEM_ZH[s.system] || s.system || '').indexOf(q) !== -1
+                String(SYSTEM_ZH[s.system] || s.system || '').indexOf(q) !== -1 ||
+                String(planetZh).indexOf(q) !== -1 ||
+                String(s.planet || '').toLowerCase().indexOf(needle) !== -1
             );
         });
     }
@@ -2878,6 +3155,7 @@
                 name: s.name,
                 nameEn: s.nameEn,
                 system: s.system,
+                planet: s.planet || '',
                 type: 'Space Station',
                 source: 'local',
             };
@@ -2900,12 +3178,13 @@
             apiItems.forEach(function (it) {
                 var zh = STATION_ZH[it.name] || it.name;
                 if (!merged.some(function (m) {
-                    return m.nameEn === it.name || m.name === zh;
+                    return (m.nameEn === it.name && m.system === it.system) || (m.name === zh && m.system === it.system);
                 })) {
                     merged.push({
                         name: zh,
                         nameEn: it.name,
                         system: it.system,
+                        planet: it.planet || it.body || '',
                         type: it.type,
                         source: 'api',
                     });
@@ -2920,7 +3199,8 @@
     function locationLabel(it) {
         var zh = it.name || STATION_ZH[it.nameEn || it.name] || it.nameEn || '';
         var sys = it.system ? (SYSTEM_ZH[it.system] || it.system) : '';
-        return sys ? zh + ' · ' + sys : zh;
+        var planet = it.planet ? (PLANET_ZH[it.planet] || it.planet) : '';
+        return [sys, planet, zh].filter(Boolean).join(' · ');
     }
 
     function renderSuggestList(node, items, renderItem, onPick) {
@@ -2935,6 +3215,7 @@
         }).join('');
         node.hidden = false;
         node.querySelectorAll('.market-suggest__item').forEach(function (btn) {
+            btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
             btn.addEventListener('click', function () {
                 onPick(items[Number(btn.getAttribute('data-idx'))]);
                 hideSuggest(node);
@@ -2956,6 +3237,20 @@
             quality: itemQuality(it),
         };
         if (offerPts) row.hqPointsAmount = offerAmount;
+        if (c.tradeType === 'barter' && !offerPts) {
+            row.quantity = Math.max(1, parseInt(it.quantity, 10) || 1);
+            row.swapGiveQty = isGiftItem(it) || c.categoryGroup === 'gift'
+                ? 1
+                : Math.max(1, parseInt(it.swapGiveQty, 10) || 1);
+        }
+        if (isGiftItem(it) || c.categoryGroup === 'gift') {
+            row.categoryGroup = 'gift';
+            row.componentId = 'uss-gift';
+            readGiftLinksFromDom();
+            row.giftRedeemUrls = giftUrlsOf(it).map(function (u) { return String(u || '').trim(); });
+            row.quantity = row.giftRedeemUrls.length;
+            row.swapGiveQty = 1;
+        }
         if (c.tradeType === 'currency') {
             var priceRaw = it.pricePerUnit;
             if (priceRaw === '' || priceRaw == null) {
@@ -2983,6 +3278,7 @@
 
     async function submitOrder() {
         if (el.formError) el.formError.hidden = true;
+        clearRequiredMarks();
         if (!state.editingOrderId && (!el.listingTermsChk || !el.listingTermsChk.checked)) {
             showListingTermsHint();
             return;
@@ -2991,63 +3287,73 @@
         readFormIntoState();
         var c = state.create;
         if (!c.location || !c.location.name) {
-            el.formError.textContent = '请填写交易位置';
-            el.formError.hidden = false;
-            return;
+            return failRequired('请填写交易位置', el.locInput);
         }
         if (!c.categoryGroup && !isHqPointsItem(currentItem())) {
-            el.formError.textContent = '请选择物品分类';
-            el.formError.hidden = false;
-            return;
+            return failRequired('请选择物品分类', el.categorySelect);
         }
         var startMin = parseTimeMinutes(c.tradeTimeStart);
         var endMin = parseTimeMinutes(c.tradeTimeEnd);
         if (startMin == null || endMin == null) {
-            el.formError.textContent = '请填写有效的交易时段';
-            el.formError.hidden = false;
-            return;
+            return failRequired('请填写有效的交易时段', startMin == null ? el.tradeTimeStart : el.tradeTimeEnd);
         }
         if (endMin <= startMin) {
-            el.formError.textContent = '结束时间须晚于开始时间';
-            el.formError.hidden = false;
-            return;
+            return failRequired('结束时间须晚于开始时间', el.tradeTimeEnd);
         }
         var items = buildPayloadItems();
         if (!items.length || !items[0].name) {
-            el.formError.textContent = '请搜索选择我方物品';
-            el.formError.hidden = false;
-            return;
+            return failRequired('请搜索选择我方物品', el.itemInput);
         }
         if (c.tradeType === 'barter') {
             var offerPts = isHqPointsItem(items[0]);
             var wantPts = isHqPointsItem(items[1]);
             if (offerPts && wantPts) {
-                el.formError.textContent = '积分只能填写在互换的一侧';
-                el.formError.hidden = false;
-                return;
+                return failRequired('积分只能填写在互换的一侧', el.wantItemInput);
             }
             if (!isSuperAdminSession() && (offerPts || wantPts)) {
-                el.formError.textContent = '仅超级管理员可发布积分互换';
-                el.formError.hidden = false;
-                return;
+                return failRequired('仅超级管理员可发布积分互换', offerPts ? el.itemInput : el.wantItemInput);
             }
             if (!wantPts && !c.barterWantCategoryGroup && !items[1].categoryGroup) {
-                el.formError.textContent = '请选择换取物品分类';
-                el.formError.hidden = false;
-                return;
+                return failRequired('请选择换取物品分类', el.wantCategorySelect);
             }
             if (!items[1].name) {
-                el.formError.textContent = '请搜索选择期望换取的物品';
-                el.formError.hidden = false;
-                return;
+                return failRequired('请搜索选择期望换取的物品', el.wantItemInput);
+            }
+            if (!offerPts) {
+                var stockN = Math.max(1, parseInt(items[0].quantity, 10) || 1);
+                var giveN = Math.max(1, parseInt(items[0].swapGiveQty, 10) || 1);
+                if (!(isGiftItem(items[0]) || c.categoryGroup === 'gift') && stockN < giveN) {
+                    return failRequired('我方总数须不少于单次给出数量', el.stockInput);
+                }
+            }
+            if (isGiftItem(items[0]) || c.categoryGroup === 'gift') {
+                if (!isSuperAdminSession()) {
+                    return failRequired('仅超级管理员可发布礼物互换', el.categorySelect);
+                }
+                var urls = items[0].giftRedeemUrls || [];
+                var emptyGift = el.giftLinksList && el.giftLinksList.querySelector('[data-gift-url-idx]');
+                if (el.giftLinksList) {
+                    var emptyInp = Array.prototype.find.call(
+                        el.giftLinksList.querySelectorAll('[data-gift-url-idx]'),
+                        function (inp) { return !String(inp.value || '').trim(); }
+                    );
+                    if (emptyInp) emptyGift = emptyInp;
+                }
+                if (!urls.length || urls.some(function (u) { return !String(u || '').trim(); })) {
+                    return failRequired('我方总数是几，就填几条兑换链接', emptyGift || el.stockInput);
+                }
+                if (urls.length !== (items[0].quantity || urls.length)) {
+                    return failRequired('礼物链接条数须与我方总数一致', el.stockInput);
+                }
+            }
+            if (isGiftItem(items[1])) {
+                return failRequired('礼物只能填写在给出一侧', el.wantCategorySelect);
             }
         }
         if (c.tradeType === 'currency') {
             for (var i = 0; i < items.length; i++) {
                 if (!Number.isFinite(items[i].pricePerUnit) || items[i].pricePerUnit < 0) {
-                    el.formError.textContent = '请填写有效的单件报价（可为 0 aUEC）';
-                    el.formError.hidden = false;
-                    return;
+                    return failRequired('请填写有效的单件报价（可为 0 aUEC）', el.priceInput);
                 }
             }
         }
@@ -3115,8 +3421,17 @@
             syncTabs();
             await fetchOrders();
         } catch (e) {
-            el.formError.textContent = (e && e.message) || '生成单据失败，稍后再试';
-            el.formError.hidden = false;
+            var errMsg = (e && e.message) || '生成单据失败，稍后再试';
+            var errFocus = null;
+            if (/交易位置/.test(errMsg)) errFocus = el.locInput;
+            else if (/换取物品分类/.test(errMsg)) errFocus = el.wantCategorySelect;
+            else if (/物品分类|分类/.test(errMsg)) errFocus = el.categorySelect;
+            else if (/报价/.test(errMsg)) errFocus = el.priceInput;
+            else if (/链接/.test(errMsg)) errFocus = el.giftLinksList && el.giftLinksList.querySelector('input');
+            else if (/我方物品|商品名称/.test(errMsg)) errFocus = el.itemInput;
+            else if (/换取/.test(errMsg)) errFocus = el.wantItemInput;
+            else if (/总数/.test(errMsg)) errFocus = el.stockInput;
+            failRequired(errMsg, errFocus);
         } finally {
             syncListingSubmitEnabled();
         }
@@ -3293,6 +3608,16 @@
             });
         }
         if (el.btnSubmit) el.btnSubmit.addEventListener('click', submitOrder);
+        if (el.formRoot) {
+            el.formRoot.addEventListener('input', function (ev) {
+                var wrap = ev.target && ev.target.closest && ev.target.closest('.is-required-miss');
+                if (wrap) wrap.classList.remove('is-required-miss');
+            });
+            el.formRoot.addEventListener('change', function (ev) {
+                var wrap = ev.target && ev.target.closest && ev.target.closest('.is-required-miss');
+                if (wrap) wrap.classList.remove('is-required-miss');
+            });
+        }
         if (el.listingTermsChk) {
             el.listingTermsChk.addEventListener('change', syncListingSubmitEnabled);
         }
@@ -3326,6 +3651,34 @@
                 state.create.categoryGroup = el.categorySelect.value || '';
                 var it = currentItem();
                 if (state.create.categoryGroup) it.categoryGroup = state.create.categoryGroup;
+                if (state.create.categoryGroup === 'gift') {
+                    it.componentId = 'uss-gift';
+                    it.typeLabel = '礼物';
+                    it.swapGiveQty = 1;
+                    if (!it.name) it.name = '礼物';
+                    if (el.itemInput && !el.itemInput.value.trim()) el.itemInput.value = '礼物';
+                    if (el.qtyInput) el.qtyInput.value = '1';
+                }
+                syncGiftFormUi();
+                syncHqPointsFormHints();
+            });
+        }
+        if (el.stockInput) {
+            el.stockInput.addEventListener('input', function () {
+                var it = currentItem();
+                var n = Math.max(1, parseInt(el.stockInput.value, 10) || 1);
+                if (state.create.categoryGroup === 'gift' || isGiftItem(it)) {
+                    n = Math.min(GIFT_MAX_URLS, n);
+                    resizeGiftUrls(it, n);
+                    renderGiftLinksList();
+                } else {
+                    it.quantity = n;
+                }
+            });
+        }
+        if (el.giftLinksList) {
+            el.giftLinksList.addEventListener('input', function () {
+                readGiftLinksFromDom();
             });
         }
 
@@ -3462,12 +3815,15 @@
 
         if (el.modalBackdrop) {
             el.modalBackdrop.addEventListener('mousedown', function (ev) {
-                if (el.itemSuggest && !ev.target.closest('.market-suggest-wrap')) {
-                    hideSuggest(el.itemSuggest);
+                function hideIfOutside(suggestNode) {
+                    if (!suggestNode || suggestNode.hidden) return;
+                    var wrap = suggestNode.closest('.market-suggest-wrap');
+                    if (wrap && wrap.contains(ev.target)) return;
+                    hideSuggest(suggestNode);
                 }
-                if (el.wantItemSuggest && !ev.target.closest('.market-suggest-wrap')) {
-                    hideSuggest(el.wantItemSuggest);
-                }
+                hideIfOutside(el.itemSuggest);
+                hideIfOutside(el.wantItemSuggest);
+                hideIfOutside(el.locSuggest);
             });
         }
 
@@ -3496,6 +3852,7 @@
                                 id: picked.nameEn || picked.name || null,
                                 name: picked.name || q,
                                 system: picked.system || null,
+                                planet: picked.planet || null,
                                 custom: !!picked.custom,
                             };
                             el.locInput.value = state.create.location.name;
@@ -3519,12 +3876,16 @@
                                 id: picked.nameEn || picked.name || null,
                                 name: picked.name,
                                 system: picked.system || null,
+                                planet: picked.planet || null,
                                 custom: false,
                             };
                             el.locInput.value = state.create.location.name;
                         });
                     });
                 }
+            });
+            el.locInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') hideSuggest(el.locSuggest);
             });
         }
     }
@@ -3586,6 +3947,10 @@
         el.locInput = $('marketLocInput');
         el.locSuggest = $('marketLocSuggest');
         el.categorySelect = $('marketCategorySelect');
+        el.giftCategoryOption = $('marketGiftCategoryOption');
+        el.giftField = $('marketGiftLinkField');
+        el.giftLinksList = $('marketGiftLinksList');
+        el.giftHint = $('marketGiftHint');
         el.qualityInput = $('marketQualityInput');
         el.tradeTimeStart = $('marketTradeTimeStart');
         el.tradeTimeEnd = $('marketTradeTimeEnd');
@@ -3601,7 +3966,10 @@
         el.imageRemove = $('marketImageRemove');
         el.qtyInput = $('marketQtyInput');
         el.qtyLabel = $('marketQtyLabel');
+        el.giveQtyField = $('marketGiveQtyField');
         el.qtyPriceRow = $('marketQtyPriceRow');
+        el.stockField = $('marketStockField');
+        el.stockInput = $('marketStockInput');
         el.priceInput = $('marketPriceInput');
         el.priceField = $('marketPriceField');
         el.hqPointsHint = $('marketHqPointsHint');
@@ -3632,6 +4000,7 @@
         state.pageSize = readPageSize();
         wireEvents();
         initHeroParallax();
+        loadComponentCatalogTypes();
         window.UssMarket = {
             openEditModal: openEditModal,
             renderManageOrderCardHtml: renderManageOrderCardHtml,

@@ -46,14 +46,62 @@
         'yellow-quikflarepro': '黄色 快燃荧光棒 Pro',
     };
 
+    var TYPE_NAME_SUFFIX = {
+        power: '电源',
+        quantum: '量子驱动器',
+        radar: '雷达',
+        shield: '护盾',
+        fuel_nozzle: '燃料喷嘴',
+        cooling: '散热',
+        jump: '跳跃驱动器',
+    };
+
+    function fallbackLocalizeItemEn(en, typeKey) {
+        var raw = String(en || '').trim();
+        if (!raw || /[\u4e00-\u9fff]/.test(raw)) return raw;
+        var typeZh = TYPE_NAME_SUFFIX[typeKey];
+        if (typeZh && /^[A-Za-z0-9][A-Za-z0-9._'-]{1,16}$/.test(raw)) return raw + ' ' + typeZh;
+        var s = raw
+            .replace(/\bHelmet\b/gi, '头盔')
+            .replace(/\bBackpack\b/gi, '背包')
+            .replace(/\bUndersuit\b/gi, '内衬')
+            .replace(/\bArms\b/gi, '臂甲')
+            .replace(/\bLegs\b/gi, '腿甲')
+            .replace(/\bCore\b/gi, '胸甲')
+            .replace(/\bRifle\b/gi, '步枪')
+            .replace(/\bShotgun\b/gi, '霰弹枪')
+            .replace(/\bMagazine\b/gi, '弹匣')
+            .replace(/\bMulti-Tool\b/gi, '多用工具')
+            .replace(/\bFire Extinguisher\b/gi, '灭火器')
+            .replace(/\s*\(Modified\)/gi, '（改装）')
+            .replace(/\s*\(Used\)/gi, '（旧）')
+            .replace(/\bRed Alert\b/gi, '红色警报')
+            .replace(/\bWoodland\b/gi, '林地');
+        return /[\u4e00-\u9fff]/.test(s) ? s : raw;
+    }
+
+    function isInternalItemKey(s) {
+        var v = String(s || '').trim();
+        if (!v || /\s/.test(v) || /[\u4e00-\u9fff]/.test(v)) return false;
+        return /^[a-z][a-z0-9]*(_[a-z0-9]+)+$/.test(v);
+    }
+
     function resolveDetailDisplayName(item) {
         var zh = String((item && item.name_zh) || '').trim();
-        var en = String((item && item.name_en) || '').trim();
+        var en = String((item && (item.name_en || item.name)) || '').trim();
         var slugOverride = DISPLAY_NAME_OVERRIDES_BY_SLUG[String((item && item.slug) || '').toLowerCase()];
         if (slugOverride) zh = slugOverride;
         if (isPlaceholderItemName(zh)) zh = '';
         var primary = zh || en || '—';
-        var subtitle = en && en !== primary ? en : '';
+        if (!/[\u4e00-\u9fff]/.test(primary) && en) {
+            var fb = fallbackLocalizeItemEn(en, item && item.type);
+            if (fb && /[\u4e00-\u9fff]/.test(fb)) primary = fb;
+        }
+        if (isInternalItemKey(en)) en = '';
+        var subtitle = '';
+        if (en && en !== primary && !isPlaceholderItemName(en)) {
+            subtitle = en;
+        }
         return { primary: primary, subtitle: subtitle };
     }
 
@@ -977,7 +1025,10 @@
             els.typeBadge.textContent = TYPE_LABELS[item.type] || item.type || '—';
         }
         if (els.titleZh) els.titleZh.textContent = names.primary;
-        if (els.titleEn) els.titleEn.textContent = names.subtitle;
+        if (els.titleEn) {
+            els.titleEn.textContent = names.subtitle;
+            els.titleEn.hidden = !names.subtitle;
+        }
 
         renderHighlights(item);
         renderBasics(item);

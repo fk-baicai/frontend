@@ -59,7 +59,7 @@
         }
     </style>
     <link rel="canonical" href="https://ussxc.org/">
-    <link rel="stylesheet" href="styles.css?v=20260825e">
+    <link rel="stylesheet" href="styles.css?v=20260827a">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
@@ -923,13 +923,21 @@
                     <button type="button" class="account-settings-close" onclick="closeAccountSettings()" aria-label="关闭">×</button>
                 </div>
                 <div class="account-settings-menu">
+                    <button type="button" class="account-settings-menu-item" onclick="showAccountSettingsPanel('verifyEmail')">
+                        <span class="account-settings-menu-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5zm-1.06 13.54L7.4 11l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41z"/></svg>
+                        </span>
+                        <span class="account-settings-menu-body">
+                            <span class="account-settings-menu-title">验证邮箱</span>
+                        </span>
+                        <span class="account-settings-menu-chevron" aria-hidden="true">›</span>
+                    </button>
                     <button type="button" class="account-settings-menu-item" onclick="showAccountSettingsPanel('email')">
                         <span class="account-settings-menu-icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2m0 4-8 5L4 8V6l8 5 8-5z"/></svg>
                         </span>
                         <span class="account-settings-menu-body">
                             <span class="account-settings-menu-title">修改邮箱</span>
-                            <span class="account-settings-menu-desc">向当前邮箱发送验证码后更换登录邮箱</span>
                         </span>
                         <span class="account-settings-menu-chevron" aria-hidden="true">›</span>
                     </button>
@@ -939,7 +947,6 @@
                         </span>
                         <span class="account-settings-menu-body">
                             <span class="account-settings-menu-title">修改密码</span>
-                            <span class="account-settings-menu-desc">邮箱验证码确认后设置新登录密码</span>
                         </span>
                         <span class="account-settings-menu-chevron" aria-hidden="true">›</span>
                     </button>
@@ -949,10 +956,35 @@
                         </span>
                         <span class="account-settings-menu-body">
                             <span class="account-settings-menu-title">RSI 绑定</span>
-                            <span class="account-settings-menu-desc">验证公民 Handle，绑定后不可更换</span>
                         </span>
                         <span class="account-settings-menu-chevron" aria-hidden="true">›</span>
                     </button>
+                </div>
+            </div>
+
+            <div id="accountSettingsVerifyEmail" class="account-settings-view" hidden>
+                <div class="account-settings-head account-settings-head--sub">
+                    <button type="button" class="account-settings-back" onclick="backToAccountSettingsHub()" aria-label="返回">‹</button>
+                    <h3 class="rsi-auth-title">验证邮箱</h3>
+                    <button type="button" class="account-settings-close" onclick="closeAccountSettings()" aria-label="关闭">×</button>
+                </div>
+                <div class="account-settings-current-email">
+                    <span class="account-settings-current-email-label">当前邮箱</span>
+                    <span id="settingsVerifyEmailDisplay" class="account-settings-current-email-value">—</span>
+                </div>
+                <div id="settingsVerifyEmailForm">
+                    <div class="rsi-field rsi-field--float forgot-pw-code-row">
+                        <div class="forgot-pw-code-inner">
+                            <input type="text" class="rsi-input" id="settingsVerifyEmailCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder=" " oninput="syncAuthFloatField(this); clearAccountSettingsHint()">
+                            <button type="button" id="settingsVerifyEmailSendCodeBtn" class="forgot-pw-send-btn" onclick="submitVerifyEmailSendCode()">发送验证码</button>
+                        </div>
+                        <label for="settingsVerifyEmailCode">验证码</label>
+                    </div>
+                    <p id="accountSettingsVerifyEmailHint" class="rsi-form-hint rsi-form-hint--error" hidden></p>
+                    <div class="account-settings-actions">
+                        <button type="button" class="rsi-btn-ghost" onclick="backToAccountSettingsHub()">取消</button>
+                        <button type="button" id="settingsVerifyEmailSubmitBtn" class="rsi-submit-btn" onclick="submitVerifyEmail()">确认验证</button>
+                    </div>
                 </div>
             </div>
 

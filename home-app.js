@@ -576,6 +576,7 @@
             return {
                 hub: document.getElementById('accountSettingsHub'),
                 email: document.getElementById('accountSettingsEmail'),
+                verifyEmail: document.getElementById('accountSettingsVerifyEmail'),
                 password: document.getElementById('accountSettingsPassword'),
                 rsi: document.getElementById('accountSettingsRsi'),
             };
@@ -591,6 +592,9 @@
             if (accountSettingsPanel === 'email') {
                 resetChangeEmailForm(false);
                 refreshAccountSettingsEmailDisplay();
+            } else if (accountSettingsPanel === 'verifyEmail') {
+                resetVerifyEmailForm(false);
+                refreshAccountSettingsVerifyEmailDisplay();
             } else if (accountSettingsPanel === 'password') {
                 resetAccountSettingsForm(false);
                 refreshAccountSettingsEmailDisplay();
@@ -876,7 +880,7 @@
         }
 
         function clearAccountSettingsHint() {
-            ['accountSettingsHint', 'accountSettingsEmailHint'].forEach(function (id) {
+            ['accountSettingsHint', 'accountSettingsEmailHint', 'accountSettingsVerifyEmailHint'].forEach(function (id) {
                 const el = document.getElementById(id);
                 if (el) {
                     el.textContent = '';
@@ -973,6 +977,125 @@
             syncAuthFloatFields();
         }
 
+        function refreshAccountSettingsVerifyEmailDisplay() {
+            const sess = loadAuthSession();
+            const display = document.getElementById('settingsVerifyEmailDisplay');
+            if (display) display.textContent = maskAccountEmail(sess && sess.email);
+            const form = document.getElementById('settingsVerifyEmailForm');
+            if (form) form.hidden = !!(sess && sess.emailVerified);
+        }
+
+        function resetVerifyEmailForm(clearHints) {
+            const input = document.getElementById('settingsVerifyEmailCode');
+            if (input) input.value = '';
+            const submit = document.getElementById('settingsVerifyEmailSubmitBtn');
+            if (submit) {
+                submit.disabled = false;
+                submit.textContent = '确认验证';
+            }
+            stopSettingsVerifyEmailSendCooldown();
+            if (clearHints !== false) setAccountSettingsHint('', false, 'accountSettingsVerifyEmailHint');
+            refreshAccountSettingsVerifyEmailDisplay();
+            syncAuthFloatFields();
+        }
+
+        let settingsVerifyEmailSendTimer = null;
+        let settingsVerifyEmailSendRemain = 0;
+
+        function stopSettingsVerifyEmailSendCooldown() {
+            if (settingsVerifyEmailSendTimer) {
+                clearInterval(settingsVerifyEmailSendTimer);
+                settingsVerifyEmailSendTimer = null;
+            }
+            settingsVerifyEmailSendRemain = 0;
+            const btn = document.getElementById('settingsVerifyEmailSendCodeBtn');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '发送验证码';
+            }
+        }
+
+        function startSettingsVerifyEmailSendCooldown(sec) {
+            stopSettingsVerifyEmailSendCooldown();
+            settingsVerifyEmailSendRemain = Math.max(1, Number(sec) || 60);
+            const btn = document.getElementById('settingsVerifyEmailSendCodeBtn');
+            function tick() {
+                if (!btn) return;
+                if (settingsVerifyEmailSendRemain <= 0) {
+                    stopSettingsVerifyEmailSendCooldown();
+                    return;
+                }
+                btn.disabled = true;
+                btn.textContent = settingsVerifyEmailSendRemain + 's';
+                settingsVerifyEmailSendRemain -= 1;
+            }
+            tick();
+            settingsVerifyEmailSendTimer = setInterval(tick, 1000);
+        }
+
+        async function submitVerifyEmailSendCode() {
+            setAccountSettingsHint('', false, 'accountSettingsVerifyEmailHint');
+            const sess = loadAuthSession();
+            if (!sess || !sess.token) {
+                setAccountSettingsHint('请先登录', false, 'accountSettingsVerifyEmailHint');
+                return;
+            }
+            if (sess.emailVerified) {
+                setAccountSettingsHint('该邮箱已完成验证', true, 'accountSettingsVerifyEmailHint');
+                return;
+            }
+            const btn = document.getElementById('settingsVerifyEmailSendCodeBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '发送中…';
+            }
+            try {
+                const res = await window.UssAuthApi.sendEmailVerifyCode(sess.token);
+                setAccountSettingsHint(
+                    (res && res.message) || '验证码已发送到您的注册邮箱，请查收（含垃圾箱）。',
+                    true,
+                    'accountSettingsVerifyEmailHint'
+                );
+                startSettingsVerifyEmailSendCooldown(60);
+            } catch (e) {
+                if (e.cooldownSec) startSettingsVerifyEmailSendCooldown(e.cooldownSec);
+                else stopSettingsVerifyEmailSendCooldown();
+                setAccountSettingsHint(safeUserFacingMessage(e), false, 'accountSettingsVerifyEmailHint');
+            }
+        }
+
+        async function submitVerifyEmail() {
+            setAccountSettingsHint('', false, 'accountSettingsVerifyEmailHint');
+            const sess = loadAuthSession();
+            if (!sess || !sess.token) {
+                setAccountSettingsHint('请先登录', false, 'accountSettingsVerifyEmailHint');
+                return;
+            }
+            const code = String(document.getElementById('settingsVerifyEmailCode')?.value || '').trim();
+            if (!/^\d{6}$/.test(code)) {
+                setAccountSettingsHint('请输入 6 位数字验证码', false, 'accountSettingsVerifyEmailHint');
+                return;
+            }
+            const btn = document.getElementById('settingsVerifyEmailSubmitBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '提交中…';
+            }
+            try {
+                const res = await window.UssAuthApi.confirmEmailVerify(sess.token, { code: code });
+                saveAuthSessionFromUser(sess.token, (res && res.user) || { emailVerified: true }, undefined, sess);
+                refreshAccountSettingsVerifyEmailDisplay();
+                setAccountSettingsHint((res && res.message) || '邮箱已验证', true, 'accountSettingsVerifyEmailHint');
+            } catch (e) {
+                setAccountSettingsHint(safeUserFacingMessage(e), false, 'accountSettingsVerifyEmailHint');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '确认验证';
+                }
+            }
+        }
+
         function resetAccountSettingsForm(clearHints) {
             const codeInput = document.getElementById('settingsPasswordCode');
             if (codeInput) codeInput.value = '';
@@ -999,6 +1122,7 @@
         function resetAccountSettingsAll() {
             accountSettingsPanel = 'hub';
             resetChangeEmailForm();
+            resetVerifyEmailForm();
             resetAccountSettingsForm();
             resetRsiBindForm();
             showAccountSettingsPanel('hub');
@@ -1220,6 +1344,7 @@
                 token: token,
                 bindingId: u.bindingId != null ? u.bindingId : p.bindingId,
                 email: u.email != null ? u.email : p.email,
+                emailVerified: u.emailVerified !== undefined ? !!u.emailVerified : !!p.emailVerified,
                 loginAt: p.loginAt || new Date().toISOString(),
                 avatarUrl: u.avatarUrl != null ? u.avatarUrl : p.avatarUrl,
                 rsiCitizenAvatarSourceUrl:
@@ -3526,6 +3651,7 @@
                     if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
                     const t = ev.target;
                     if (t && t.closest && t.closest('a.community-author-avatar-link')) return;
+                    if (t && t.closest && t.closest('button')) return;
                     ev.preventDefault();
                     window.location.assign(postHref);
                 });
@@ -3533,22 +3659,47 @@
                 const inner = document.createElement('div');
                 inner.className = 'community-post-compact-inner';
 
+                const content = String(p.content || '').trim();
+                const imgs = Array.isArray(p.images) ? p.images : [];
+                const replies = Array.isArray(p.replies) ? p.replies : [];
+
+                let delBtn = null;
+                if (sessionIsCommunityStaff() || communityPostIsMine(p)) {
+                    delBtn = document.createElement('button');
+                    delBtn.type = 'button';
+                    delBtn.className = 'community-post-compact-delete';
+                    delBtn.textContent = '删除';
+                    delBtn.setAttribute('aria-label', '删除该帖子');
+                    delBtn.addEventListener('click', async function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        const sure = await showCommunityConfirm('确定删除该帖子？', { danger: true });
+                        if (!sure) return;
+                        const sess = loadAuthSession();
+                        if (!sess || !sess.token) return;
+                        delBtn.disabled = true;
+                        try {
+                            await window.UssAuthApi.communityDeletePost(sess.token, pid);
+                            await loadCommunityPosts();
+                        } catch (err) {
+                            alert((err && err.message) || '删除失败');
+                            delBtn.disabled = false;
+                        }
+                    });
+                }
+
                 inner.appendChild(
                     buildCommunityAuthorRow(
                         p.bindingId,
                         p.avatarUrl,
                         p.createdAt,
-                        null,
+                        delBtn,
                         null,
                         p.authorLabel,
                         true,
                         p.rsiAvatarUrl
                     )
                 );
-
-                const content = String(p.content || '').trim();
-                const imgs = Array.isArray(p.images) ? p.images : [];
-                const replies = Array.isArray(p.replies) ? p.replies : [];
 
                 if (content) {
                     const excerpt = document.createElement('p');

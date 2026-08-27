@@ -17,6 +17,8 @@
     if (!channelsRoot && !logRoot) return;
 
     var bridgePollTimer = null;
+    var lastChannelsSig = '';
+    var lastLogsSig = '';
 
     function loadSession() {
         try {
@@ -421,8 +423,28 @@
         });
     }
 
+    function channelsSignature(areas) {
+        if (!areas || !areas.length) return 'empty';
+        return areas
+            .map(function (area) {
+                return String(area.areaId || '') + ':' + (area.channels || [])
+                    .map(function (ch) {
+                        return String(ch.channelId || ch.channelName || '') + '>' + (ch.members || [])
+                            .map(function (m) {
+                                return [m.uid || '', m.name || '', m.oopzId || '', m.avatar ? '1' : '0'].join('\t');
+                            })
+                            .join('|');
+                    })
+                    .join(';');
+            })
+            .join('||');
+    }
+
     function renderChannels(areas) {
         if (!channelsRoot) return;
+        var sig = channelsSignature(areas);
+        if (sig === lastChannelsSig && channelsRoot.childElementCount) return;
+        lastChannelsSig = sig;
         hideMemberFloatTip();
         if (!areas || !areas.length) {
             channelsRoot.innerHTML = '<p class="oopz-bridge-empty">暂无机器人接入的频道数据，请确认 oopz-bot 已启动并上报。</p>';
@@ -556,6 +578,13 @@
             .filter(function (item) {
                 return item && isWithinLogRetention(item.at);
             });
+        var logsSig = list
+            .map(function (item) {
+                return [item.id || '', item.at || '', item.text || '', item.skipReason || ''].join('\t');
+            })
+            .join('|');
+        if (logsSig === lastLogsSig && logRoot.childElementCount) return;
+        lastLogsSig = logsSig;
         if (!list.length) {
             logRoot.innerHTML = '<p class="oopz-bridge-empty">暂无日志记录。</p>';
             return;

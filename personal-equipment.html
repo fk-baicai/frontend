@@ -148,23 +148,32 @@
 
         <div id="scGate" class="sc-gate is-hidden" role="alert"></div>
 
+        <div class="sc-workspace-wrap">
+            <div class="sc-view-toggle" role="group" aria-label="展示方式">
+                <button type="button" class="sc-view-btn is-active" id="scViewCard" aria-pressed="true">卡片</button>
+                <button type="button" class="sc-view-btn" id="scViewList" aria-pressed="false">列表</button>
+            </div>
         <div class="sc-workspace sc-panel">
             <div class="sc-filter-deck">
-                <div class="sc-filter-deck__search">
+                    <div class="sc-filter-deck__search">
                     <label class="sc-search-wrap">
                         <span class="sc-sr-only">搜索装备名称</span>
                         <input type="search" id="scSearch" class="sc-search" placeholder="搜索装备（中/英）…" autocomplete="off" aria-autocomplete="list" aria-controls="scSearchSuggest" aria-expanded="false">
                         <div id="scSearchSuggest" class="sc-search-suggest" role="listbox" hidden aria-label="搜索匹配装备"></div>
                     </label>
-                </div>
+                    </div>
                 <nav class="sc-filter-deck__nav" aria-label="装备筛选">
                     <div class="sc-nav-row sc-nav-row--major sc-tabs" id="scGroupTabs" role="tablist" aria-label="装备大类"></div>
                     <div class="sc-nav-row sc-nav-row--minor sc-tabs" id="scTabs" role="tablist" aria-label="装备类型"></div>
                 </nav>
+                <div class="sc-catalog-tools">
+                    <div class="sc-facet-bar" id="scFacetBar" hidden></div>
+                </div>
             </div>
 
             <div class="sc-workspace-body">
             <p class="sc-mobile-scroll-hint" id="scMobileScrollHint" aria-hidden="true">左右滑动查看全部字段</p>
+            <div class="sc-card-grid" id="scCardGrid" hidden></div>
             <div class="sc-table-shell" id="scTableShell">
                 <table class="sc-table" id="scTable">
                     <colgroup></colgroup>
@@ -176,6 +185,7 @@
             </div>
             <div class="sc-meta-bar" id="scMetaBar"></div>
             </div>
+        </div>
         </div>
 
         <div id="scLoadSentinel" class="sc-load-sentinel" aria-hidden="true"></div>
@@ -191,6 +201,6 @@
     <script src="ship-component-wiki.js?v=51" defer></script>
     <script src="ship-component-blueprints.js?v=28" defer></script>
     <script src="ship-component-weapon-loadout.js?v=13" defer></script>
-    <script src="ship-components.js?v=65" defer></script>
+    <script src="ship-components.js?v=74" defer></script>
 </body>
 </html>

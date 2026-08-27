@@ -220,12 +220,12 @@
         var type = params.get('type');
         var blueprint = params.get('blueprint');
         var component = params.get('component') || params.get('id');
-        if (group && GROUP_META[group]) {
+        if (group && (GROUP_META[group] || (state.meta && state.meta.groups && state.meta.groups[group]))) {
             state.group = group;
-            state.sector = GROUP_TO_SECTOR[group] || 'ship';
+            state.sector = sectorForGroup(group);
         } else if (sector && SECTOR_META[sector]) {
             state.sector = sector;
-            var groups = GROUP_BY_SECTOR[sector] || [];
+            var groups = groupKeysForSector(sector);
             state.group = groups[0] || state.group;
         }
         if (type) state.type = type;
@@ -431,7 +431,7 @@
                 });
                 if (selectedGroup) {
                     state.group = selectedGroup;
-                    state.sector = GROUP_TO_SECTOR[selectedGroup];
+                    state.sector = sectorForGroup(selectedGroup);
                 }
             }
             return;
@@ -440,8 +440,10 @@
             var vis = visibleTypesForGroup(state.group);
             state.type = vis.length ? vis[0] : DEFAULT_TYPE_BY_GROUP[state.group];
         }
-        if (!GROUP_ORDER.includes(state.group) || groupCount(state.group) === 0) {
-            var firstGroup = GROUP_ORDER.find(function (g) {
+        if (!groupKeysForSector(state.sector).includes(state.group) || groupCount(state.group) === 0) {
+            var firstGroup = groupKeysForSector(state.sector).find(function (g) {
+                return groupCount(g) > 0;
+            }) || GROUP_ORDER.find(function (g) {
                 return groupCount(g) > 0;
             });
             if (firstGroup) {
@@ -498,11 +500,46 @@
         return n != null ? n : null;
     }
 
+    function groupKeysForSector(sector) {
+        var fromMap = GROUP_BY_SECTOR[sector] || [];
+        var extra = [];
+        var types = (state.meta && state.meta.types) || {};
+        Object.keys(types).forEach(function (typeKey) {
+            var t = types[typeKey];
+            var g = t && t.group === 'module' ? 'mining' : t && t.group;
+            if (!g || extra.indexOf(g) >= 0 || fromMap.indexOf(g) >= 0) return;
+            if (sectorForGroup(g) === sector && groupCount(g) > 0) extra.push(g);
+        });
+        return fromMap.concat(extra);
+    }
+
+    function sectorForGroup(groupKey) {
+        if (GROUP_TO_SECTOR[groupKey]) return GROUP_TO_SECTOR[groupKey];
+        if (/^fps_/.test(String(groupKey || ''))) return 'equipment';
+        return 'ship';
+    }
+
     function visibleTypesForGroup(groupKey) {
         var order = TYPE_ORDER_BY_GROUP[groupKey] || [];
-        return order.filter(function (typeKey) {
-            var count = typeCount(typeKey);
-            return count != null && count > 0;
+        var types = (state.meta && state.meta.types) || {};
+        var keys = Object.keys(types).filter(function (typeKey) {
+            var t = types[typeKey];
+            var g = t && t.group === 'module' ? 'mining' : t && t.group;
+            return g === groupKey && typeCount(typeKey) > 0;
+        });
+        if (!keys.length) {
+            return order.filter(function (typeKey) {
+                var count = typeCount(typeKey);
+                return count != null && count > 0;
+            });
+        }
+        return keys.slice().sort(function (a, b) {
+            var ai = order.indexOf(a);
+            var bi = order.indexOf(b);
+            if (ai < 0) ai = order.length + 1;
+            if (bi < 0) bi = order.length + 1;
+            if (ai !== bi) return ai - bi;
+            return a.localeCompare(b, 'zh-CN');
         });
     }
 
@@ -510,10 +547,16 @@
         if (!el.groupSelect) return;
         el.groupSelect.innerHTML = '';
         var hasCurrent = false;
-        GROUP_ORDER.forEach(function (groupKey) {
+        var groupKeys = GROUP_ORDER.slice();
+        Object.keys((state.meta && state.meta.counts_by_group) || {}).forEach(function (g) {
+            if (g === 'other' || g === 'module') return;
+            if (groupKeys.indexOf(g) < 0) groupKeys.push(g);
+        });
+        groupKeys.forEach(function (groupKey) {
             var count = groupCount(groupKey);
             if (count === 0 || count == null) return;
-            var meta = GROUP_META[groupKey] || { tab_label: groupKey };
+            var meta = GROUP_META[groupKey] ||
+                ((state.meta && state.meta.groups && state.meta.groups[groupKey]) || { tab_label: groupKey });
             var opt = document.createElement('option');
             opt.value = groupKey;
             opt.textContent =
@@ -696,12 +739,7 @@
             btn.appendChild(badges);
         }
         badges.innerHTML = '';
-        if (item.is_available_by_default) {
-            var defBadge = document.createElement('span');
-            defBadge.className = 'bp-list-item__badge bp-list-item__badge--default';
-            defBadge.textContent = '默认可造';
-            badges.appendChild(defBadge);
-        } else if (item.unlocking_missions_count > 0) {
+        if (Number(item.unlocking_missions_count) > 0) {
             var missBadge = document.createElement('span');
             missBadge.className = 'bp-list-item__badge bp-list-item__badge--mission';
             missBadge.textContent = '任务解锁 ×' + item.unlocking_missions_count;
@@ -1328,6 +1366,14 @@
         );
     }
 
+    function hasQuestUnlock(item) {
+        return !!(item && Number(item.unlocking_missions_count) > 0);
+    }
+
+    function keepQuestUnlockItems(items) {
+        return (items || []).filter(hasQuestUnlock);
+    }
+
     function listCacheKey() {
         var q = String(state.listSearchQuery || '').trim();
         if (q) return 'q:' + q.toLowerCase();
@@ -1388,8 +1434,8 @@
         if (!options.force && LIST_CACHE[cacheKey]) {
             var cached = LIST_CACHE[cacheKey];
             state.page = 1;
-            state.items = cached.items.slice();
-            state.total = cached.total;
+            state.items = keepQuestUnlockItems(cached.items);
+            state.total = state.items.length;
             if (!preserveScroll && el.listWrap) el.listWrap.scrollTop = 0;
             state.listVirt.measured = false;
             hideGate();
@@ -1407,13 +1453,16 @@
 
         function fetchNext() {
             return fetchJson(buildListQuery(state.page)).then(function (data) {
-                var batch = data.items || [];
-                state.total = data.total || 0;
+                var rawBatch = data.items || [];
+                var batch = keepQuestUnlockItems(rawBatch);
                 state.items = state.items.concat(batch);
-                if (state.items.length < state.total && batch.length >= PAGE_SIZE) {
+                var reportedTotal = Number(data.total) || 0;
+                if (rawBatch.length >= PAGE_SIZE && state.items.length < reportedTotal) {
                     state.page += 1;
+                    state.total = reportedTotal;
                     return fetchNext();
                 }
+                state.total = state.items.length;
                 LIST_CACHE[cacheKey] = {
                     items: state.items.slice(),
                     total: state.total,
@@ -2131,10 +2180,6 @@
             el.missions.innerHTML = '<p class="bp-mission-empty">选择蓝图后显示解锁任务</p>';
             return;
         }
-        if (bp.is_available_by_default) {
-            el.missions.innerHTML = '<p class="bp-mission-empty">默认可制造，无需解锁任务</p>';
-            return;
-        }
         if (!count) {
             el.missions.innerHTML = '<p class="bp-mission-empty">无解锁任务要求</p>';
             return;
@@ -2171,8 +2216,7 @@
             tags.push({ text: 'S' + bp.size, title: '尺寸（Size）' });
         }
         if (bp.craft_time_seconds) tags.push({ text: formatCraftTime(bp.craft_time_seconds), title: '制造耗时' });
-        if (bp.is_available_by_default) tags.push({ text: '默认可造', kind: 'default', title: '无需任务即可制造' });
-        else if (bp.unlocking_missions_count) {
+        if (bp.unlocking_missions_count) {
             tags.push({ text: '任务解锁 ×' + bp.unlocking_missions_count, warn: true, title: '需完成任务解锁' });
         }
         tags.forEach(function (tag) {

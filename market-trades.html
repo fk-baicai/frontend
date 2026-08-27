@@ -260,8 +260,15 @@
                                         <option value="fps_magazine">武器配件</option>
                                         <option value="fps_armor">个人护甲</option>
                                         <option value="other">其他</option>
+                                        <option value="gift" id="marketGiftCategoryOption" hidden>礼物</option>
                                     </select>
                                 </label>
+                            </div>
+
+                            <div class="market-field" id="marketGiftLinkField" hidden>
+                                <span class="market-field__label">兑换链接</span>
+                                <div id="marketGiftLinksList" class="market-gift-links"></div>
+                                <p class="market-field__hint" id="marketGiftHint">我方总数是几，就填几条官方兑换链接；成交一次消耗一条。</p>
                             </div>
 
                             <div class="market-field">
@@ -277,11 +284,20 @@
                                     <span class="market-field__label">报价 (aUEC)</span>
                                     <input type="number" id="marketPriceInput" class="market-control" min="0" step="1" placeholder="120">
                                 </label>
-                                <label class="market-inline-field">
-                                    <span class="market-field__label">数量</span>
+                                <label class="market-inline-field" id="marketStockField" hidden>
+                                    <span class="market-field__label">我方总数</span>
+                                    <input type="number" id="marketStockInput" class="market-control" min="1" step="1" value="1">
+                                </label>
+                                <label class="market-inline-field" id="marketGiveQtyField">
+                                    <span class="market-field__label" id="marketQtyLabel">数量</span>
                                     <input type="number" id="marketQtyInput" class="market-control" min="1" step="1" value="1">
                                 </label>
+                                <label class="market-inline-field" id="marketWantQtyField" hidden>
+                                    <span class="market-field__label" id="marketWantQtyLabel">换取数量</span>
+                                    <input type="number" id="marketWantQtyInput" class="market-control" min="1" step="1" value="1">
+                                </label>
                             </div>
+                            <p class="market-field__hint" id="marketBarterQtyHint" hidden>我方总数是库存。给出数量 / 换取数量是单次比例。</p>
 
                             <div class="market-field">
                                 <span class="market-field__label">每日交易时段</span>

@@ -1486,7 +1486,7 @@ html:has(body.market-body) {
 
 .market-product-media__frame {
     position: relative;
-    aspect-ratio: 1;
+    aspect-ratio: 4 / 3;
     width: 100%;
     border: 1px solid var(--mkt-border);
     background: rgba(0, 0, 0, 0.28);
@@ -1613,6 +1613,16 @@ html:has(body.market-body) {
     white-space: nowrap;
 }
 
+#marketGiftLinkField .market-control {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#marketGiftLinkInput {
+    font-size: 0.8125rem;
+    letter-spacing: 0.01em;
+}
+
 .market-form__subhead {
     margin: 0 0 0.55rem;
     font-size: 0.875rem;
@@ -1661,7 +1671,28 @@ html:has(body.market-body) {
 }
 
 .market-row-2--barter-qty {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.market-gift-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-height: 14rem;
+    overflow-y: auto;
+}
+
+.market-gift-links input {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: var(--mkt-ctrl-h, 2.25rem);
+    padding: 0.45rem 0.55rem;
+    border-radius: var(--mkt-radius);
+    border: 1px solid var(--mkt-border);
+    background: var(--mkt-bg);
+    color: var(--mkt-text);
+    font: inherit;
+    font-size: 0.8125rem;
 }
 
 .market-row-2--controls .market-control,
@@ -1722,6 +1753,10 @@ html:has(body.market-body) {
     display: flex;
     flex-direction: column;
     min-width: 0;
+}
+
+.market-inline-field[hidden] {
+    display: none !important;
 }
 
 .market-field label,
@@ -2049,7 +2084,7 @@ html:has(body.market-body) {
 
 .market-listing-terms {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 0.5rem;
     margin: 0;
     cursor: pointer;
@@ -2066,7 +2101,7 @@ html:has(body.market-body) {
 .market-listing-terms input {
     width: 1.05rem;
     height: 1.05rem;
-    margin: 0.12rem 0 0;
+    margin: 0;
     flex-shrink: 0;
     accent-color: var(--mkt-accent, #f78f1e);
     cursor: pointer;
@@ -2225,6 +2260,27 @@ html:has(body.market-body) {
 }
 
 .market-form-error[hidden] { display: none; }
+
+.market-field.is-required-miss > input,
+.market-field.is-required-miss > select,
+.market-field.is-required-miss > textarea,
+.market-inline-field.is-required-miss input,
+.market-inline-field.is-required-miss select,
+.market-inline-field.is-required-miss textarea,
+.market-gift-links.is-required-miss input,
+.market-listing-terms.is-required-miss,
+.market-listing-terms.is-error {
+    border-color: #ff4466;
+    box-shadow: 0 0 0 1px rgba(255, 68, 102, 0.45);
+}
+
+.market-field.is-required-miss > input,
+.market-field.is-required-miss > select,
+.market-field.is-required-miss > textarea,
+.market-inline-field.is-required-miss input,
+.market-inline-field.is-required-miss select {
+    outline: none;
+}
 
 /* —— 商品详情弹窗 —— */
 .market-detail {
@@ -3812,7 +3868,7 @@ body.market-trades-body .uss-site-footer {
         grid-template-columns: 1fr;
     }
     .market-row-2--barter-qty {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
     }
     .market-grid {
         grid-template-columns: 1fr;

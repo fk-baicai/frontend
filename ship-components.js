@@ -166,6 +166,16 @@
         return !LEGACY_AGGREGATE_TYPES[typeKey];
     }
 
+    function isFpsGroupKey(groupKey) {
+        return String(groupKey || '').indexOf('fps_') === 0;
+    }
+
+    function isGroupForCurrentPage(groupKey) {
+        var key = String(groupKey || '').trim();
+        if (!key || key === 'other' || key === 'module') return false;
+        return IS_EQUIPMENT_PAGE ? isFpsGroupKey(key) : !isFpsGroupKey(key);
+    }
+
     function resolveTypeLabel(typeKey, typeObj) {
         if (typeObj && typeof typeObj === 'object' && typeObj.label_zh) return typeObj.label_zh;
         if (TYPE_FALLBACK_LABELS[typeKey]) return TYPE_FALLBACK_LABELS[typeKey];
@@ -225,19 +235,32 @@
                 nextTypes[key] = Object.assign({}, t, { group: 'mining' });
             }
         });
-        var nextGroups = Object.assign({}, GROUP_META, groups || {});
+        var nextGroups = Object.assign({}, GROUP_META);
+        Object.keys(groups || {}).forEach(function (key) {
+            if (!isGroupForCurrentPage(key)) return;
+            nextGroups[key] = groups[key];
+        });
         delete nextGroups.module;
-        if (!nextGroups.mining) {
+        if (!IS_EQUIPMENT_PAGE && !nextGroups.mining) {
             nextGroups.mining = GROUP_META.mining;
         }
+        Object.keys(nextGroups).forEach(function (key) {
+            if (!isGroupForCurrentPage(key)) delete nextGroups[key];
+        });
         return { types: nextTypes, groups: nextGroups };
     }
 
     function groupKeysForRender() {
         var keys = GROUP_ORDER.filter(function (key) {
+            if (!isGroupForCurrentPage(key)) return false;
             return state.groups[key] || GROUP_META[key];
         });
-        return keys.length ? keys : GROUP_ORDER.slice();
+        Object.keys(state.groups || {}).forEach(function (key) {
+            if (!key || keys.indexOf(key) >= 0) return;
+            if (!isGroupForCurrentPage(key)) return;
+            if (Object.keys(typesForGroup(key)).length) keys.push(key);
+        });
+        return keys.length ? keys : GROUP_ORDER.filter(isGroupForCurrentPage);
     }
 
     function typeKeysForGroup(groupKey, filtered) {
@@ -277,6 +300,14 @@
         blueprintExpandedByItem: {},
         armorVariantExpanded: {},
         armorVariantGrouping: null,
+        view: 'card',
+        facets: null,
+        filters: {
+            size: '',
+            grade: '',
+            class: '',
+            damage_type: '',
+        },
     };
 
     var ACQUIRE_BTN_LABEL = '获取';
@@ -297,7 +328,423 @@
         search: document.getElementById('scSearch'),
         suggest: document.getElementById('scSearchSuggest'),
         loadSentinel: document.getElementById('scLoadSentinel'),
+        cardGrid: document.getElementById('scCardGrid'),
+        facetBar: document.getElementById('scFacetBar'),
+        viewCard: document.getElementById('scViewCard'),
+        viewList: document.getElementById('scViewList'),
+        mobileHint: document.getElementById('scMobileScrollHint'),
     };
+
+    var VIEW_LS_KEY = 'uss_sc_catalog_view';
+
+    function readStoredCatalogView() {
+        try {
+            var raw = localStorage.getItem(VIEW_LS_KEY);
+            if (raw === 'list' || raw === 'card') return raw;
+        } catch (e) {
+            /* ignore */
+        }
+        return 'card';
+    }
+
+    function isCardView() {
+        return state.view !== 'list';
+    }
+
+    function applyCatalogView() {
+        var card = isCardView();
+        document.body.classList.toggle('sc-view-card', card);
+        document.body.classList.toggle('sc-view-list', !card);
+        if (els.cardGrid) els.cardGrid.hidden = !card;
+        if (els.tableShell) els.tableShell.hidden = card;
+        if (els.mobileHint) els.mobileHint.hidden = card;
+        if (els.viewCard) {
+            els.viewCard.classList.toggle('is-active', card);
+            els.viewCard.setAttribute('aria-pressed', card ? 'true' : 'false');
+        }
+        if (els.viewList) {
+            els.viewList.classList.toggle('is-active', !card);
+            els.viewList.setAttribute('aria-pressed', card ? 'false' : 'true');
+        }
+    }
+
+    function setCatalogView(mode) {
+        state.view = mode === 'list' ? 'list' : 'card';
+        try {
+            localStorage.setItem(VIEW_LS_KEY, state.view);
+        } catch (e) {
+            /* ignore */
+        }
+        applyCatalogView();
+        renderCatalog();
+        updateMetaBar();
+    }
+
+    function resetCatalogFilters() {
+        state.filters = { size: '', grade: '', class: '', damage_type: '' };
+    }
+
+    function bindCatalogViewToggle() {
+        if (els.viewCard && !els.viewCard.dataset.bound) {
+            els.viewCard.dataset.bound = '1';
+            els.viewCard.addEventListener('click', function () {
+                setCatalogView('card');
+            });
+        }
+        if (els.viewList && !els.viewList.dataset.bound) {
+            els.viewList.dataset.bound = '1';
+            els.viewList.addEventListener('click', function () {
+                setCatalogView('list');
+            });
+        }
+    }
+
+    function facetOptionList(key) {
+        var facets = state.facets || {};
+        var fromApi = [];
+        if (key === 'size') fromApi = facets.sizes || [];
+        else if (key === 'grade') fromApi = facets.grades || [];
+        else if (key === 'class') fromApi = facets.classes || [];
+        else if (key === 'damage_type') fromApi = facets.damage_types || [];
+        if (fromApi.length) return fromApi;
+        var seen = Object.create(null);
+        var out = [];
+        (state.items || []).forEach(function (item) {
+            var val = '';
+            if (key === 'size') val = item.size != null ? String(item.size) : '';
+            else if (key === 'grade') val = String(item.grade || item.grade_letter || '');
+            else if (key === 'class') val = String(item.class_short_zh || '');
+            else if (key === 'damage_type') val = itemDamageTypeRaw(item);
+            val = val.trim();
+            if (!val || seen[val]) return;
+            seen[val] = 1;
+            out.push(val);
+        });
+        if (key === 'size') {
+            out.sort(function (a, b) {
+                return Number(a) - Number(b);
+            });
+        } else {
+            out.sort(function (a, b) {
+                return String(a).localeCompare(String(b), 'zh-CN');
+            });
+        }
+        return out;
+    }
+
+    function facetLabel(key) {
+        if (key === 'size') return '尺寸';
+        if (key === 'grade') return '等级';
+        if (key === 'class') return '用途';
+        if (key === 'damage_type') return '伤害类型';
+        return key;
+    }
+
+    function sizeOptionLabel(value) {
+        var n = Number(value);
+        if (Number.isFinite(n)) return 'S' + n;
+        return String(value);
+    }
+
+    function manufacturerOptionLabel(value) {
+        var fake = { manufacturer: value, manufacturer_zh: '' };
+        var zh = itemManufacturerLabel(fake);
+        return zh && zh !== value ? zh : value;
+    }
+
+    function showGradeFacet() {
+        return (
+            state.group !== 'weapon' &&
+            state.group !== 'mining' &&
+            state.group !== 'salvage' &&
+            state.group !== 'fuel_nozzle'
+        );
+    }
+
+    function showDamageTypeFacet() {
+        return IS_EQUIPMENT_PAGE && state.group === 'fps_weapon';
+    }
+
+    function itemDamageTypeRaw(item) {
+        var wf = item && item.wiki_fields;
+        if (!wf) return '';
+        var pw = wf.personal_weapon;
+        if (pw && pw.class) return String(pw.class).trim();
+        if (wf.grenade && wf.grenade.damage_type) return String(wf.grenade.damage_type).trim();
+        var desc = wf.description_data;
+        if (Array.isArray(desc)) {
+            for (var i = 0; i < desc.length; i++) {
+                if (String(desc[i].name || '').toLowerCase() === 'damage type' && desc[i].value) {
+                    return String(desc[i].value).trim();
+                }
+            }
+        }
+        return '';
+    }
+
+    function damageTypeOptionLabel(value) {
+        var wiki = window.ShipComponentWiki;
+        if (wiki && typeof wiki.formatWikiScalar === 'function') {
+            return wiki.formatWikiScalar(value) || value;
+        }
+        return value;
+    }
+
+    function itemDamageTypeShown(item) {
+        try {
+            var cols = getWikiTableColumns();
+            for (var i = 0; i < cols.length; i++) {
+                if (cols[i] && cols[i].label === '伤害类型' && typeof cols[i].get === 'function') {
+                    var v = cols[i].get(item);
+                    if (v != null && String(v).trim()) return String(v).trim();
+                }
+            }
+        } catch (e) {
+            /* ignore */
+        }
+        var raw = itemDamageTypeRaw(item);
+        return damageTypeOptionLabel(raw) || raw;
+    }
+
+    function matchesDamageTypeFilter(item) {
+        if (!showDamageTypeFacet()) return true;
+        var sel = String(state.filters.damage_type || '').trim();
+        if (!sel) return true;
+        var raw = itemDamageTypeRaw(item);
+        if (raw && raw === sel) return true;
+        if (raw && raw.toLowerCase() === sel.toLowerCase()) return true;
+        var shown = itemDamageTypeShown(item);
+        if (!shown) return false;
+        if (shown === sel) return true;
+        var selLabel = damageTypeOptionLabel(sel);
+        if (shown === selLabel) return true;
+        if (raw && damageTypeOptionLabel(raw) === sel) return true;
+        if (raw && damageTypeOptionLabel(raw) === selLabel) return true;
+        return false;
+    }
+
+    function catalogBrowsableItems() {
+        return state.items.filter(function (item) {
+            return isBrowsableItem(item) && matchesDamageTypeFilter(item);
+        });
+    }
+
+    function renderFacetBar() {
+        if (!els.facetBar) return;
+        var keys = [];
+        keys.push('size');
+        if (showGradeFacet()) keys.push('grade');
+        keys.push('class');
+        if (showDamageTypeFacet()) keys.push('damage_type');
+        els.facetBar.innerHTML = '';
+        var shown = 0;
+        keys.forEach(function (key) {
+            var opts = facetOptionList(key);
+            if (!opts.length) return;
+            shown += 1;
+            var group = document.createElement('div');
+            group.className = 'sc-facet-group';
+            var lab = document.createElement('span');
+            lab.className = 'sc-facet__label';
+            lab.textContent = facetLabel(key);
+            group.appendChild(lab);
+            var row = document.createElement('div');
+            row.className = 'sc-facet-tags';
+            function addTag(value, label) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className =
+                    'sc-facet-tag' +
+                    (String(state.filters[key] || '') === String(value) ? ' is-active' : '');
+                btn.setAttribute('data-facet', key);
+                btn.textContent = label;
+                btn.addEventListener('click', function () {
+                    state.filters[key] = String(value || '');
+                    loadList();
+                });
+                row.appendChild(btn);
+            }
+            addTag('', '全部');
+            opts.forEach(function (val) {
+                var lab = val;
+                if (key === 'size') lab = sizeOptionLabel(val);
+                else if (key === 'damage_type') lab = damageTypeOptionLabel(val);
+                addTag(val, lab);
+            });
+            group.appendChild(row);
+            els.facetBar.appendChild(group);
+        });
+        els.facetBar.hidden = !shown;
+    }
+
+    function cardChipTone(kind, text) {
+        var t = String(text || '');
+        if (kind === 'size') return 'size';
+        if (kind === 'grade') return 'grade';
+        if (/军|戰鬥|战斗|军用|Military/i.test(t)) return 'mil';
+        if (/工|工业|Industrial/i.test(t)) return 'ind';
+        if (/隐|匿|Stealth/i.test(t)) return 'stealth';
+        return 'civ';
+    }
+
+    function cardHighlightStats(item) {
+        var out = [];
+        getWikiTableColumns().forEach(function (col) {
+            if (!col || !col.label || typeof col.get !== 'function') return;
+            if (out.length >= 4) return;
+            var val = col.get(item);
+            if (val == null || val === '' || val === '—') return;
+            out.push({ label: col.label, value: String(val) });
+        });
+        return out;
+    }
+
+    function bindCardImageFallback(img, item) {
+        var urls = collectNameImageCandidates(item);
+        var media = img.parentNode;
+        function fail() {
+            if (img && img.parentNode) img.remove();
+            if (media) {
+                media.classList.add('sc-item-card__media--empty');
+                if (!String(media.textContent || '').trim()) media.textContent = '暂无图片';
+            }
+        }
+        if (!urls.length) {
+            fail();
+            return;
+        }
+        var i = 0;
+        img.src = urls[0];
+        img.addEventListener('error', function () {
+            i += 1;
+            if (i < urls.length) img.src = urls[i];
+            else fail();
+        });
+    }
+
+    function renderItemCard(item) {
+        var names = resolveItemDisplayNames(item);
+        var id = resolveComponentId(item);
+        var card = document.createElement('a');
+        card.className = 'sc-item-card';
+        card.dataset.id = normalizeItemId(item.id_item);
+        if (id) {
+            card.href = componentDetailUrl(id);
+            card.addEventListener('click', function () {
+                rememberListReturnState(item.id_item);
+                rememberComponentDetailId(id);
+            });
+        } else {
+            card.removeAttribute('href');
+        }
+        var media = document.createElement('div');
+        media.className = 'sc-item-card__media';
+        var img = document.createElement('img');
+        img.alt = names.primary || '配件图片';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        media.appendChild(img);
+        bindCardImageFallback(img, item);
+        card.appendChild(media);
+
+        var body = document.createElement('div');
+        body.className = 'sc-item-card__body';
+        var title = document.createElement('h3');
+        title.className = 'sc-item-card__title';
+        title.innerHTML =
+            '<span class="sc-item-card__name-zh">' +
+            escapeHtml(names.primary || '—') +
+            '</span>' +
+            (names.subtitle
+                ? '<span class="sc-item-card__name-en">' + escapeHtml(names.subtitle) + '</span>'
+                : '');
+        body.appendChild(title);
+
+        var chips = document.createElement('div');
+        chips.className = 'sc-item-card__chips';
+        var sizeLabel = item.size_label || (item.size != null ? 'S' + item.size : '');
+        var grade = item.grade || item.grade_letter || '';
+        var klass = item.class_short_zh || item.class_zh || '';
+        [
+            { kind: 'size', text: sizeLabel },
+            { kind: 'grade', text: grade },
+            { kind: 'class', text: klass },
+        ].forEach(function (chip) {
+            if (!chip.text || chip.text === '—') return;
+            var span = document.createElement('span');
+            span.className = 'sc-meta-tag sc-meta-tag--' + cardChipTone(chip.kind, chip.text);
+            span.textContent = chip.text;
+            chips.appendChild(span);
+        });
+        if (chips.childNodes.length) body.appendChild(chips);
+
+        var stats = cardHighlightStats(item);
+        if (stats.length) {
+            var dl = document.createElement('dl');
+            dl.className = 'sc-item-card__stats';
+            stats.forEach(function (stat) {
+                var wrap = document.createElement('div');
+                wrap.className = 'sc-item-card__stat';
+                wrap.innerHTML =
+                    '<dt>' + escapeHtml(stat.label) + '</dt><dd>' + escapeHtml(stat.value) + '</dd>';
+                dl.appendChild(wrap);
+            });
+            body.appendChild(dl);
+        }
+
+        var foot = document.createElement('div');
+        foot.className = 'sc-item-card__foot';
+        var mfg = document.createElement('span');
+        mfg.className = 'sc-item-card__mfg';
+        mfg.textContent = itemManufacturerLabel(item) || '—';
+        var price = document.createElement('span');
+        price.className = 'sc-item-card__price';
+        price.textContent = formatPrice(item.price_buy_min);
+        foot.appendChild(mfg);
+        foot.appendChild(price);
+        body.appendChild(foot);
+        card.appendChild(body);
+        return card;
+    }
+
+    function renderCards() {
+        if (!els.cardGrid) return;
+        els.cardGrid.innerHTML = '';
+        var items = sortItems(catalogBrowsableItems());
+        if (!items.length) {
+            els.cardGrid.innerHTML = '<p class="sc-card-grid__empty">无匹配配件</p>';
+            return;
+        }
+        items.forEach(function (item) {
+            els.cardGrid.appendChild(renderItemCard(item));
+        });
+    }
+
+    function appendCards(items) {
+        if (!els.cardGrid || !items || !items.length) return;
+        var empty = els.cardGrid.querySelector('.sc-card-grid__empty, .sc-card-grid__loading');
+        if (empty) empty.remove();
+        sortItems(items.filter(isBrowsableItem).filter(matchesDamageTypeFilter)).forEach(function (item) {
+            if (els.cardGrid.querySelector('[data-id="' + normalizeItemId(item.id_item) + '"]')) return;
+            els.cardGrid.appendChild(renderItemCard(item));
+        });
+    }
+
+    function renderCatalog(preservedExpanded) {
+        if (isCardView()) renderCards();
+        else renderTable(preservedExpanded);
+        renderFacetBar();
+    }
+
+    function setCatalogLoading(message) {
+        var hint = message || '加载中…';
+        if (isCardView() && els.cardGrid) {
+            els.cardGrid.innerHTML = '<p class="sc-card-grid__loading">' + escapeHtml(hint) + '</p>';
+        }
+        if (els.body) {
+            els.body.innerHTML = '<tr><td colspan="' + getColCount() + '">' + escapeHtml(hint) + '</td></tr>';
+        }
+    }
 
     var loadMoreObserver = null;
     var tableColumnSyncRaf = 0;
@@ -368,6 +815,9 @@
         if (attempt > 0) hint += '（' + attempt + '/' + maxAttempts + '）';
         els.body.innerHTML =
             '<tr><td colspan="' + getColCount() + '">' + escapeHtml(hint) + '…</td></tr>';
+        if (isCardView() && els.cardGrid) {
+            els.cardGrid.innerHTML = '<p class="sc-card-grid__loading">' + escapeHtml(hint) + '…</p>';
+        }
     }
 
     async function fetchJsonWithRetry(url, options, retryOpts) {
@@ -639,16 +1089,32 @@
 
     function getRenderedItemIds() {
         var ids = Object.create(null);
-        if (!els.body) return ids;
-        els.body.querySelectorAll('tr[data-id]').forEach(function (row) {
-            var id = normalizeItemId(row.dataset.id);
+        function add(id) {
             if (id) ids[id] = true;
-        });
+        }
+        if (els.body) {
+            els.body.querySelectorAll('tr[data-id]').forEach(function (row) {
+                add(normalizeItemId(row.dataset.id));
+            });
+        }
+        if (els.cardGrid) {
+            els.cardGrid.querySelectorAll('[data-id]').forEach(function (node) {
+                add(normalizeItemId(node.getAttribute('data-id')));
+            });
+        }
         return ids;
     }
 
     function appendTableRows(items, scrollY) {
-        if (!els.body || !items || !items.length) return 0;
+        if (!items || !items.length) return 0;
+        if (isCardView()) {
+            appendCards(items);
+            if (scrollY != null && scrollY >= 0) {
+                window.scrollTo({ top: scrollY, left: 0, behavior: 'auto' });
+            }
+            return items.length;
+        }
+        if (!els.body) return 0;
         if (isArmorVariantGroupingEnabled()) {
             var snap = snapshotExpandedState();
             renderTable(snap);
@@ -868,6 +1334,10 @@
     function inferGroupFromTypeKey(typeKey) {
         var key = String(typeKey || '').trim();
         if (!key) return '';
+        var catalog = state.types && state.types[key];
+        if (catalog && catalog.group) {
+            return catalog.group === 'module' ? 'mining' : catalog.group;
+        }
         if (key === 'ship_weapon' || key === 'ship_turret' || key === 'ship_missile' || key === 'missile_rack') return 'weapon';
         if (key === 'mining_laser' || key === 'ship_module') return 'mining';
         if (key === 'salvage_scraper') return 'salvage';
@@ -972,7 +1442,7 @@
             if (focusId) sessionStorage.setItem(LIST_RETURN_FOCUS_ITEM_KEY, focusId);
             else sessionStorage.removeItem(LIST_RETURN_FOCUS_ITEM_KEY);
             if (isArmorVariantGroupingEnabled()) {
-                computeArmorVariantGrouping(sortItems(state.items.filter(isBrowsableItem)));
+                computeArmorVariantGrouping(sortItems(catalogBrowsableItems()));
                 var variantKeys = Object.keys(state.armorVariantExpanded || {}).filter(function (key) {
                     return state.armorVariantExpanded[key];
                 });
@@ -1526,6 +1996,12 @@
         var params = new URLSearchParams();
         if (state.type) params.set('type', state.type);
         if (q) params.set('q', q);
+        if (state.filters.size) params.set('size', state.filters.size);
+        if (showGradeFacet() && state.filters.grade) params.set('grade', state.filters.grade);
+        if (state.filters.class) params.set('class', state.filters.class);
+        if (showDamageTypeFacet() && state.filters.damage_type) {
+            params.set('damage_type', state.filters.damage_type);
+        }
         params.set('limit', String(getPageSize()));
         params.set('page', String(page || 1));
         var syncParam = apiDataVersionParam();
@@ -1570,18 +2046,24 @@
     }
 
     function mergeItems(existing, incoming) {
-        var seen = {};
-        var out = (existing || []).slice();
-        (existing || []).forEach(function (item) {
-            seen[String(item.id_item)] = true;
+        var order = [];
+        var map = {};
+        function put(item) {
+            var id = normalizeItemId(item && item.id_item);
+            if (!id) return;
+            if (map[id]) {
+                var idx = order.indexOf(id);
+                if (idx >= 0) order[idx] = id;
+            } else {
+                order.push(id);
+            }
+            map[id] = item;
+        }
+        (existing || []).forEach(put);
+        (incoming || []).forEach(put);
+        return order.map(function (id) {
+            return map[id];
         });
-        (incoming || []).forEach(function (item) {
-            var id = String(item.id_item);
-            if (seen[id]) return;
-            seen[id] = true;
-            out.push(item);
-        });
-        return out;
     }
 
 
@@ -1627,30 +2109,24 @@
         Object.keys(state.types || {}).forEach(function (key) {
             if (!isBrowsableTypeKey(key)) return;
             var t = state.types[key];
-            var g = (t && t.group) || 'component';
+            var g = (t && t.group) || inferGroupFromTypeKey(key) || 'component';
             if (g === groupKey) out[key] = t;
         });
-        var order = TYPE_ORDER_BY_GROUP[groupKey];
-        if (order && order.length) {
-            order.forEach(function (key) {
-                if (out[key]) return;
-                out[key] = {
-                    key: key,
-                    label_zh: resolveTypeLabel(key, null),
-                    group: groupKey,
-                    count: 0,
-                };
-            });
-        }
         return out;
     }
 
     function ensureTypeInGroup() {
         var filtered = typesForGroup(state.group);
-        var keys = Object.keys(filtered);
+        var keys = typeKeysForGroup(state.group, filtered);
         if (!keys.length) return;
-        if (keys.indexOf(state.type) < 0) {
-            state.type = DEFAULT_TYPE_BY_GROUP[state.group] || keys[0];
+        var live = keys.filter(function (key) {
+            return filtered[key] && Number(filtered[key].count) > 0;
+        });
+        var pickFrom = live.length ? live : keys;
+        if (pickFrom.indexOf(state.type) < 0) {
+            state.type = DEFAULT_TYPE_BY_GROUP[state.group] && pickFrom.indexOf(DEFAULT_TYPE_BY_GROUP[state.group]) >= 0
+                ? DEFAULT_TYPE_BY_GROUP[state.group]
+                : pickFrom[0];
         }
         normalizeGroupState();
     }
@@ -1695,6 +2171,7 @@
         if (!filtered[typeKey]) return;
         var typesLoaded = hasTypesCatalog();
         if (typesLoaded && filtered[typeKey].count === 0) return;
+        resetCatalogFilters();
         state.type = typeKey;
         state.expanded = {};
         clearArmorVariantExpanded();
@@ -1794,6 +2271,7 @@
             btn.dataset.group = key;
             btn.addEventListener('click', function () {
                 if (state.group === key) return;
+                resetCatalogFilters();
                 state.group = key;
                 ensureTypeInGroup();
                 resetSortIfHiddenGradeClassColumns();
@@ -1860,6 +2338,7 @@
         var cls = (IS_EQUIPMENT_PAGE ? 'personal-equipment-body' : 'ship-components-body') + ' sc-group-' + state.group + ' sc-type-' + state.type;
         if (isWikiMode()) cls += ' sc-source-wiki';
         document.body.className = cls;
+        applyCatalogView();
         rebuildTableStructure();
         syncTableColumns();
     }
@@ -2032,8 +2511,7 @@
             }
             updateSortHeaders();
             var scrollY = window.scrollY;
-            renderTable();
-            if (els.tableShell) els.tableShell.scrollLeft = 0;
+            renderCatalog();
             window.scrollTo({ top: scrollY, left: 0, behavior: 'auto' });
         });
         updateSortHeaders();
@@ -2517,6 +2995,100 @@
         'yellow-quikflarepro': '黄色 快燃荧光棒 Pro',
     };
 
+    var ITEM_EN_NAME_ZH = {
+        'TrueDef-Pro Arms': '真防专业 臂甲',
+        'Aril Arms Red Alert': '阿瑞尔 臂甲 红色警报',
+        'FBL-8a Arms (Modified)': 'FBL-8a 臂甲（改装）',
+        'Aril Backpack Red Alert': '阿瑞尔 背包 红色警报',
+        'Morozov-CH-I Backpack Gideon': '莫罗佐夫-CH-I 背包 吉迪恩',
+        'Warden Backpack Hemlock Camo': '典狱 背包 铁杉迷彩',
+        'Warden Backpack HighSec': '典狱 背包 高安保',
+        'Warden Backpack Keystone': '典狱 背包 基石',
+        'Warden Backpack Monde': '典狱 背包 蒙德',
+        'Argus Helmet': '阿尔戈斯 头盔',
+        'Venture Helmet White': '冒险 头盔 白色',
+        'Venture Helmet Olive': '冒险 头盔 橄榄',
+        'ORC-mkX Helmet Woodland': 'ORC-mkX 头盔 林地',
+        'The Butcher Helmet': '屠夫 头盔',
+        'ADP-mk4 Helmet Woodland': 'ADP-mk4 头盔 林地',
+        'Aril Helmet Red Alert': '阿瑞尔 头盔 红色警报',
+        'Exo-8 Helmet (Used)': 'Exo-8 头盔（旧）',
+        'FBL-8a Helmet (Modified)': 'FBL-8a 头盔（改装）',
+        'TrueDef-Pro Legs': '真防专业 腿甲',
+        'Aril Legs Red Alert': '阿瑞尔 腿甲 红色警报',
+        'Carnifex Armor Legs': '卡尔尼法克斯 腿甲',
+        'FBL-8a Legs (Modified)': 'FBL-8a 腿甲（改装）',
+        'MacFlex Core': '麦克弗莱克斯 胸甲',
+        'Venture Core Olive': '冒险 胸甲 橄榄',
+        'TrueDef-Pro Core Base': '真防专业 胸甲',
+        'Aril Core Red Alert': '阿瑞尔 胸甲 红色警报',
+        'Carnifex Armor Core': '卡尔尼法克斯 胸甲',
+        'FBL-8a Core (Modified)': 'FBL-8a 胸甲（改装）',
+        'ForceFlex Undersuit Black/Red': '力柔 内衬 黑/红',
+        'Venture Undersuit Olive/Black': '冒险 内衬 橄榄/黑',
+        'Pyro RYT Multi-Tool': '派罗 RYT 多用工具',
+        'APX Fire Extinguisher': 'APX 灭火器',
+        'P4-AR Rifle': 'P4-AR 步枪',
+        'Gallant Rifle': '英勇 步枪',
+        'Karna Rifle': '卡纳 步枪',
+        'Karna "Valor" Rifle': '卡纳 步枪「勇毅」',
+        'BR-2 Shotgun': 'BR-2 霰弹枪',
+        'BR-2 Shotgun Magazine (12 cap)': 'BR-2 霰弹枪弹匣（12 发）',
+        'Custodian SMG': '监护 冲锋枪',
+        'C54 SMG': 'C54 冲锋枪',
+        'Quartz "Black Op" Energy SMG': '石英 能量冲锋枪「黑行动」',
+        'Quartz "Deadfall" Energy SMG': '石英 能量冲锋枪「枯落」',
+        'Quartz "Lumen" Energy SMG': '石英 能量冲锋枪「流明」',
+        'Scalpel "Permafrost" Sniper Rifle': '手术刀 狙击步枪「永冻」',
+        'Cambio-Lite SRT Canister': '转化宝-Lite 打捞罐',
+        'Cambio SRT Canister': '转化宝 打捞罐',
+        'PC2 Dual S4 Mount': 'PC2 双联 S4 挂点',
+        'Drake Caterpillar Weapon Mount': '德雷克 毛虫号 武器挂点',
+        'Vanduul Cleaver': '梵杜尔 劈砍导弹',
+        'Sion "Tweaker" Compensator1': '锡安「微调」补偿器',
+        "6SA 'Arbiter'": '6SA「仲裁者」',
+        "7SA 'Concord'": '7SA「和谐」',
+    };
+
+    var TYPE_NAME_SUFFIX = {
+        power: '电源',
+        quantum: '量子驱动器',
+        radar: '雷达',
+        shield: '护盾',
+        fuel_nozzle: '燃料喷嘴',
+        cooling: '散热',
+        jump: '跳跃驱动器',
+    };
+
+    function fallbackLocalizeItemEn(en, typeKey) {
+        var raw = String(en || '').trim();
+        if (!raw || /[\u4e00-\u9fff]/.test(raw)) return raw;
+        if (ITEM_EN_NAME_ZH[raw]) return ITEM_EN_NAME_ZH[raw];
+        var typeZh = TYPE_NAME_SUFFIX[typeKey];
+        if (typeZh && /^[A-Za-z0-9][A-Za-z0-9._'-]{1,16}$/.test(raw)) return raw + ' ' + typeZh;
+        var s = raw
+            .replace(/\bHelmet\b/gi, '头盔')
+            .replace(/\bBackpack\b/gi, '背包')
+            .replace(/\bUndersuit\b/gi, '内衬')
+            .replace(/\bArms\b/gi, '臂甲')
+            .replace(/\bLegs\b/gi, '腿甲')
+            .replace(/\bCore\b/gi, '胸甲')
+            .replace(/\bRifle\b/gi, '步枪')
+            .replace(/\bShotgun\b/gi, '霰弹枪')
+            .replace(/\bMagazine\b/gi, '弹匣')
+            .replace(/\bMulti-Tool\b/gi, '多用工具')
+            .replace(/\bFire Extinguisher\b/gi, '灭火器')
+            .replace(/\bWeapon Mount\b/gi, '武器挂点')
+            .replace(/\bGimbal Mount\b/gi, '可动挂点')
+            .replace(/\s*\(Modified\)/gi, '（改装）')
+            .replace(/\s*\(Used\)/gi, '（旧）')
+            .replace(/\bRed Alert\b/gi, '红色警报')
+            .replace(/\bWoodland\b/gi, '林地')
+            .replace(/\bTelescopic\b/gi, '光学瞄准')
+            .replace(/\bHolographic\b/gi, '全息瞄准');
+        return /[\u4e00-\u9fff]/.test(s) ? s : raw;
+    }
+
     function resolveItemDisplayNames(item) {
         var zh = String((item && item.name_zh) || '').trim();
         var en = String((item && item.name_en) || '').trim();
@@ -2526,15 +3098,20 @@
             zh = '';
         }
         var primary = zh || en || '—';
-        var subtitle = '';
+        if (!/[\u4e00-\u9fff]/.test(primary) && en) {
+            var fb = fallbackLocalizeItemEn(en, item && item.type);
+            if (fb && /[\u4e00-\u9fff]/.test(fb)) primary = fb;
+        }
 
         if (!item || !item.loc_matched || isPlaceholderItemName(item.name_zh)) {
             if (isInternalItemKey(primary)) primary = '—';
             if (isInternalItemKey(en)) en = '';
         }
 
-        if (zh && en && zh !== en) subtitle = en;
-        else if (en && en !== primary) subtitle = en;
+        var subtitle = '';
+        if (en && en !== primary && !isInternalItemKey(en) && !isPlaceholderItemName(en)) {
+            subtitle = en;
+        }
         return { primary: primary, subtitle: subtitle };
     }
 
@@ -3666,7 +4243,7 @@
         captureBlueprintExpandedState();
         applyExpandedSnapshot(expandedSnapshot);
         els.body.innerHTML = '';
-        var browsable = sortItems(state.items.filter(isBrowsableItem));
+        var browsable = sortItems(catalogBrowsableItems());
         computeArmorVariantGrouping(browsable);
         var items = orderItemsForArmorVariantDisplay(browsable);
         if (!items.length) {
@@ -3934,7 +4511,7 @@
     }
 
     async function loadList() {
-        if (!els.body) return;
+        if (!els.body && !els.cardGrid) return;
         abortPendingFetches();
         var pendingRestore = isListRestorePending();
         if (!pendingRestore) clearArmorVariantExpanded();
@@ -3944,7 +4521,7 @@
         state.loadingMore = false;
         state.listFetchController = new AbortController();
         var signal = state.listFetchController.signal;
-        els.body.innerHTML = '<tr><td colspan="' + getColCount() + '">加载中…</td></tr>';
+        setCatalogLoading('加载中…');
         updateMetaBar();
         try {
             var fetched = await fetchJsonWithRetry(apiUrl('/api/sc/components?' + buildQuery(1)), { signal: signal }, {
@@ -3953,14 +4530,15 @@
             var data = fetched.data;
             hideGate();
             state.meta = data.meta;
+            if (data.facets) state.facets = data.facets;
             applyMetaTypeCounts(data.meta);
-            state.items = data.items || [];
+            state.items = mergeItems([], data.items || []);
             state.total = data.total || 0;
             state.hasMore = state.items.length < state.total;
             syncBodyMode();
             updateSortHeaders();
             if (pendingRestore) applyArmorVariantRestore(readPendingArmorVariantRestoreKeys());
-            renderTable();
+            renderCatalog();
             updateMetaBar();
             renderTabs();
             updateHero();
@@ -3980,7 +4558,8 @@
             } else {
                 showGate((e && e.message) || '加载失败，请稍后刷新重试');
             }
-            els.body.innerHTML = '';
+            if (els.body) els.body.innerHTML = '';
+            if (els.cardGrid) els.cardGrid.innerHTML = '';
             state.hasMore = false;
         } finally {
             state.loading = false;
@@ -3990,7 +4569,7 @@
     }
 
     async function loadMore() {
-        if (!els.body || state.loading || state.loadingMore || !state.hasMore) return;
+        if ((!els.body && !els.cardGrid) || state.loading || state.loadingMore || !state.hasMore) return;
         var expandedSnapshot = snapshotExpandedState();
         state.loadingMore = true;
         updateMetaBar();
@@ -4313,6 +4892,9 @@
         parseUrlState();
         bindLeadNavOnce();
         bindSortHeaders();
+        bindCatalogViewToggle();
+        state.view = readStoredCatalogView();
+        applyCatalogView();
         syncBodyMode();
         ensureTypeInGroup();
         updateHero();

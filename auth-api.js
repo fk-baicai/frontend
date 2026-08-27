@@ -465,6 +465,33 @@
             return data;
         },
 
+        async sendEmailVerifyCode(token) {
+            var r = await fetch(joinUrl('/api/account/email/verify/send-code'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + token,
+                },
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'AUTH_V004');
+            return data;
+        },
+
+        async confirmEmailVerify(token, body) {
+            var r = await fetch(joinUrl('/api/account/email/verify/confirm'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + token,
+                },
+                body: JSON.stringify(body || {}),
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'AUTH_V003');
+            return data;
+        },
+
         async getOopzBinding(token) {
             var r = await fetch(joinUrl('/api/me/oopz'), {
                 headers: { Authorization: 'Bearer ' + token },
