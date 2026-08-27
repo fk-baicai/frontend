@@ -4613,6 +4613,59 @@ button.sc-facet-tag:focus-visible {
 }
 
 @media (max-width: 720px) {
+    .sc-search-wrap {
+        gap: 0.4rem;
+        padding: 0.28rem 0 0.4rem;
+    }
+
+    .sc-search {
+        font-size: 0.8rem;
+    }
+
+    .sc-filter-deck__nav {
+        gap: 0.3rem;
+        padding: 0.38rem clamp(0.75rem, 1.2vw, 1rem) 0.35rem;
+    }
+
+    .sc-nav-row--major.sc-tabs {
+        gap: 0.05rem 0.9rem;
+    }
+
+    .sc-nav-row--minor.sc-tabs {
+        gap: 0.05rem 0.65rem;
+    }
+
+    .sc-nav-row--major .sc-tab {
+        padding: 0.2rem 0 0.06rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+    }
+
+    .sc-nav-row--minor .sc-tab {
+        padding: 0.14rem 0 0.04rem;
+        font-size: 0.72rem;
+    }
+
+    .sc-catalog-tools {
+        margin-top: 0.15rem;
+        padding: 0.42rem 0 0.55rem;
+    }
+
+    .sc-facet-bar {
+        gap: 0.18rem;
+    }
+
+    .sc-facet-group {
+        gap: 0.06rem 0.5rem;
+    }
+
+    .sc-facet__label,
+    button.sc-facet-tag {
+        padding: 0.08rem 0 0.04rem;
+        font-size: 0.7rem;
+    }
+
     .sc-workspace-wrap {
         padding-top: 2.1rem;
     }
