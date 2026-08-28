@@ -3803,23 +3803,81 @@ body.market-trades-body .uss-site-footer {
 }
 
 @media (max-width: 640px) {
+    .market-hero {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 0.7rem;
+        box-shadow: none;
+    }
+
+    .market-hero::before {
+        position: relative;
+        inset: auto;
+        z-index: 0;
+        flex: 0 0 auto;
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        aspect-ratio: 2.15 / 1;
+        background-size: cover;
+        background-position: center center;
+        transform: none;
+        will-change: auto;
+    }
+
+    .market-hero::after {
+        display: block;
+        top: 0;
+        bottom: auto;
+        height: auto;
+        aspect-ratio: 2.15 / 1;
+        background:
+            linear-gradient(90deg, rgba(11, 28, 46, 0.42) 0%, transparent 42%, transparent 70%, rgba(11, 28, 46, 0.28) 100%),
+            linear-gradient(180deg, rgba(11, 28, 46, 0.18) 0%, transparent 40%, rgba(11, 28, 46, 0.35) 100%);
+        box-shadow: none;
+    }
+
     .market-head {
         --market-hero-inset-y: 0.85rem;
         --market-hero-inset-x: 0.75rem;
-        padding: var(--market-hero-inset-y) var(--market-hero-inset-x);
-        min-height: 200px;
-        gap: 0.55rem;
+        position: static;
+        padding: 0;
+        min-height: 0;
+        gap: 0;
+        background: transparent;
     }
-    .market-hero {
-        margin-bottom: 0.7rem;
+
+    .market-head__top {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2;
+        padding: var(--market-hero-inset-y) var(--market-hero-inset-x);
+        gap: 0.5rem 1rem;
+        pointer-events: none;
+    }
+
+    .market-head__top .market-head__text,
+    .market-head__top .market-head__guides,
+    .market-head__top .market-flow-guide {
+        pointer-events: auto;
+    }
+
+    .market-head__title,
+    .market-head__sub {
+        text-shadow: 0 1px 12px rgba(0, 0, 0, 0.65);
+    }
+
+    .market-head__actions {
+        width: 100%;
+        padding: 0.85rem var(--market-hero-inset-x, 0.75rem) 0;
+        background: var(--mkt-bg);
     }
     .market-qq-invite {
         margin-left: 0;
         margin-right: 0;
         margin-bottom: 0.35rem;
-    }
-    .market-head__top {
-        gap: 0.5rem 1rem;
     }
     .market-main {
         padding: 0.75rem 0 calc(2.5rem + env(safe-area-inset-bottom, 0px));
@@ -3853,9 +3911,6 @@ body.market-trades-body .uss-site-footer {
         min-height: 44px;
         padding: 0.5rem 0.7rem;
         font-size: 0.875rem;
-    }
-    .market-head__actions {
-        width: 100%;
     }
     .market-head__actions .market-btn {
         flex: 1;
