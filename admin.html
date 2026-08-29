@@ -2109,7 +2109,7 @@
     </div>
 
     <script src="api-error.js"></script>
-    <script src="auth-api.js?v=16"></script>
+    <script src="auth-api.js?v=17"></script>
     <script src="admin-step-up.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
@@ -4023,14 +4023,11 @@
 
             async function loadOopzBridgeAreasForAdmin() {
                 try {
-                    var base =
-                        (window.UssAuthApi && window.UssAuthApi.base) ||
-                        (typeof window !== 'undefined' && window.USS_AUTH_API_BASE) ||
-                        '';
-                    var url = String(base || '').replace(/\/$/, '') + '/api/oopz-bridge/state';
-                    var r = await fetch(url, { credentials: 'omit', cache: 'no-store' });
-                    if (!r.ok) return { areas: [], channelGroups: [] };
-                    var data = await r.json();
+                    var s = loadSess();
+                    var data =
+                        window.UssAuthApi && window.UssAuthApi.adminGetOopzBridgeState
+                            ? await window.UssAuthApi.adminGetOopzBridgeState(s.token)
+                            : null;
                     return {
                         areas: Array.isArray(data && data.areas) ? data.areas : [],
                         channelGroups: Array.isArray(data && data.channelGroups)

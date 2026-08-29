@@ -707,6 +707,9 @@
         async adminGetOopzTts(token) {
             return adminJson(token, '/api/admin/oopz/tts');
         },
+        async adminGetOopzBridgeState(token) {
+            return adminJson(token, '/api/oopz-bridge/state');
+        },
         async adminPutOopzTts(token, body) {
             return adminJson(token, '/api/admin/oopz/tts', {
                 method: 'PUT',
