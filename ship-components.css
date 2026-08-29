@@ -2941,20 +2941,64 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
     padding-top: 0;
 }
 
-/* Responsive */
+/* Responsive — detail page mobile only */
 @media (max-width: 820px) {
+    .sc-detail-page {
+        --sc-detail-pad-x: 0.8rem;
+        --sc-detail-pad-y: 0.65rem;
+        --sc-detail-head-gap: 0.2rem;
+        --sc-detail-block-gap: 0.45rem;
+        --sc-detail-field-row-gap: 0.5rem;
+        --sc-detail-field-col-gap: 0.55rem;
+        --sc-detail-label-size: 0.65rem;
+        --sc-detail-value-size: 0.78rem;
+        --sc-detail-section-title-size: 0.7rem;
+    }
+
+    .sc-detail-page .sc-main {
+        padding-left: 0.7rem;
+        padding-right: 0.7rem;
+    }
+
+    .sc-detail-page .sc-detail-article {
+        gap: 0.65rem;
+    }
+
+    .sc-detail-page .sc-detail-back {
+        margin-bottom: 0.5rem;
+    }
+
+    .sc-detail-page .sc-detail-back-link {
+        font-size: 0.75rem;
+    }
+
     .sc-detail-hero-inner {
+        --sc-detail-hero-media-inset: 0.5rem;
+        --sc-detail-hero-img-size: 6.75rem;
         grid-template-columns: 1fr;
         grid-template-rows: auto;
         height: auto;
         min-height: 0;
+        gap: 0.4rem;
+        align-items: stretch;
+    }
+
+    .sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])) {
+        grid-template-columns: minmax(0, 1fr) var(--sc-detail-hero-img-size);
+        grid-template-rows: auto;
+        height: auto;
+        column-gap: 0.55rem;
+        padding: 0.55rem 0.55rem 0.55rem 0.7rem;
+        box-sizing: border-box;
     }
 
     .sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])) .sc-detail-hero-copy {
         display: flex;
         flex-direction: column;
-        gap: var(--sc-detail-block-gap);
-        padding: var(--sc-detail-pad-y) var(--sc-detail-pad-x);
+        justify-content: center;
+        gap: 0.35rem;
+        min-width: 0;
+        padding: 0;
     }
 
     .sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])) .sc-detail-hero-head,
@@ -2971,30 +3015,53 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
 
     .sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])) .sc-detail-hero-stats {
         margin: 0;
-        padding: var(--sc-detail-block-gap) 0 0;
+        padding: 0.32rem 0 0;
+        gap: 0.22rem 0.45rem;
     }
 
+    .sc-detail-page .sc-detail-hero .sc-type-badge {
+        padding: 0.12rem 0.38rem;
+        font-size: 0.6rem;
+    }
+
+    .sc-detail-page .sc-detail-title {
+        margin-top: 0.22rem;
+        font-size: 1.02rem;
+        line-height: 1.22;
+    }
+
+    .sc-detail-page .sc-detail-subtitle {
+        margin-top: 1px;
+        margin-bottom: 0;
+        font-size: 0.7rem;
+        line-height: 1.3;
+    }
+
+    .sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])) .sc-detail-hero-media,
     .sc-detail-hero-media {
-        width: 100%;
-        max-width: 100%;
-        height: auto;
-        align-self: start;
-        margin: var(--sc-detail-hero-media-inset, 55px);
+        order: 0;
+        width: var(--sc-detail-hero-img-size);
+        max-width: var(--sc-detail-hero-img-size);
+        height: var(--sc-detail-hero-img-size);
+        margin: 0;
         padding: 0;
-        justify-self: stretch;
+        align-self: center;
+        justify-self: end;
     }
 
     .sc-detail-hero-media .sc-detail-media-btn {
-        width: auto !important;
-        height: var(--sc-detail-hero-img-h, 180px);
-        max-width: 100%;
+        width: var(--sc-detail-hero-img-size) !important;
+        height: var(--sc-detail-hero-img-size) !important;
+        max-width: var(--sc-detail-hero-img-size);
+        aspect-ratio: 1 / 1;
     }
 
     .sc-detail-hero-media .sc-detail-image {
         width: 100%;
         height: 100%;
         max-height: none;
-        object-fit: fill;
+        object-fit: cover;
+        object-position: center;
     }
 
     .sc-detail-hero-stats--3,
@@ -3002,8 +3069,24 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .sc-detail-page .sc-mission-field {
+        gap: 0.12rem;
+    }
+
+    .sc-detail-mission-body > .sc-blueprint-mission-section,
+    .sc-detail-mission-body > .sc-detail-locations-blueprint-row > .sc-blueprint-mission-section,
+    .sc-detail-specs > .sc-blueprint-mission-section {
+        padding: 0.7rem var(--sc-detail-pad-x) 0.75rem;
+    }
+
+    .sc-detail-page .sc-detail-mission-body > .sc-blueprint-mission-section > .sc-blueprint-mission-section-title,
+    .sc-detail-page .sc-detail-mission-body > .sc-detail-locations-blueprint-row > .sc-blueprint-mission-section > .sc-blueprint-mission-section-title,
+    .sc-detail-page .sc-detail-specs > .sc-blueprint-mission-section > .sc-blueprint-mission-section-title {
+        margin-bottom: 0.45rem;
+    }
+
     .sc-detail-field-grid {
-        grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .sc-detail-locations-blueprint-row {
@@ -3014,27 +3097,110 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
         border-right: 0;
         border-bottom: 1px solid rgba(95, 184, 255, 0.08);
     }
+
+    .sc-detail-page .sc-loc-table,
+    .sc-detail-page .sc-detail-locations-body .sc-loc-table {
+        font-size: 0.7rem;
+    }
+
+    .sc-detail-page .sc-loc-table thead th,
+    .sc-detail-page .sc-detail-locations-body .sc-loc-table thead th {
+        font-size: 0.62rem;
+        letter-spacing: 0.06em;
+        padding-top: 0.15rem;
+        padding-bottom: 0.28rem;
+    }
+
+    .sc-detail-page .sc-loc-table th,
+    .sc-detail-page .sc-loc-table td,
+    .sc-detail-page .sc-detail-locations-body .sc-loc-table th,
+    .sc-detail-page .sc-detail-locations-body .sc-loc-table td {
+        padding: 0.28rem 0.3rem;
+        vertical-align: top;
+    }
+
+    .sc-detail-page .sc-loc-th-price,
+    .sc-detail-page .sc-loc-price-cell {
+        width: 4.85rem;
+        padding-right: 0;
+        font-size: 0.68rem;
+    }
+
+    .sc-detail-page .sc-loc-table .sc-loc-level,
+    .sc-detail-page .sc-detail-locations-body .sc-loc-table .sc-loc-level {
+        font-size: 0.64rem;
+        line-height: 1.25;
+        padding: 0.04rem 0.22rem;
+        letter-spacing: 0;
+    }
+
+    .sc-detail-page .sc-detail-locations-body .sc-loc-path {
+        gap: 0.14rem 0.12rem;
+    }
+
+    .sc-detail-page .sc-detail-craft-blueprint-link {
+        gap: 0.35rem;
+        padding: 0.42rem 0.5rem;
+    }
+
+    .sc-detail-page .sc-detail-craft-blueprint-kicker {
+        font-size: 0.58rem;
+    }
+
+    .sc-detail-page .sc-detail-craft-blueprint-text {
+        font-size: 0.74rem;
+        line-height: 1.3;
+    }
+
+    .sc-detail-page .sc-detail-section--blueprint .sc-blueprint-mission-title {
+        font-size: 0.76rem;
+    }
+
+    .sc-detail-page .sc-detail-section--blueprint .sc-blueprint-mission-table-wrap {
+        font-size: 0.76rem;
+    }
+
+    .sc-detail-page .sc-detail-section--blueprint .sc-bp-mission-th {
+        font-size: 0.62rem;
+    }
+
+    .sc-detail-page .sc-detail-section--blueprint .sc-blueprint-mission-type,
+    .sc-detail-page .sc-detail-section--blueprint .sc-blueprint-mission-giver,
+    .sc-detail-page .sc-detail-section--blueprint .sc-blueprint-mission-legality {
+        font-size: 0.58rem;
+        padding: 0.08rem 0.24rem;
+    }
+
+    .sc-detail-page .sc-detail-section--blueprint .sc-blueprint-mission-reward {
+        min-width: 3.6rem;
+        font-size: 0.66rem;
+    }
+
+    .sc-detail-page .sc-detail-empty,
+    .sc-detail-page .sc-detail-section--blueprint .sc-acquire-empty,
+    .sc-detail-page .sc-detail-section--blueprint .sc-acquire-loading {
+        font-size: 0.76rem;
+        line-height: 1.4;
+    }
+
+    .sc-detail-page .sc-detail-footnote {
+        font-size: 0.68rem;
+    }
 }
 
 @media (max-width: 560px) {
     .sc-detail-page {
-        --sc-detail-pad-x: clamp(1.1rem, 4vw, 1.35rem);
+        --sc-detail-pad-x: 0.75rem;
     }
 
     .sc-detail-hero-stats--3,
     .sc-detail-hero-stats--4 {
-        grid-template-columns: 1fr;
-        gap: 0.75rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.35rem 0.55rem;
     }
 
     .sc-detail-field-grid {
         grid-template-columns: 1fr 1fr;
-    }
-}
-
-@media (max-width: 420px) {
-    .sc-detail-field-grid {
-        grid-template-columns: 1fr;
     }
 }
 

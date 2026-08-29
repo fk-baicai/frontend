@@ -1726,7 +1726,7 @@
                     </summary>
                     <div class="branch-help-body">
                         <p class="hint"><strong>自动签到：</strong>必须先在<strong>上方签到日程</strong>为该分部启用开放窗口（勾选「启用长期默认」并设全天或时段，或单独配置某日）。仅在下方勾选「启用」而上面未开放时，<strong>不会签到</strong>。已绑定 OOPZ 的成员在对应语音内达到分钟数后自动写入该分部。「仅时段内」勾选时，在线时长只计开放窗口内。</p>
-                        <p class="hint"><strong>语音主分类：</strong>每个分部可单独选择 OOPZ <strong>频道分组</strong>（如「主力舰一中队」「创伤舰队」）。默认「全局」=任意分组内语音均计时。需 OOPZ 机器人在线；若下拉为空请重启机器人或运行 <code>oopz-bot/sync_channel_groups.py</code> 后刷新本页。</p>
+                        <p class="hint"><strong>语音主分类：</strong>下拉只列 OOPZ <strong>顶层频道分组</strong>（不含「无分类」、不含每个语音子频道）。选中后，该分部签到在线时长<strong>仅累计该主分类下任意语音子频道</strong>的在线时间；「全局」=任意主分类均计。需机器人在线并上报完整分组；若仍只有一项，请重启机器人或运行 <code>oopz-bot/sync_channel_groups.py</code> 后刷新。</p>
                         <p class="hint"><strong>手动签到：</strong>控制分部页「今日签到」按钮的额外条件。须绑定 OOPZ 时未绑定将引导去首页绑定；勾选「须在线时长」时，全天签到计今日总在线，时段签到仅计该分部开放窗口内在线（与自动签到共用统计）。</p>
                     </div>
                 </details>

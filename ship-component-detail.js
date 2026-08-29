@@ -912,13 +912,13 @@
         syncHeroImageFrameSize();
     }
 
-    function isHeroImageStackedLayout() {
+    function isMobileHeroLayout() {
         return window.matchMedia('(max-width: 820px)').matches;
     }
 
     function syncHeroImageFrameSize() {
         if (!els.image || !els.imageBtn) return;
-        if (els.imageBtn.hidden || isHeroImageStackedLayout()) {
+        if (els.imageBtn.hidden || isMobileHeroLayout()) {
             els.imageBtn.style.width = '';
             els.imageBtn.style.height = '';
             return;
