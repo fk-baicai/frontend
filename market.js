@@ -13,7 +13,7 @@
         var map = {};
         var groups = {
             component: ['cooling', 'power', 'shield', 'quantum', 'jump', 'radar'],
-            weapon: ['ship_weapon', 'ship_missile', 'missile_rack', 'ship_turret'],
+            weapon: ['ship_weapon', 'ship_missile', 'missile_rack', 'ship_turret', 'ship_emp'],
             other: ['mining_laser', 'ship_module', 'salvage_scraper', 'fuel_nozzle'],
             fps_weapon: [
                 'weapon_pistol', 'weapon_smg', 'weapon_rifle', 'weapon_sniper',
@@ -23,7 +23,7 @@
             fps_armor: ['armor_helmet', 'armor_torso', 'armor_legs', 'armor_arms', 'armor_backpack', 'armor_undersuit'],
             fps_magazine: [
                 'magazine', 'attachment_ironsight', 'attachment_barrel',
-                'attachment_bottom', 'attachment_utility', 'attachment_missile',
+                'attachment_bottom', 'attachment_utility', 'attachment_missile', 'attachment_other',
             ],
         };
         Object.keys(groups).forEach(function (gk) {

@@ -114,6 +114,7 @@
         radar: '雷达',
         ship_weapon: '舰炮',
         ship_turret: '舰船炮台',
+        ship_emp: 'EMP',
         ship_missile: '导弹',
         missile_rack: '导弹架',
         mining_laser: '矿头',
@@ -128,6 +129,7 @@
         attachment_bottom: '下挂',
         attachment_utility: '实用配件',
         attachment_missile: '发射器导弹',
+        attachment_other: '其他配件',
         weapon_pistol: '手枪',
         weapon_smg: '冲锋枪',
         weapon_rifle: '突击步枪',
@@ -150,6 +152,7 @@
     var TYPE_GROUP = {
         ship_weapon: 'weapon',
         ship_turret: 'weapon',
+        ship_emp: 'weapon',
         ship_missile: 'weapon',
         missile_rack: 'weapon',
         mining_laser: 'mining',
@@ -162,6 +165,7 @@
         attachment_bottom: 'fps_magazine',
         attachment_utility: 'fps_magazine',
         attachment_missile: 'fps_magazine',
+        attachment_other: 'fps_magazine',
         salvage_scraper: 'salvage',
         fuel_nozzle: 'fuel_nozzle',
     };
@@ -1132,6 +1136,27 @@
         return resolveDetailReturnSource(searchParams) === 'blueprint-crafting';
     }
     var LIST_RESTORE_FLAG_KEY = 'scComponentListRestorePending';
+    var CATALOG_FILTER_KEYS = ['size', 'grade', 'class', 'damage_type', 'signal_type'];
+
+    function copyCatalogFilterParams(fromParams, destUrl) {
+        if (!fromParams || !destUrl || !destUrl.searchParams) return;
+        CATALOG_FILTER_KEYS.forEach(function (key) {
+            var v = String(fromParams.get(key) || '').trim();
+            if (v) destUrl.searchParams.set(key, v);
+        });
+    }
+
+    function mergeCatalogFiltersIntoHref(href, fromParamsList) {
+        try {
+            var u = new URL(href, window.location.href);
+            (fromParamsList || []).forEach(function (sp) {
+                copyCatalogFilterParams(sp, u);
+            });
+            return u.pathname + u.search;
+        } catch (e) {
+            return href;
+        }
+    }
 
     var DEFAULT_TYPE_BY_GROUP = {
         component: 'cooling',
@@ -1218,6 +1243,7 @@
                     group = group || su.searchParams.get('group') || '';
                     type = type || su.searchParams.get('type') || '';
                     q = su.searchParams.get('q') || '';
+                    href = su.pathname + su.search;
                 }
             }
         } catch (e) {
@@ -1273,12 +1299,23 @@
             q: (params.get('q') || params.get('from_q') || '').trim(),
         };
         var stored = readStoredListReturnParts();
+        var storedFilterParams = null;
+        if (stored.href) {
+            try {
+                storedFilterParams = new URL(stored.href, window.location.href).searchParams;
+            } catch (e1) {
+                storedFilterParams = null;
+            }
+        }
+        function withListFilters(href) {
+            return mergeCatalogFiltersIntoHref(href, [params, storedFilterParams]);
+        }
 
         if (hasPendingListRestore() && stored.href) {
             try {
                 var saved = new URL(stored.href, window.location.href);
                 if (isCatalogListPath(saved.pathname)) {
-                    return saved.pathname + saved.search;
+                    return withListFilters(saved.pathname + saved.search);
                 }
             } catch (e) {
                 /* ignore */
@@ -1305,14 +1342,14 @@
                     su.searchParams.set('type', type);
                     if (q) su.searchParams.set('q', q);
                     else su.searchParams.delete('q');
-                    return su.pathname + su.search;
+                    return withListFilters(su.pathname + su.search);
                 }
             } catch (e) {
                 /* ignore */
             }
         }
 
-        return buildListPageHref(group, type, q);
+        return withListFilters(buildListPageHref(group, type, q));
     }
 
     function bindBackLinkRestore() {

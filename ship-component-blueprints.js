@@ -1135,7 +1135,7 @@
                 out.push({
                     uuid: m.uuid || missionRef(stub) || null,
                     title_en: title || '未命名任务',
-                    title_zh: null,
+                    title_zh: m.title_zh || null,
                     debug_name: m.debug_name || null,
                     web_url: m.web_url || null,
                     chance: m.chance != null ? m.chance : null,

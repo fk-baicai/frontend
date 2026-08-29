@@ -29,7 +29,7 @@
               fps_magazine: {
                   label_zh: '武器配件',
                   kicker: 'ATTACHMENTS',
-                  lead: ['弹匣', '瞄具', '枪口', '下挂', '实用配件', '发射器导弹'],
+                  lead: ['弹匣', '瞄具', '枪口', '下挂', '实用配件', '发射器导弹', '其他配件'],
               },
           }
         : {
@@ -41,7 +41,7 @@
               weapon: {
                   label_zh: '舰船武器',
                   kicker: 'WEAPONS',
-                  lead: ['舰炮', '导弹', '导弹架', '舰船炮台'],
+                  lead: ['舰炮', '导弹', '导弹架', '舰船炮台', 'EMP'],
               },
               mining: {
                   label_zh: '舰船矿头',
@@ -105,11 +105,12 @@
                   'attachment_bottom',
                   'attachment_utility',
                   'attachment_missile',
+                  'attachment_other',
               ],
           }
         : {
               component: ['cooling', 'power', 'shield', 'quantum', 'jump', 'radar'],
-              weapon: ['ship_weapon', 'ship_missile', 'missile_rack', 'ship_turret'],
+              weapon: ['ship_weapon', 'ship_missile', 'missile_rack', 'ship_turret', 'ship_emp'],
               mining: ['mining_laser', 'ship_module'],
               salvage: ['salvage_scraper'],
               fuel_nozzle: ['fuel_nozzle'],
@@ -127,6 +128,7 @@
         mining_laser: '矿头',
         ship_module: '模组',
         ship_turret: '舰船炮台',
+        ship_emp: 'EMP',
         salvage_scraper: '刮削模块',
         fuel_nozzle: '燃料喷嘴',
         personal_weapon: '武器',
@@ -137,6 +139,7 @@
         attachment_bottom: '下挂',
         attachment_utility: '实用配件',
         attachment_missile: '发射器导弹',
+        attachment_other: '其他配件',
         weapon_pistol: '手枪',
         weapon_smg: '冲锋枪',
         weapon_rifle: '突击步枪',
@@ -307,6 +310,7 @@
             grade: '',
             class: '',
             damage_type: '',
+            signal_type: '',
         },
     };
 
@@ -380,8 +384,30 @@
         updateMetaBar();
     }
 
+    var CATALOG_FILTER_KEYS = ['size', 'grade', 'class', 'damage_type', 'signal_type'];
+
     function resetCatalogFilters() {
-        state.filters = { size: '', grade: '', class: '', damage_type: '' };
+        state.filters = { size: '', grade: '', class: '', damage_type: '', signal_type: '' };
+    }
+
+    function writeCatalogFiltersToParams(searchParams) {
+        if (!searchParams || !state.filters) return;
+        CATALOG_FILTER_KEYS.forEach(function (key) {
+            var v = String(state.filters[key] || '').trim();
+            var skip =
+                (key === 'grade' && !showGradeFacet()) ||
+                (key === 'damage_type' && !showDamageTypeFacet()) ||
+                (key === 'signal_type' && !showSignalTypeFacet());
+            if (v && !skip) searchParams.set(key, v);
+            else searchParams.delete(key);
+        });
+    }
+
+    function readCatalogFiltersFromParams(searchParams) {
+        if (!searchParams) return;
+        CATALOG_FILTER_KEYS.forEach(function (key) {
+            state.filters[key] = String(searchParams.get(key) || '').trim();
+        });
     }
 
     function bindCatalogViewToggle() {
@@ -431,6 +457,7 @@
         else if (key === 'grade') fromApi = facets.grades || [];
         else if (key === 'class') fromApi = facets.classes || [];
         else if (key === 'damage_type') fromApi = facets.damage_types || [];
+        else if (key === 'signal_type') fromApi = facets.signal_types || [];
         if (fromApi.length) return fromApi;
         var seen = Object.create(null);
         var out = [];
@@ -440,6 +467,7 @@
             else if (key === 'grade') val = String(item.grade || item.grade_letter || '');
             else if (key === 'class') val = String(item.class_short_zh || '');
             else if (key === 'damage_type') val = itemDamageTypeRaw(item);
+            else if (key === 'signal_type') val = itemMissileSignalTypeRaw(item);
             val = val.trim();
             if (!val || seen[val]) return;
             seen[val] = 1;
@@ -457,6 +485,7 @@
         if (key === 'grade') return '等级';
         if (key === 'class') return '用途';
         if (key === 'damage_type') return '伤害类型';
+        if (key === 'signal_type') return '信号类型';
         return key;
     }
 
@@ -483,6 +512,16 @@
 
     function showDamageTypeFacet() {
         return IS_EQUIPMENT_PAGE && state.group === 'fps_weapon';
+    }
+
+    function showSignalTypeFacet() {
+        return !IS_EQUIPMENT_PAGE && state.type === 'ship_missile';
+    }
+
+    function itemMissileSignalTypeRaw(item) {
+        var m = item && item.wiki_fields && item.wiki_fields.missile;
+        if (!m || m.signal_type == null) return '';
+        return String(m.signal_type).trim();
     }
 
     function itemDamageTypeRaw(item) {
@@ -543,10 +582,60 @@
         return false;
     }
 
-    function catalogBrowsableItems() {
-        return state.items.filter(function (item) {
-            return isBrowsableItem(item) && matchesDamageTypeFilter(item);
+    function matchesSignalTypeFilter(item) {
+        if (!showSignalTypeFacet()) return true;
+        var sel = String(state.filters.signal_type || '').trim();
+        if (!sel) return true;
+        var raw = itemMissileSignalTypeRaw(item);
+        if (raw && raw === sel) return true;
+        if (raw && raw.toLowerCase() === sel.toLowerCase()) return true;
+        var selLabel = damageTypeOptionLabel(sel);
+        if (raw && damageTypeOptionLabel(raw) === sel) return true;
+        if (raw && damageTypeOptionLabel(raw) === selLabel) return true;
+        return false;
+    }
+
+    function catalogIdentityKey(item) {
+        function n(s) {
+            return String(s == null ? '' : s).trim().toLowerCase();
+        }
+        return [
+            n(item && item.type),
+            n((item && item.name_en) || (item && item.name_zh)),
+            n(item && item.size),
+            n((item && (item.grade || item.grade_letter)) || ''),
+            n((item && (item.class_en || item.class_short_zh)) || ''),
+            n(item && item.manufacturer),
+        ].join('\0');
+    }
+
+    function uniqueCatalogItems(items) {
+        var best = Object.create(null);
+        var order = [];
+        (items || []).forEach(function (item) {
+            var key = catalogIdentityKey(item);
+            if (!key || key === '\0\0\0\0\0') return;
+            var prev = best[key];
+            if (!prev) {
+                best[key] = item;
+                order.push(key);
+                return;
+            }
+            var prevScore = Number(prev.purchase_count) || 0;
+            var nextScore = Number(item.purchase_count) || 0;
+            if (nextScore > prevScore) best[key] = item;
         });
+        return order.map(function (key) {
+            return best[key];
+        });
+    }
+
+    function catalogBrowsableItems() {
+        return uniqueCatalogItems(
+            state.items.filter(function (item) {
+                return isBrowsableItem(item) && matchesDamageTypeFilter(item) && matchesSignalTypeFilter(item);
+            })
+        );
     }
 
     function renderFacetBar() {
@@ -556,6 +645,7 @@
         if (showGradeFacet()) keys.push('grade');
         keys.push('class');
         if (showDamageTypeFacet()) keys.push('damage_type');
+        if (showSignalTypeFacet()) keys.push('signal_type');
         els.facetBar.innerHTML = '';
         var shown = 0;
         keys.forEach(function (key) {
@@ -580,6 +670,7 @@
                 btn.textContent = label;
                 btn.addEventListener('click', function () {
                     state.filters[key] = String(value || '');
+                    updateUrlState();
                     loadList();
                 });
                 row.appendChild(btn);
@@ -588,7 +679,7 @@
             opts.forEach(function (val) {
                 var lab = val;
                 if (key === 'size') lab = sizeOptionLabel(val);
-                else if (key === 'damage_type') lab = damageTypeOptionLabel(val);
+                else if (key === 'damage_type' || key === 'signal_type') lab = damageTypeOptionLabel(val);
                 addTag(val, lab);
             });
             group.appendChild(row);
@@ -1029,6 +1120,7 @@
             url.searchParams.set('type', state.type);
             var q = els.search ? String(els.search.value || '').trim() : '';
             if (q) url.searchParams.set('q', q);
+            writeCatalogFiltersToParams(url.searchParams);
             return url.pathname + url.search;
         } catch (e) {
             var href =
@@ -1041,6 +1133,10 @@
                 encodeURIComponent(state.type);
             var qFallback = els.search ? String(els.search.value || '').trim() : '';
             if (qFallback) href += '&q=' + encodeURIComponent(qFallback);
+            CATALOG_FILTER_KEYS.forEach(function (key) {
+                var v = String(state.filters[key] || '').trim();
+                if (v) href += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(v);
+            });
             return href;
         }
     }
@@ -1358,7 +1454,7 @@
         if (catalog && catalog.group) {
             return catalog.group === 'module' ? 'mining' : catalog.group;
         }
-        if (key === 'ship_weapon' || key === 'ship_turret' || key === 'ship_missile' || key === 'missile_rack') return 'weapon';
+        if (key === 'ship_weapon' || key === 'ship_turret' || key === 'ship_missile' || key === 'missile_rack' || key === 'ship_emp') return 'weapon';
         if (key === 'mining_laser' || key === 'ship_module') return 'mining';
         if (key === 'salvage_scraper') return 'salvage';
         if (key === 'fuel_nozzle') return 'fuel_nozzle';
@@ -1389,10 +1485,15 @@
             url.searchParams.set('type', t);
             if (query) url.searchParams.set('q', query);
             else url.searchParams.delete('q');
+            writeCatalogFiltersToParams(url.searchParams);
             return url.pathname + url.search;
         } catch (e) {
             var href = listPagePathname() + '?group=' + encodeURIComponent(g) + '&type=' + encodeURIComponent(t);
             if (query) href += '&q=' + encodeURIComponent(query);
+            CATALOG_FILTER_KEYS.forEach(function (key) {
+                var v = String(state.filters[key] || '').trim();
+                if (v) href += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(v);
+            });
             return href;
         }
     }
@@ -1656,6 +1757,17 @@
             'wiki_t_sub',
             'wiki_t_mounts',
             'wiki_t_wsize',
+            'mfg',
+            'mass',
+            'volume',
+            'price',
+            'loc',
+            'expand',
+        ],
+        ship_emp: [
+            'name',
+            'type',
+            'size',
             'mfg',
             'mass',
             'volume',
@@ -2022,6 +2134,9 @@
         if (showDamageTypeFacet() && state.filters.damage_type) {
             params.set('damage_type', state.filters.damage_type);
         }
+        if (showSignalTypeFacet() && state.filters.signal_type) {
+            params.set('signal_type', state.filters.signal_type);
+        }
         params.set('limit', String(getPageSize()));
         params.set('page', String(page || 1));
         var syncParam = apiDataVersionParam();
@@ -2121,6 +2236,7 @@
             }
             var q = url.searchParams.get('q');
             if (q != null && els.search) els.search.value = q;
+            readCatalogFiltersFromParams(url.searchParams);
             normalizeGroupState();
         } catch (e) {
             /* ignore */
@@ -2169,6 +2285,7 @@
             var q = els.search ? String(els.search.value || '').trim() : '';
             if (q) url.searchParams.set('q', q);
             else url.searchParams.delete('q');
+            writeCatalogFiltersToParams(url.searchParams);
             history.replaceState(null, '', url.pathname + url.search);
         } catch (e) {
             /* ignore */
@@ -4543,6 +4660,7 @@
     async function loadList() {
         if (!els.body && !els.cardGrid) return;
         abortPendingFetches();
+        updateUrlState();
         var pendingRestore = isListRestorePending();
         if (!pendingRestore) clearArmorVariantExpanded();
         state.page = 1;
