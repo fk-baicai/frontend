@@ -975,10 +975,47 @@
         return window.matchMedia('(max-width: 820px)').matches;
     }
 
+    function clearHeroImageFrameSize() {
+        [els.media, els.imageBtn].forEach(function (el) {
+            if (!el) return;
+            el.style.width = '';
+            el.style.height = '';
+            el.style.minWidth = '';
+            el.style.minHeight = '';
+            el.style.maxWidth = '';
+        });
+    }
+
     function syncHeroImageFrameSize() {
-        if (!els.imageBtn) return;
-        els.imageBtn.style.width = '';
-        els.imageBtn.style.height = '';
+        if (!els.media || !els.imageBtn) return;
+        if (!isMobileHeroLayout() || els.media.hidden) {
+            clearHeroImageFrameSize();
+            return;
+        }
+        var inner = els.media.parentElement;
+        var copy = inner ? inner.querySelector('.sc-detail-hero-copy') : null;
+        if (!inner || !copy) {
+            clearHeroImageFrameSize();
+            return;
+        }
+        clearHeroImageFrameSize();
+        var cs = window.getComputedStyle(inner);
+        var padL = parseFloat(cs.paddingLeft) || 0;
+        var padR = parseFloat(cs.paddingRight) || 0;
+        var gap = parseFloat(cs.columnGap) || parseFloat(cs.gap) || 8;
+        var minCopy = 116;
+        var maxSquare = Math.max(88, inner.clientWidth - padL - padR - gap - minCopy);
+        var n;
+        for (n = 0; n < 5; n += 1) {
+            var copyH = copy.getBoundingClientRect().height;
+            var size = Math.round(Math.min(Math.max(copyH, 88), maxSquare));
+            els.media.style.width = size + 'px';
+            els.media.style.height = size + 'px';
+            els.media.style.minWidth = size + 'px';
+            els.media.style.minHeight = size + 'px';
+            els.imageBtn.style.width = size + 'px';
+            els.imageBtn.style.height = size + 'px';
+        }
     }
 
     var heroImageResizeTimer = null;
@@ -1094,6 +1131,7 @@
             lastGoodSrc = els.image.currentSrc || els.image.src;
             showDetailImage();
             syncHeroImageFrameSize();
+            window.requestAnimationFrame(syncHeroImageFrameSize);
         };
         showDetailImage();
         showDetailLayer(detailImageIndex);
