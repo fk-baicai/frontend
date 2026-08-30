@@ -1688,7 +1688,7 @@
             const s = loadAuthSession();
             const bid = s && s.bindingId ? String(s.bindingId).trim().toLowerCase() : '';
             if (!bid) return null;
-            return 'UssCommunityUi_v1:' + bid + ':' + suffix;
+            return 'UssCommunityUi_v2:' + bid + ':' + suffix;
         }
 
         function readCommunityUiCache(suffix) {

@@ -28,6 +28,24 @@
         return root ? root.querySelector('.community-image-lightbox-img') : null;
     }
 
+    function getCreditEl(overlay) {
+        const root = overlay || getOverlay();
+        return root ? root.querySelector('.community-image-lightbox-by') : null;
+    }
+
+    function setCredit(overlay, by) {
+        const el = getCreditEl(overlay);
+        if (!el) return;
+        const name = String(by || '').trim();
+        if (!name) {
+            el.hidden = true;
+            el.textContent = '';
+            return;
+        }
+        el.hidden = false;
+        el.textContent = 'by:' + name;
+    }
+
     function notifyChange() {
         try {
             document.dispatchEvent(new CustomEvent('uss-community-lightbox-change'));
@@ -36,9 +54,16 @@
         }
     }
 
+    function getFrame(overlay) {
+        const root = overlay || getOverlay();
+        return root ? root.querySelector('.community-image-lightbox-frame') : null;
+    }
+
     function applyTransform(img) {
-        if (!img) return;
-        img.style.transform = 'translate(' + state.tx + 'px, ' + state.ty + 'px) scale(' + state.scale + ')';
+        const frame = getFrame() || (img && img.closest && img.closest('.community-image-lightbox-frame'));
+        const el = frame || img;
+        if (!el) return;
+        el.style.transform = 'translate(' + state.tx + 'px, ' + state.ty + 'px) scale(' + state.scale + ')';
     }
 
     function resetTransform(img) {
@@ -47,6 +72,8 @@
         state.ty = 0;
         state.dragging = false;
         state.dragMoved = false;
+        const frame = getFrame() || (img && img.closest && img.closest('.community-image-lightbox-frame'));
+        if (frame) frame.style.transform = '';
         if (img) {
             img.style.transform = '';
             img.classList.remove('is-dragging');
@@ -130,14 +157,31 @@
             img.alt = '';
             img.decoding = 'async';
             img.draggable = false;
-            overlay.appendChild(img);
+            const frame = document.createElement('div');
+            frame.className = 'community-image-lightbox-frame';
+            const credit = document.createElement('p');
+            credit.className = 'community-image-lightbox-by';
+            credit.hidden = true;
+            frame.appendChild(img);
+            frame.appendChild(credit);
+            overlay.appendChild(frame);
             document.body.appendChild(overlay);
+        } else if (!overlay.querySelector('.community-image-lightbox-frame')) {
+            const img = overlay.querySelector('.community-image-lightbox-img');
+            const frame = document.createElement('div');
+            frame.className = 'community-image-lightbox-frame';
+            const credit = document.createElement('p');
+            credit.className = 'community-image-lightbox-by';
+            credit.hidden = true;
+            if (img) frame.appendChild(img);
+            frame.appendChild(credit);
+            overlay.appendChild(frame);
         }
         wireIfNeeded(overlay);
         return overlay;
     }
 
-    function open(src) {
+    function open(src, opts) {
         if (!src) return;
         const overlay = ensureOverlay();
         const img = getImg(overlay);
@@ -145,6 +189,8 @@
         resetTransform(img);
         img.src = src;
         img.alt = '放大预览';
+        const by = typeof opts === 'string' ? opts : opts && opts.by;
+        setCredit(overlay, by);
         overlay.classList.add('is-open');
         overlay.setAttribute('aria-hidden', 'false');
         notifyChange();
@@ -164,6 +210,7 @@
             img.removeAttribute('src');
             img.alt = '';
         }
+        setCredit(overlay, '');
         overlay.classList.remove('is-open');
         overlay.setAttribute('aria-hidden', 'true');
         notifyChange();

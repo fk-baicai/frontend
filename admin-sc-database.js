@@ -1300,6 +1300,9 @@
         loadScSyncLog();
         loadScImageStatus();
         loadScManualLoc();
+        if (window.UssScUserImageReview && typeof window.UssScUserImageReview.mount === 'function') {
+            window.UssScUserImageReview.mount(document.getElementById('scUserImageReviewRoot'), s.token);
+        }
         resumeSyncProgressWatch();
     }
 

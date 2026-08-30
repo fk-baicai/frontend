@@ -20,11 +20,48 @@
         return Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    /** 非零但小于 0.005：写出真实小数，避免两位小数显示成 0.00 */
+    function formatTinyDecimal(v) {
+        var n = Number(v);
+        if (!Number.isFinite(n)) return null;
+        if (n === 0) return '0';
+        var abs = Math.abs(n);
+        var digits = 6;
+        if (abs < 0.01) digits = 8;
+        if (abs < 1e-4) digits = 12;
+        if (abs < 1e-8) digits = 14;
+        var s = n.toFixed(digits);
+        return s.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+    }
+
+    function formatWikiAuthenticNumber(v) {
+        var n = Number(v);
+        if (!Number.isFinite(n)) return null;
+        if (n === 0) return formatFixedDecimal2(0);
+        if (Math.abs(n) >= 0.005) return formatFixedDecimal2(n);
+        return formatTinyDecimal(n);
+    }
+
+    /** 仅量子驱动：按数值本身展示，不四舍五入到 0.01 */
+    function formatQuantumExactNumber(v) {
+        var n = Number(v);
+        if (!Number.isFinite(n)) return null;
+        if (n === 0) return '0';
+        var abs = Math.abs(n);
+        if (abs !== 0 && abs < 0.005) return formatTinyDecimal(n);
+        if (abs !== 0 && (abs < 1e-4 || abs >= 1e7)) return String(n);
+        return n.toLocaleString('zh-CN', {
+            useGrouping: true,
+            maximumFractionDigits: 20,
+            minimumFractionDigits: 0,
+        });
+    }
+
     function formatWikiScalar(v) {
         if (v == null || v === '') return null;
         if (typeof v === 'boolean') return v ? '是' : '否';
         if (typeof v === 'number' && Number.isFinite(v)) {
-            return formatFixedDecimal2(v);
+            return formatWikiAuthenticNumber(v);
         }
         var s = String(v).trim();
         if (!s) return null;
@@ -165,13 +202,19 @@
         return fromPorts != null ? fromPorts : null;
     }
 
-    function formatWikiFieldDisplay(key, val, nestedKey) {
+    function formatWikiFieldDisplay(key, val, nestedKey, itemType) {
         if (val == null || val === '') return null;
         if (typeof val === 'number' && val < 0 && isUnlimitedRangeKey(key)) {
             return '无限';
         }
         if (WIKI_BOOLEAN_NUM_KEYS[key] && (val === 0 || val === 1)) {
             return val === 1 ? '是' : '否';
+        }
+        if (itemType === 'quantum' && typeof val === 'number' && Number.isFinite(val)) {
+            var exact =
+                key === 'fuel_rate' ? formatTinyDecimal(val) : formatQuantumExactNumber(val);
+            if (exact == null) return null;
+            return appendWikiFieldUnit(key, exact, nestedKey);
         }
         if (/_change$/i.test(String(key)) && typeof val === 'number' && Number.isFinite(val)) {
             if (val === 0) return null;
@@ -1306,7 +1349,7 @@
             }
             return null;
         }
-        var display = formatWikiFieldDisplay(key, val, nestedKey);
+        var display = formatWikiFieldDisplay(key, val, nestedKey, itemType);
         if (display == null) return null;
         return { label: wikiFieldLabel(key, itemType, nestedKey), value: display };
     }

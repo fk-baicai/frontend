@@ -22,11 +22,62 @@
         media: document.getElementById('scDetailMedia'),
         imageBtn: document.getElementById('scDetailImageBtn'),
         image: document.getElementById('scDetailImage'),
+        imagePager: document.getElementById('scDetailImagePager'),
+        imagePagerMeta: document.getElementById('scDetailImagePagerMeta'),
+        imagePrev: document.getElementById('scDetailImagePrev'),
+        imageNext: document.getElementById('scDetailImageNext'),
         loadout: document.getElementById('scDetailLoadout'),
+        imageUpload: document.getElementById('scDetailImageUpload'),
+        imageUploadBtn: document.getElementById('scDetailImageUploadBtn'),
+        imageUploadHint: document.getElementById('scDetailImageUploadHint'),
+        imageFile: document.getElementById('scDetailImageFile'),
+        uploadToast: document.getElementById('scDetailUploadToast'),
+        uploadToastTitle: document.getElementById('scDetailUploadToastTitle'),
+        uploadToastSub: document.getElementById('scDetailUploadToastSub'),
+        imgDesk: document.getElementById('scImgDesk'),
+        imgDeskList: document.getElementById('scImgDeskList'),
+        imgDeskReward: document.getElementById('scImgDeskReward'),
+        imgDeskMeta: document.getElementById('scImgDeskMeta'),
+        imgDeskClose: document.getElementById('scImgDeskClose'),
+        imgDeskAdd: document.getElementById('scImgDeskAdd'),
     };
 
+    var uploadToastTimer = 0;
     var currentImageLightboxSrc = '';
-    var currentDetailItem = null;
+    var currentImageLightboxBy = '';
+
+    function hideUploadToast() {
+        if (uploadToastTimer) {
+            clearTimeout(uploadToastTimer);
+            uploadToastTimer = 0;
+        }
+        if (els.uploadToast) {
+            els.uploadToast.classList.remove('is-on');
+            els.uploadToast.hidden = true;
+        }
+    }
+
+    function showUploadToast(reward) {
+        if (!els.uploadToast) return;
+        var fleet = !!(reward && reward.fleet);
+        if (els.uploadToastTitle) {
+            els.uploadToastTitle.textContent = '上传成功';
+        }
+        if (els.uploadToastSub) {
+            if (fleet) {
+                els.uploadToastSub.innerHTML =
+                    '已提交审核，录用成功后 USS总部积分+0.5<span class="sc-upload-toast__cap">（最高上限增加8积分）</span>';
+            } else {
+                els.uploadToastSub.textContent = '已提交管理员审核';
+            }
+        }
+        els.uploadToast.hidden = false;
+        requestAnimationFrame(function () {
+            els.uploadToast.classList.add('is-on');
+        });
+        if (uploadToastTimer) clearTimeout(uploadToastTimer);
+        uploadToastTimer = setTimeout(hideUploadToast, 5200);
+    }
 
     function isPlaceholderItemName(s) {
         var v = String(s || '').trim();
@@ -871,7 +922,7 @@
                   ? String(item.uuid).trim()
                   : '';
         if (!id) return '';
-        return absoluteAssetUrl('/api/sc/components/image/' + encodeURIComponent(id));
+        return absoluteAssetUrl('/api/sc/components/image/' + encodeURIComponent(id) + '?layer=wiki');
     }
 
     function componentImageDirectUrl(item) {
@@ -882,6 +933,10 @@
 
     function hideDetailImage() {
         currentImageLightboxSrc = '';
+        currentImageLightboxBy = '';
+        detailImageLayers = [];
+        if (els.imagePrev) els.imagePrev.hidden = true;
+        if (els.imageNext) els.imageNext.hidden = true;
         if (els.media) els.media.hidden = true;
         if (els.imageBtn) {
             els.imageBtn.hidden = true;
@@ -898,7 +953,7 @@
         if (!currentImageLightboxSrc) return;
         var lb = window.UssCommunityImageLightbox;
         if (lb && typeof lb.open === 'function') {
-            lb.open(currentImageLightboxSrc);
+            lb.open(currentImageLightboxSrc, { by: currentImageLightboxBy });
             return;
         }
         window.open(currentImageLightboxSrc, '_blank', 'noopener,noreferrer');
@@ -921,32 +976,9 @@
     }
 
     function syncHeroImageFrameSize() {
-        if (!els.image || !els.imageBtn) return;
-        if (els.imageBtn.hidden || isMobileHeroLayout()) {
-            els.imageBtn.style.width = '';
-            els.imageBtn.style.height = '';
-            return;
-        }
-        var nw = els.image.naturalWidth;
-        var nh = els.image.naturalHeight;
-        if (!nw || !nh) {
-            els.imageBtn.style.width = '';
-            els.imageBtn.style.height = '';
-            return;
-        }
-        var frameH = parseFloat(getComputedStyle(els.imageBtn).height);
-        if (!Number.isFinite(frameH) || frameH <= 0) {
-            frameH = els.imageBtn.getBoundingClientRect().height;
-        }
-        if (!frameH) return;
-
-        var width = Math.round((frameH * nw) / nh);
-        var maxW = parseFloat(getComputedStyle(els.imageBtn).maxWidth);
-        if (Number.isFinite(maxW) && maxW > 0 && width > maxW) {
-            width = maxW;
-        }
-        els.imageBtn.style.height = frameH + 'px';
-        els.imageBtn.style.width = Math.max(1, width) + 'px';
+        if (!els.imageBtn) return;
+        els.imageBtn.style.width = '';
+        els.imageBtn.style.height = '';
     }
 
     var heroImageResizeTimer = null;
@@ -964,39 +996,443 @@
         window.addEventListener('resize', scheduleHeroImageFrameSync);
     }
 
+    var detailImageLayers = [];
+    var detailImageIndex = 0;
+
+    function orderedImageLayers(item) {
+        var user = [];
+        var wiki = [];
+        var list = item && Array.isArray(item.images) ? item.images : [];
+        for (var i = 0; i < list.length; i += 1) {
+            var row = list[i];
+            var raw = row && row.url ? absoluteAssetUrl(row.url) : '';
+            if (!raw) continue;
+            var pack = { url: raw, by: String(row.by || '').trim(), source: row.source || '' };
+            if (row.source === 'user') user.push(pack);
+            else wiki.push(pack);
+        }
+        return user.concat(wiki);
+    }
+
+    function showDetailLayer(index) {
+        if (!detailImageLayers.length) return;
+        detailImageIndex = (index + detailImageLayers.length) % detailImageLayers.length;
+        var layer = detailImageLayers[detailImageIndex];
+        currentImageLightboxSrc = layer.url;
+        currentImageLightboxBy = layer.by || '';
+        if (els.image) els.image.src = layer.url;
+        if (els.imagePrev) els.imagePrev.hidden = detailImageLayers.length < 2;
+        if (els.imageNext) els.imageNext.hidden = detailImageLayers.length < 2;
+    }
+
+    function pickDisplayImage(item) {
+        var layers = orderedImageLayers(item);
+        var userCount = 0;
+        for (var i = 0; i < layers.length; i += 1) {
+            if (layers[i].source === 'user') userCount += 1;
+        }
+        if (!layers.length) {
+            var proxySrc = componentImageProxyUrl(item);
+            var directSrc = componentImageDirectUrl(item);
+            var only = proxySrc || directSrc;
+            return {
+                url: only,
+                by: '',
+                layers: only ? [{ url: only, by: '', source: 'official' }] : [],
+            };
+        }
+        var start = userCount ? Math.floor(Math.random() * userCount) : 0;
+        var pageable = userCount ? layers.filter(function (row) { return row.source === 'user'; }) : layers;
+        return { url: layers[start].url, by: layers[start].by, layers: pageable, index: start };
+    }
+
     function renderImage(item) {
         if (!els.media || !els.image) return;
-        var proxySrc = componentImageProxyUrl(item);
-        var directSrc = componentImageDirectUrl(item);
-        var src = proxySrc || directSrc;
+        var picked = pickDisplayImage(item);
+        var src = picked && picked.url;
         if (!src) {
             hideDetailImage();
             return;
         }
-        currentImageLightboxSrc = directSrc || proxySrc;
+        detailImageLayers = picked.layers || [];
+        detailImageIndex = picked.index || 0;
+        var lastGoodSrc = '';
+        var fallbacks = [];
+        detailImageLayers.forEach(function (row, i) {
+            if (i !== detailImageIndex && row.url) fallbacks.push(row.url);
+        });
+        var directSrc = componentImageDirectUrl(item);
+        currentImageLightboxSrc = src;
+        currentImageLightboxBy = picked.by || '';
         wireDetailImageLightbox();
         wireHeroImageFrameSync();
+        wireDetailImagePager();
         els.image.loading = 'eager';
         els.image.alt = item.name_zh || item.name_en || '配件图片';
         els.image.referrerPolicy = 'no-referrer';
         els.image.onerror = function () {
+            if (lastGoodSrc) {
+                els.image.src = lastGoodSrc;
+                currentImageLightboxSrc = lastGoodSrc;
+                return;
+            }
+            var next = fallbacks.shift();
+            if (next) {
+                els.image.src = next;
+                currentImageLightboxSrc = next;
+                return;
+            }
             if (directSrc && els.image.src !== directSrc) {
                 els.image.src = directSrc;
                 currentImageLightboxSrc = directSrc;
+                currentImageLightboxBy = '';
                 return;
             }
             hideDetailImage();
         };
         els.image.onload = function () {
+            lastGoodSrc = els.image.currentSrc || els.image.src;
             showDetailImage();
             syncHeroImageFrameSize();
         };
         showDetailImage();
-        els.image.src = src;
+        showDetailLayer(detailImageIndex);
         if (els.image.complete && els.image.naturalWidth > 0) {
             showDetailImage();
             syncHeroImageFrameSize();
         }
+    }
+
+    function wireDetailImagePager() {
+        if (!els.imagePrev || els.imagePrev.dataset.wired === '1') return;
+        els.imagePrev.dataset.wired = '1';
+        els.imagePrev.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            showDetailLayer(detailImageIndex - 1);
+        });
+        if (els.imageNext) {
+            els.imageNext.addEventListener('click', function (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                showDetailLayer(detailImageIndex + 1);
+            });
+        }
+    }
+
+    function readAuthToken() {
+        try {
+            var raw = sessionStorage.getItem('ussHangzhouAuthSession') || localStorage.getItem('ussHangzhouAuthSession');
+            if (!raw) return '';
+            var sess = JSON.parse(raw);
+            return (sess && sess.token) || '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function setUploadHint(text) {
+        var msg = text || '';
+        if (els.imageUploadHint) els.imageUploadHint.textContent = msg;
+        if (els.imageUploadBtn) {
+            els.imageUploadBtn.title = msg || '上传图片';
+            els.imageUploadBtn.setAttribute('aria-label', msg || '上传图片');
+            var pending = /等待管理员审核/.test(msg);
+            els.imageUploadBtn.classList.toggle('is-pending', pending);
+            if (pending) els.imageUploadBtn.title = msg;
+        }
+    }
+
+    function showUploadPanel(visible) {
+        if (!els.imageUpload) return;
+        els.imageUpload.hidden = !visible;
+    }
+
+    async function refreshOwnSubmission(item) {
+        var token = readAuthToken();
+        var id = item && item.id_item != null ? String(item.id_item) : getItemId();
+        if (!token || !id) return;
+        try {
+            var res = await fetch(apiUrl('/api/sc/components/' + encodeURIComponent(id) + '/image-submission'), {
+                headers: { Authorization: 'Bearer ' + token },
+            });
+            var data = await res.json().catch(function () {
+                return {};
+            });
+            if (!res.ok) return;
+            var sub = data.submission;
+            if (sub && sub.status === 'pending') {
+                setUploadHint('已提交，等待管理员审核');
+            } else if (sub && sub.status === 'rejected') {
+                var why = String(sub.reject_reason || '').trim();
+                setUploadHint(why ? '未录用：' + why : '未录用，可重新上传');
+            }
+        } catch (e) {
+            /* ignore */
+        }
+    }
+
+    function bindDetailImageUpload(item) {
+        var token = readAuthToken();
+        if (!els.imageUploadBtn || !els.imageFile) {
+            showUploadPanel(false);
+            return;
+        }
+        if (!token) {
+            showUploadPanel(false);
+            return;
+        }
+        showUploadPanel(true);
+        setUploadHint('打开图片投稿');
+        refreshOwnSubmission(item);
+        if (els.imageUploadBtn.dataset.wired === '1') return;
+        els.imageUploadBtn.dataset.wired = '1';
+        els.imageUploadBtn.addEventListener('click', function () {
+            openImgDesk();
+        });
+        if (els.imgDeskClose) {
+            els.imgDeskClose.addEventListener('click', closeImgDesk);
+        }
+        if (els.imgDesk) {
+            els.imgDesk.addEventListener('click', function (ev) {
+                if (ev.target === els.imgDesk) closeImgDesk();
+            });
+        }
+        if (els.imgDeskAdd) {
+            els.imgDeskAdd.addEventListener('click', function () {
+                uploadItemId = currentDetailItem && currentDetailItem.id_item != null ? String(currentDetailItem.id_item) : getItemId();
+                els.imageFile.click();
+            });
+        }
+        els.imageFile.addEventListener('change', function () {
+            var file = els.imageFile.files && els.imageFile.files[0];
+            els.imageFile.value = '';
+            if (!file) return;
+            submitUploadFile(file, uploadItemId);
+        });
+    }
+
+    var uploadItemId = '';
+    var imgDeskOpen = false;
+
+    function closeImgDesk() {
+        imgDeskOpen = false;
+        if (els.imgDesk) els.imgDesk.hidden = true;
+    }
+
+    function statusLabel(status) {
+        if (status === 'pending') return '待审核';
+        if (status === 'approved') return '已录用';
+        if (status === 'rejected') return '未录用';
+        return status || '—';
+    }
+
+    function rewardCopy(reward) {
+        if (!reward || !reward.fleet) return '';
+        var earned = Number(reward.earned) || 0;
+        var cap = Number(reward.cap) || 8;
+        return '录用成功后 USS总部积分+0.5（此项已得 ' + earned + ' / 上限 ' + cap + '）。达上限仍可继续投稿。';
+    }
+
+    function rowPointsCopy(row, reward) {
+        if (row.status === 'approved') {
+            return reward && reward.fleet ? '已录用。符合规则时总部积分 +0.5 已入账。' : '已录用。';
+        }
+        if (row.status === 'pending') {
+            return reward && reward.fleet ? '待审核。录用成功后才增加总部积分。' : '待审核。';
+        }
+        return reward && reward.fleet ? '未录用，不增加积分。' : '未录用。';
+    }
+
+    function loadDeskThumbs() {
+        if (!els.imgDeskList) return;
+        var tok = readAuthToken();
+        els.imgDeskList.querySelectorAll('img[data-sub-id]').forEach(function (img) {
+            var id = img.getAttribute('data-sub-id');
+            fetch(apiUrl('/api/sc/my-image-submissions/' + encodeURIComponent(id) + '/preview'), {
+                headers: { Authorization: 'Bearer ' + tok },
+            })
+                .then(function (res) {
+                    if (!res.ok) throw new Error('preview');
+                    return res.blob();
+                })
+                .then(function (blob) {
+                    img.src = URL.createObjectURL(blob);
+                })
+                .catch(function () {
+                    img.alt = '无法预览';
+                });
+        });
+    }
+
+    function renderImgDesk(data) {
+        var items = (data && data.items) || [];
+        var reward = data && data.reward;
+        if (els.imgDeskReward) {
+            var copy = rewardCopy(reward);
+            els.imgDeskReward.textContent = copy;
+            els.imgDeskReward.hidden = !copy;
+        }
+        if (els.imgDeskMeta) els.imgDeskMeta.textContent = items.length ? '共 ' + items.length + ' 条投稿' : '还没有投稿';
+        if (!els.imgDeskList) return;
+        if (!items.length) {
+            els.imgDeskList.innerHTML = '<p class="sc-img-desk__empty">还没有上传记录。点上方按钮为当前配件提交图片，管理员审核后会出现在这里。</p>';
+            return;
+        }
+        els.imgDeskList.innerHTML = items
+            .map(function (row) {
+                var why = String(row.reject_reason || '').trim();
+                var approved = row.status === 'approved';
+                var actions =
+                    '<div class="sc-img-desk__actions">' +
+                    '<button type="button" data-replace-item="' +
+                    escapeHtml(row.id_item) +
+                    '">替换</button>' +
+                    (approved
+                        ? ''
+                        : '<button type="button" data-del-id="' +
+                          escapeHtml(row.id) +
+                          '">删除</button>') +
+                    '</div>';
+                return (
+                    '<article class="sc-img-desk__card">' +
+                    '<img alt="" class="sc-img-desk__thumb" data-sub-id="' +
+                    escapeHtml(row.id) +
+                    '">' +
+                    '<div>' +
+                    '<p class="sc-img-desk__name">' +
+                    escapeHtml(row.item_name_zh || row.item_name_en || row.id_item) +
+                    '</p>' +
+                    '<p class="sc-img-desk__status' +
+                    (row.status === 'rejected' ? ' is-rejected' : '') +
+                    '">审核状态：' +
+                    escapeHtml(statusLabel(row.status)) +
+                    '</p>' +
+                    (why ? '<p class="sc-img-desk__reason">驳回理由：' + escapeHtml(why) + '</p>' : '') +
+                    '<p class="sc-img-desk__points">' +
+                    escapeHtml(rowPointsCopy(row, reward)) +
+                    '</p>' +
+                    actions +
+                    '</div></article>'
+                );
+            })
+            .join('');
+        loadDeskThumbs();
+        els.imgDeskList.querySelectorAll('[data-replace-item]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                uploadItemId = btn.getAttribute('data-replace-item');
+                els.imageFile.click();
+            });
+        });
+        els.imgDeskList.querySelectorAll('[data-del-id]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                if (!window.confirm('删除这条投稿？')) return;
+                var tok = readAuthToken();
+                fetch(apiUrl('/api/sc/my-image-submissions/' + encodeURIComponent(btn.getAttribute('data-del-id'))), {
+                    method: 'DELETE',
+                    headers: { Authorization: 'Bearer ' + tok },
+                })
+                    .then(function (res) {
+                        return res.json().then(function (d) {
+                            return { res: res, data: d };
+                        });
+                    })
+                    .then(function (pack) {
+                        if (!pack.res.ok) throw new Error('del');
+                        return loadImgDesk();
+                    })
+                    .catch(function () {
+                        if (els.imgDeskMeta) els.imgDeskMeta.textContent = '删除失败';
+                    });
+            });
+        });
+    }
+
+    function loadImgDesk() {
+        var tok = readAuthToken();
+        if (!tok) return Promise.resolve();
+        if (els.imgDeskMeta) els.imgDeskMeta.textContent = '加载中…';
+        return fetch(apiUrl('/api/sc/my-image-submissions'), {
+            headers: { Authorization: 'Bearer ' + tok },
+        })
+            .then(function (res) {
+                return res.json().then(function (data) {
+                    return { res: res, data: data };
+                });
+            })
+            .then(function (pack) {
+                if (!pack.res.ok) throw new Error('list');
+                renderImgDesk(pack.data);
+            })
+            .catch(function () {
+                if (els.imgDeskList) els.imgDeskList.innerHTML = '<p class="sc-img-desk__empty">加载失败，请稍后重试。</p>';
+            });
+    }
+
+    function openImgDesk() {
+        if (!els.imgDesk) return;
+        imgDeskOpen = true;
+        els.imgDesk.hidden = false;
+        loadImgDesk();
+    }
+
+    function submitUploadFile(file, itemId) {
+        var tok = readAuthToken();
+        var id = itemId || (currentDetailItem && currentDetailItem.id_item != null ? String(currentDetailItem.id_item) : getItemId());
+        if (!tok || !id) {
+            setUploadHint('请先登录后再上传');
+            return;
+        }
+        if (file.size > 6 * 1024 * 1024) {
+            if (els.imgDeskMeta) els.imgDeskMeta.textContent = '图片请不超过 6MB';
+            return;
+        }
+        if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
+            if (els.imgDeskMeta) els.imgDeskMeta.textContent = '请上传 jpeg / png / webp / gif';
+            return;
+        }
+        if (els.imageUploadBtn) els.imageUploadBtn.disabled = true;
+        if (els.imgDeskMeta) els.imgDeskMeta.textContent = '正在压缩并提交…';
+        var reader = new FileReader();
+        reader.onerror = function () {
+            if (els.imageUploadBtn) els.imageUploadBtn.disabled = false;
+            if (els.imgDeskMeta) els.imgDeskMeta.textContent = '读取图片失败';
+        };
+        reader.onload = function () {
+            fetch(apiUrl('/api/sc/components/' + encodeURIComponent(id) + '/image-submission'), {
+                method: 'POST',
+                headers: {
+                    Authorization: 'Bearer ' + tok,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ image: String(reader.result || '') }),
+            })
+                .then(function (res) {
+                    return res.json().then(function (data) {
+                        return { res: res, data: data };
+                    });
+                })
+                .then(function (pack) {
+                    if (els.imageUploadBtn) els.imageUploadBtn.disabled = false;
+                    if (!pack.res.ok) {
+                        var msg =
+                            window.UssApiError && pack.data && pack.data.code
+                                ? window.UssApiError.formatUserError(pack.data.code)
+                                : '提交失败';
+                        if (els.imgDeskMeta) els.imgDeskMeta.textContent = msg;
+                        setUploadHint(msg);
+                        return;
+                    }
+                    setUploadHint('已提交，等待管理员审核');
+                    showUploadToast(pack.data && pack.data.reward);
+                    if (imgDeskOpen) loadImgDesk();
+                })
+                .catch(function () {
+                    if (els.imageUploadBtn) els.imageUploadBtn.disabled = false;
+                    if (els.imgDeskMeta) els.imgDeskMeta.textContent = '网络异常，请稍后重试';
+                });
+        };
+        reader.readAsDataURL(file);
     }
 
     function renderFootnote(meta) {
@@ -1040,14 +1476,15 @@
         renderLocations(item);
         renderBlueprintMissions(item);
         renderFootnote(meta);
+        currentDetailItem = item;
         renderImage(item);
+        bindDetailImageUpload(item);
         if (window.ShipComponentWeaponLoadout && els.loadout) {
             window.ShipComponentWeaponLoadout.renderDetailPanel(item, els.loadout);
         } else if (els.loadout) {
             els.loadout.hidden = true;
             els.loadout.innerHTML = '';
         }
-        currentDetailItem = item;
         syncDetailUrlId(item.id_item || item.uuid || requestedId);
         updateBackLink(item);
         updateShipNavHighlight(item);
@@ -1429,10 +1866,12 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
             initBackLinkEarly();
+            bindDetailImageUpload(null);
             load();
         });
     } else {
         initBackLinkEarly();
+        bindDetailImageUpload(null);
         load();
     }
 })();

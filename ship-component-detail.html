@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>配件详情 · USSXC</title>
     <meta name="description" content="星际公民舰船配件详细参数与购买地点。">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="ship-components.css?v=54">
+    <link rel="stylesheet" href="styles.css?v=sc-lb3">
+    <link rel="stylesheet" href="ship-components.css?v=72">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -114,7 +114,38 @@
     <main class="sc-main sc-detail-main">
         <nav class="sc-detail-back" aria-label="返回">
             <a href="/ship-components?group=component&amp;type=cooling" class="sc-detail-back-link" id="scDetailBackLink">← 返回列表</a>
+            <div class="sc-detail-image-upload" id="scDetailImageUpload" hidden>
+                <input type="file" id="scDetailImageFile" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                <button type="button" class="sc-detail-image-upload-btn" id="scDetailImageUploadBtn" title="图片投稿" aria-label="打开图片投稿">
+                    <svg class="sc-detail-image-upload-btn__icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M64 960V640h128v192h640v-192h128v320H64zM576 287.104V768h-128V287.072l-199.904 217.024L160 416 512 64l352 352-88.128 88.096z"/>
+                    </svg>
+                </button>
+                <p class="sc-detail-image-upload-hint" id="scDetailImageUploadHint">登录后可补充或更新展示图，需管理员审核</p>
+            </div>
         </nav>
+
+        <div id="scDetailUploadToast" class="sc-upload-toast" hidden role="status" aria-live="polite">
+            <p class="sc-upload-toast__title" id="scDetailUploadToastTitle">上传成功</p>
+            <p class="sc-upload-toast__sub" id="scDetailUploadToastSub"></p>
+        </div>
+
+        <div id="scImgDesk" class="sc-img-desk" hidden>
+            <div class="sc-img-desk__panel" role="dialog" aria-modal="true" aria-labelledby="scImgDeskTitle">
+                <header class="sc-img-desk__head">
+                    <div>
+                        <h2 id="scImgDeskTitle" class="sc-img-desk__title">图片投稿</h2>
+                        <p class="sc-img-desk__sub" id="scImgDeskReward"></p>
+                    </div>
+                    <button type="button" class="sc-img-desk__close" id="scImgDeskClose" aria-label="关闭">×</button>
+                </header>
+                <div class="sc-img-desk__toolbar">
+                    <button type="button" class="sc-img-desk__add" id="scImgDeskAdd">为本配件上传</button>
+                    <p class="sc-img-desk__meta" id="scImgDeskMeta"></p>
+                </div>
+                <div id="scImgDeskList" class="sc-img-desk__list"></div>
+            </div>
+        </div>
 
         <div id="scDetailGate" class="sc-gate" role="alert">加载中…</div>
 
@@ -132,6 +163,12 @@
                     <figure class="sc-detail-hero-media" id="scDetailMedia" hidden>
                         <button type="button" class="sc-detail-media-btn" id="scDetailImageBtn" aria-label="点击放大图片" hidden>
                             <img id="scDetailImage" class="sc-detail-image" alt="" decoding="async" loading="eager">
+                        </button>
+                        <button type="button" class="sc-img-hit sc-img-hit--prev" id="scDetailImagePrev" hidden aria-label="上一张">
+                            <svg class="sc-img-hit__icon" viewBox="0 0 1024 1024" aria-hidden="true"><path fill="currentColor" d="M613.3 512.4L274.9 850.8c-24.9 24.9-24.9 65.6 0 90.5 24.9 24.9 65.6 24.9 90.5 0L749 557.7c6.2-6.2 10.9-13.4 14-21.1 5.4-13.5 6.1-28.5 2-42.4-0.6-2-1.3-3.9-2-5.9-3.1-7.7-7.8-14.9-14-21.1L365.4 83.5c-24.9-24.9-65.6-24.9-90.5 0-24.9 24.9-24.9 65.6 0 90.5l338.4 338.4z"/></svg>
+                        </button>
+                        <button type="button" class="sc-img-hit sc-img-hit--next" id="scDetailImageNext" hidden aria-label="下一张">
+                            <svg class="sc-img-hit__icon" viewBox="0 0 1024 1024" aria-hidden="true"><path fill="currentColor" d="M613.3 512.4L274.9 850.8c-24.9 24.9-24.9 65.6 0 90.5 24.9 24.9 65.6 24.9 90.5 0L749 557.7c6.2-6.2 10.9-13.4 14-21.1 5.4-13.5 6.1-28.5 2-42.4-0.6-2-1.3-3.9-2-5.9-3.1-7.7-7.8-14.9-14-21.1L365.4 83.5c-24.9-24.9-65.6-24.9-90.5 0-24.9 24.9-24.9 65.6 0 90.5l338.4 338.4z"/></svg>
                         </button>
                     </figure>
                 </div>
@@ -172,10 +209,10 @@
     <script src="sc-display-format.js?v=1"></script>
     <script src="ship-component-wiki-scalar-zh.js?v=29" defer></script>
     <script src="ship-component-manufacturer-zh.js?v=1" defer></script>
-    <script src="ship-component-wiki.js?v=51" defer></script>
+    <script src="ship-component-wiki.js?v=57" defer></script>
     <script src="ship-component-blueprints.js?v=28" defer></script>
     <script src="ship-component-weapon-loadout.js?v=13" defer></script>
-    <script src="community-image-lightbox.js" defer></script>
-    <script src="ship-component-detail.js?v=53" defer></script>
+    <script src="community-image-lightbox.js?v=3" defer></script>
+    <script src="ship-component-detail.js?v=69" defer></script>
 </body>
 </html>

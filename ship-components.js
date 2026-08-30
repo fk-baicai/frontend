@@ -304,6 +304,7 @@
         armorVariantExpanded: {},
         armorVariantGrouping: null,
         view: 'card',
+        pinnedIds: [],
         facets: null,
         filters: {
             size: '',
@@ -340,6 +341,11 @@
     };
 
     var VIEW_LS_KEY = 'uss_sc_catalog_view';
+    var PIN_LS_KEY = IS_EQUIPMENT_PAGE ? 'uss_sc_equip_pins' : 'uss_sc_catalog_pins';
+    var PIN_SVG =
+        '<svg class="sc-pin-btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+        '<path fill="currentColor" d="M16 9V4h1V2H7v2h1v5c0 1.85-1.16 3.43-2.8 4.03-.4.15-.7.52-.7.97V17h5.2V22h1.6v-5H19v-1c0-.45-.3-.82-.7-.97C16.16 12.43 15 10.85 15 9h1z"/>' +
+        '</svg>';
 
     function readStoredCatalogView() {
         try {
@@ -638,6 +644,94 @@
         );
     }
 
+    function readStoredPinnedIds() {
+        try {
+            var raw = localStorage.getItem(PIN_LS_KEY);
+            var parsed = JSON.parse(raw || '[]');
+            if (!Array.isArray(parsed)) return [];
+            var seen = Object.create(null);
+            var out = [];
+            parsed.forEach(function (id) {
+                var n = normalizeItemId(id);
+                if (!n || seen[n]) return;
+                seen[n] = true;
+                out.push(n);
+            });
+            return out.slice(0, 40);
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function persistPinnedIds() {
+        try {
+            localStorage.setItem(PIN_LS_KEY, JSON.stringify(state.pinnedIds || []));
+        } catch (e) {
+            /* ignore */
+        }
+    }
+
+    function isItemPinned(id) {
+        var n = normalizeItemId(id);
+        return !!(n && (state.pinnedIds || []).indexOf(n) >= 0);
+    }
+
+    function applyPinnedOrder(items) {
+        var pins = state.pinnedIds || [];
+        if (!items || !items.length || !pins.length) return items;
+        var byId = Object.create(null);
+        items.forEach(function (item) {
+            var id = normalizeItemId(item && item.id_item);
+            if (id && !byId[id]) byId[id] = item;
+        });
+        var pinned = [];
+        var used = Object.create(null);
+        pins.forEach(function (id) {
+            if (!byId[id]) return;
+            pinned.push(byId[id]);
+            used[id] = true;
+        });
+        if (!pinned.length) return items;
+        var rest = items.filter(function (item) {
+            return !used[normalizeItemId(item.id_item)];
+        });
+        return pinned.concat(rest);
+    }
+
+    function togglePinnedItem(idItem) {
+        var id = normalizeItemId(idItem);
+        if (!id) return;
+        var next = (state.pinnedIds || []).slice();
+        var idx = next.indexOf(id);
+        if (idx >= 0) next.splice(idx, 1);
+        else next.push(id);
+        state.pinnedIds = next;
+        persistPinnedIds();
+        var scrollY = window.scrollY;
+        renderCatalog(snapshotExpandedState());
+        window.scrollTo({ top: scrollY, left: 0, behavior: 'auto' });
+    }
+
+    function createPinButton(item) {
+        var id = normalizeItemId(item && item.id_item);
+        var pinned = isItemPinned(id);
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'sc-pin-btn' + (pinned ? ' is-pinned' : '');
+        btn.dataset.pinId = id;
+        btn.setAttribute('aria-pressed', pinned ? 'true' : 'false');
+        btn.setAttribute('aria-label', pinned ? '取消置顶' : '置顶对比');
+        btn.title = pinned ? '取消置顶' : '置顶对比';
+        btn.innerHTML = PIN_SVG;
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            togglePinnedItem(id);
+            btn.blur();
+        });
+        return btn;
+    }
+
     function renderFacetBar() {
         if (!els.facetBar) return;
         var keys = [];
@@ -710,12 +804,22 @@
         return out;
     }
 
-    function bindCardImageFallback(img, item) {
-        var urls = collectNameImageCandidates(item);
-        var media = img.parentNode;
+    function bindCardImageFallback(img, item, media) {
+        var layers = orderedImageLayers(item);
+        var gallery = [];
+        layers.forEach(function (row) {
+            if (row && row.source === 'user' && row.url && gallery.indexOf(row.url) < 0) gallery.push(row.url);
+        });
+        var urls = gallery.slice();
+        collectNameImageCandidates(item).forEach(function (u) {
+            if (urls.indexOf(u) < 0) urls.push(u);
+        });
         function fail() {
             if (img && img.parentNode) img.remove();
             if (media) {
+                media.querySelectorAll('.sc-img-hit').forEach(function (el) {
+                    el.remove();
+                });
                 media.classList.add('sc-item-card__media--empty');
                 if (!String(media.textContent || '').trim()) media.textContent = '暂无图片';
             }
@@ -724,29 +828,85 @@
             fail();
             return;
         }
-        var i = 0;
-        img.src = urls[0];
-        img.addEventListener('error', function () {
-            i += 1;
-            if (i < urls.length) img.src = urls[i];
-            else fail();
+        var userCount = layers.filter(function (r) {
+            return r.source === 'user';
+        }).length;
+        var start = userCount ? Math.floor(Math.random() * userCount) : 0;
+        var idx = Math.min(start, urls.length - 1);
+        var lastGood = '';
+        var lastGoodIdx = idx;
+        var paging = false;
+        img.addEventListener('load', function () {
+            lastGood = img.currentSrc || img.src;
+            lastGoodIdx = idx;
         });
+        img.addEventListener('error', function onErr() {
+            if (paging && lastGood) {
+                paging = false;
+                idx = lastGoodIdx;
+                img.src = lastGood;
+                return;
+            }
+            idx += 1;
+            if (idx >= urls.length) {
+                img.removeEventListener('error', onErr);
+                fail();
+                return;
+            }
+            img.src = urls[idx];
+        });
+        img.src = urls[idx];
+        if (gallery.length > 1) {
+            var svg =
+                '<svg class="sc-img-hit__icon" viewBox="0 0 1024 1024" aria-hidden="true"><path fill="currentColor" d="M613.3 512.4L274.9 850.8c-24.9 24.9-24.9 65.6 0 90.5 24.9 24.9 65.6 24.9 90.5 0L749 557.7c6.2-6.2 10.9-13.4 14-21.1 5.4-13.5 6.1-28.5 2-42.4-0.6-2-1.3-3.9-2-5.9-3.1-7.7-7.8-14.9-14-21.1L365.4 83.5c-24.9-24.9-65.6-24.9-90.5 0-24.9 24.9-24.9 65.6 0 90.5l338.4 338.4z"/></svg>';
+            var prev = document.createElement('button');
+            prev.type = 'button';
+            prev.className = 'sc-img-hit sc-img-hit--prev';
+            prev.setAttribute('aria-label', '上一张');
+            prev.innerHTML = svg;
+            var next = document.createElement('button');
+            next.type = 'button';
+            next.className = 'sc-img-hit sc-img-hit--next';
+            next.setAttribute('aria-label', '下一张');
+            next.innerHTML = svg;
+            function go(delta, ev) {
+                if (ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                }
+                if (gallery.length < 2) return;
+                paging = true;
+                idx = (idx + delta + gallery.length) % gallery.length;
+                img.src = gallery[idx];
+            }
+            prev.addEventListener('click', function (e) {
+                go(-1, e);
+            });
+            next.addEventListener('click', function (e) {
+                go(1, e);
+            });
+            media.appendChild(prev);
+            media.appendChild(next);
+        }
     }
 
     function renderItemCard(item) {
         var names = resolveItemDisplayNames(item);
         var id = resolveComponentId(item);
-        var card = document.createElement('a');
-        card.className = 'sc-item-card';
+        var card = document.createElement('article');
+        card.className = 'sc-item-card' + (isItemPinned(item.id_item) ? ' is-pinned' : '');
         card.dataset.id = normalizeItemId(item.id_item);
+        card.appendChild(createPinButton(item));
+        var hit = document.createElement('a');
+        hit.className = 'sc-item-card__hit';
         if (id) {
-            card.href = componentDetailUrl(id);
-            card.addEventListener('click', function () {
+            hit.href = componentDetailUrl(id);
+            hit.addEventListener('click', function () {
                 rememberListReturnState(item.id_item);
                 rememberComponentDetailId(id);
             });
         } else {
-            card.removeAttribute('href');
+            hit.removeAttribute('href');
         }
         var media = document.createElement('div');
         media.className = 'sc-item-card__media';
@@ -755,8 +915,8 @@
         img.loading = 'lazy';
         img.decoding = 'async';
         media.appendChild(img);
-        bindCardImageFallback(img, item);
-        card.appendChild(media);
+        bindCardImageFallback(img, item, media);
+        hit.appendChild(media);
 
         var body = document.createElement('div');
         body.className = 'sc-item-card__body';
@@ -814,14 +974,15 @@
         foot.appendChild(mfg);
         foot.appendChild(price);
         body.appendChild(foot);
-        card.appendChild(body);
+        hit.appendChild(body);
+        card.appendChild(hit);
         return card;
     }
 
     function renderCards() {
         if (!els.cardGrid) return;
         els.cardGrid.innerHTML = '';
-        var items = sortItems(catalogBrowsableItems());
+        var items = applyPinnedOrder(sortItems(catalogBrowsableItems()));
         if (!items.length) {
             els.cardGrid.innerHTML = '<p class="sc-card-grid__empty">无匹配配件</p>';
             return;
@@ -835,6 +996,10 @@
         if (!els.cardGrid || !items || !items.length) return;
         var empty = els.cardGrid.querySelector('.sc-card-grid__empty, .sc-card-grid__loading');
         if (empty) empty.remove();
+        if ((state.pinnedIds || []).length) {
+            renderCards();
+            return;
+        }
         sortItems(items.filter(isBrowsableItem).filter(matchesDamageTypeFilter)).forEach(function (item) {
             if (els.cardGrid.querySelector('[data-id="' + normalizeItemId(item.id_item) + '"]')) return;
             els.cardGrid.appendChild(renderItemCard(item));
@@ -1231,7 +1396,7 @@
             return items.length;
         }
         if (!els.body) return 0;
-        if (isArmorVariantGroupingEnabled()) {
+        if (isArmorVariantGroupingEnabled() || (state.pinnedIds || []).length) {
             var snap = snapshotExpandedState();
             renderTable(snap);
             if (scrollY != null && scrollY >= 0) {
@@ -3798,7 +3963,7 @@
     function componentImageProxyUrl(item) {
         var id = resolveComponentId(item);
         if (!id) return '';
-        return absoluteAssetUrl('/api/sc/components/image/' + encodeURIComponent(id));
+        return absoluteAssetUrl('/api/sc/components/image/' + encodeURIComponent(id) + '?layer=wiki');
     }
 
     function componentImageDirectUrl(item) {
@@ -3819,9 +3984,26 @@
             seen.add(val);
             out.push(val);
         }
+        var layers = orderedImageLayers(item);
+        for (var i = 0; i < layers.length; i += 1) add(layers[i].url);
         add(componentImageProxyUrl(item));
         add(componentImageDirectUrl(item));
         return out;
+    }
+
+    function orderedImageLayers(item) {
+        var user = [];
+        var wiki = [];
+        var list = item && Array.isArray(item.images) ? item.images : [];
+        for (var i = 0; i < list.length; i += 1) {
+            var row = list[i];
+            var raw = row && row.url ? absoluteAssetUrl(row.url) : '';
+            if (!raw) continue;
+            var pack = { url: raw, by: String(row.by || '').trim(), source: row.source || '' };
+            if (row.source === 'user') user.push(pack);
+            else wiki.push(pack);
+        }
+        return user.concat(wiki);
     }
 
     function ensureNameLinkWrap(link) {
@@ -4285,6 +4467,7 @@
     function renderRow(item) {
         var tr = document.createElement('tr');
         tr.dataset.id = normalizeItemId(item.id_item);
+        if (isItemPinned(item.id_item)) tr.classList.add('is-pinned');
         if (getArmorVariantLeaderInfo(item.id_item)) tr.classList.add('sc-row-armor-variant-leader');
         if (isArmorVariantChildRow(item.id_item)) tr.classList.add('sc-row-armor-variant');
         var expanded = isItemExpanded(item.id_item);
@@ -4392,7 +4575,7 @@
         els.body.innerHTML = '';
         var browsable = sortItems(catalogBrowsableItems());
         computeArmorVariantGrouping(browsable);
-        var items = orderItemsForArmorVariantDisplay(browsable);
+        var items = applyPinnedOrder(orderItemsForArmorVariantDisplay(browsable));
         if (!items.length) {
             els.body.innerHTML = '<tr><td colspan="' + getColCount() + '">无匹配配件</td></tr>';
             syncExpandedShellClass();
@@ -5047,6 +5230,7 @@
         bindSortHeaders();
         bindCatalogViewToggle();
         state.view = readStoredCatalogView();
+        state.pinnedIds = readStoredPinnedIds();
         applyCatalogView();
         syncBodyMode();
         ensureTypeInGroup();
