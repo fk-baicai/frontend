@@ -7904,6 +7904,7 @@ a.community-author-avatar-link:focus-visible {
  will-change: transform;
  user-select: none;
  -webkit-user-drag: none;
+ touch-action: none;
 }
 
 .community-image-lightbox-img.is-dragging {

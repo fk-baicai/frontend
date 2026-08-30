@@ -1287,7 +1287,9 @@
                     '<div class="sc-img-desk__actions">' +
                     '<button type="button" data-replace-item="' +
                     escapeHtml(row.id_item) +
-                    '">替换</button>' +
+                    '"' +
+                    (approved ? ' data-replace-approved="1"' : '') +
+                    '>替换</button>' +
                     (approved
                         ? ''
                         : '<button type="button" data-del-id="' +
@@ -1320,6 +1322,9 @@
         loadDeskThumbs();
         els.imgDeskList.querySelectorAll('[data-replace-item]').forEach(function (btn) {
             btn.addEventListener('click', function () {
+                if (btn.getAttribute('data-replace-approved') === '1') {
+                    if (!window.confirm('替换后需要管理员重新审核，通过前仍展示当前录用图。确定替换？')) return;
+                }
                 uploadItemId = btn.getAttribute('data-replace-item');
                 els.imageFile.click();
             });

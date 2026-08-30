@@ -17,6 +17,9 @@
         lastY: 0,
         wired: false,
         keyHandler: null,
+        pointers: {},
+        pinchDist: 0,
+        pinchScale: 1,
     };
 
     function getOverlay() {
@@ -72,12 +75,29 @@
         state.ty = 0;
         state.dragging = false;
         state.dragMoved = false;
+        state.pointers = {};
+        state.pinchDist = 0;
+        state.pinchScale = 1;
         const frame = getFrame() || (img && img.closest && img.closest('.community-image-lightbox-frame'));
         if (frame) frame.style.transform = '';
         if (img) {
             img.style.transform = '';
             img.classList.remove('is-dragging');
         }
+    }
+
+    function pointerList() {
+        return Object.keys(state.pointers).map(function (id) {
+            return state.pointers[id];
+        });
+    }
+
+    function pointerDist(a, b) {
+        return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function pointerMid(a, b) {
+        return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     }
 
     function wireIfNeeded(overlay) {
@@ -95,33 +115,94 @@
             if (!state.dragMoved && state.scale <= 1) close();
         });
 
-        img.addEventListener('mousedown', function (ev) {
-            if (ev.button !== 0) return;
-            ev.preventDefault();
-            state.dragging = true;
-            state.dragMoved = false;
-            state.lastX = ev.clientX;
-            state.lastY = ev.clientY;
-            img.classList.add('is-dragging');
-        });
+        overlay.addEventListener(
+            'pointerdown',
+            function (ev) {
+                if (!overlay.classList.contains('is-open')) return;
+                if (ev.target !== overlay && ev.target !== img && !img.contains(ev.target)) return;
+                state.pointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+                const pts = pointerList();
+                if (pts.length >= 2) {
+                    state.dragging = false;
+                    state.pinchDist = pointerDist(pts[0], pts[1]);
+                    state.pinchScale = state.scale;
+                    state.dragMoved = true;
+                    try {
+                        overlay.setPointerCapture(ev.pointerId);
+                    } catch (e) {
+                        /* ignore */
+                    }
+                    return;
+                }
+                if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+                ev.preventDefault();
+                state.dragging = true;
+                state.dragMoved = false;
+                state.lastX = ev.clientX;
+                state.lastY = ev.clientY;
+                img.classList.add('is-dragging');
+                try {
+                    overlay.setPointerCapture(ev.pointerId);
+                } catch (e2) {
+                    /* ignore */
+                }
+            },
+            { passive: false }
+        );
 
-        document.addEventListener('mousemove', function (ev) {
-            if (!state.dragging || !overlay.classList.contains('is-open')) return;
-            const dx = ev.clientX - state.lastX;
-            const dy = ev.clientY - state.lastY;
-            if (dx !== 0 || dy !== 0) state.dragMoved = true;
-            state.tx += dx;
-            state.ty += dy;
-            state.lastX = ev.clientX;
-            state.lastY = ev.clientY;
-            applyTransform(img);
-        });
+        overlay.addEventListener(
+            'pointermove',
+            function (ev) {
+                if (!overlay.classList.contains('is-open')) return;
+                if (!state.pointers[ev.pointerId]) return;
+                state.pointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+                const pts = pointerList();
+                if (pts.length >= 2 && state.pinchDist > 0) {
+                    ev.preventDefault();
+                    const d = pointerDist(pts[0], pts[1]);
+                    const mid = pointerMid(pts[0], pts[1]);
+                    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, state.pinchScale * (d / state.pinchDist)));
+                    const rect = img.getBoundingClientRect();
+                    const offsetX = mid.x - rect.left - rect.width / 2;
+                    const offsetY = mid.y - rect.top - rect.height / 2;
+                    const ratio = newScale / state.scale;
+                    state.tx -= offsetX * (ratio - 1);
+                    state.ty -= offsetY * (ratio - 1);
+                    state.scale = newScale;
+                    applyTransform(img);
+                    return;
+                }
+                if (!state.dragging) return;
+                ev.preventDefault();
+                const dx = ev.clientX - state.lastX;
+                const dy = ev.clientY - state.lastY;
+                if (dx !== 0 || dy !== 0) state.dragMoved = true;
+                state.tx += dx;
+                state.ty += dy;
+                state.lastX = ev.clientX;
+                state.lastY = ev.clientY;
+                applyTransform(img);
+            },
+            { passive: false }
+        );
 
-        document.addEventListener('mouseup', function () {
-            if (!state.dragging) return;
+        function endPointer(ev) {
+            delete state.pointers[ev.pointerId];
+            const pts = pointerList();
+            if (pts.length === 1) {
+                state.dragging = true;
+                state.lastX = pts[0].x;
+                state.lastY = pts[0].y;
+                state.pinchDist = 0;
+                return;
+            }
             state.dragging = false;
+            state.pinchDist = 0;
             img.classList.remove('is-dragging');
-        });
+        }
+
+        overlay.addEventListener('pointerup', endPointer);
+        overlay.addEventListener('pointercancel', endPointer);
 
         overlay.addEventListener(
             'wheel',
