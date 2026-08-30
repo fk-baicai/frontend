@@ -6,7 +6,7 @@
 
     var AUTH_KEY = 'ussHangzhouAuthSession';
     var API_BASE = (typeof window !== 'undefined' && window.USS_AUTH_API_BASE) || 'http://127.0.0.1:3789';
-    var MAX_PROOF_IMAGE_BYTES = 1024 * 1024;
+    var MAX_PROOF_IMAGE_BYTES = 4 * 1024 * 1024;
 
     var PURCHASE_STATUS_LABEL = {
         pending: '待卖家确认交易',
@@ -404,13 +404,26 @@
         window.alert('无法打开商品详情');
     }
 
+    function isProofImageFile(file) {
+        if (!file) return false;
+        var t = String(file.type || '').toLowerCase();
+        if (t === 'image/jpg') t = 'image/jpeg';
+        if (/^image\/(jpeg|pjpeg|png|x-png|gif|webp|bmp|x-ms-bmp|heic|heif|avif)$/.test(t)) return true;
+        var n = String(file.name || '').toLowerCase();
+        return /\.(jpe?g|png|gif|webp|bmp|heic|heif|avif)$/.test(n);
+    }
+
     function proofUploadBtnHtml(purchaseId, proofType, done, label) {
         if (done) {
             return '<span class="market-trades-proof-done">' + escapeHtml(label) + '已上传</span>';
         }
         return (
             '<label class="market-trades-proof-upload">' +
-            '<input type="file" class="market-trades-proof-file" data-proof-type="' + escapeHtml(proofType) + '" data-purchase-id="' + escapeHtml(purchaseId) + '" accept="image/jpeg,image/png,image/webp,image/gif" hidden>' +
+            '<input type="file" class="market-trades-proof-file" data-proof-type="' +
+            escapeHtml(proofType) +
+            '" data-purchase-id="' +
+            escapeHtml(purchaseId) +
+            '" accept="image/*,.heic,.heif,.bmp,.avif" hidden>' +
             '<span class="market-btn">' + escapeHtml(label) + '</span>' +
             '</label>'
         );
@@ -663,7 +676,18 @@
     function mediaUrl(rel) {
         if (!rel) return '';
         var s = String(rel);
-        if (/^https?:\/\//i.test(s) || /^data:/i.test(s)) return s;
+        if (/^data:/i.test(s) || /^blob:/i.test(s)) return s;
+        var file = '';
+        if (/^https?:\/\//i.test(s)) {
+            try {
+                file = new URL(s).pathname.split('/').pop() || '';
+            } catch (e) {
+                file = s.split('/').pop() || '';
+            }
+        } else if (/\/(?:api\/market\/uploads|market-uploads)\//i.test(s)) {
+            file = s.split('/').pop().split('?')[0];
+        }
+        if (file) return joinUrl('/api/market/uploads/' + file);
         if (window.UssAuthApi && typeof window.UssAuthApi.resolveAssetUrl === 'function') {
             var u = window.UssAuthApi.resolveAssetUrl(s);
             if (u) return u;
@@ -1071,12 +1095,12 @@
                 var file = input.files && input.files[0];
                 input.value = '';
                 if (!file || !purchaseId || !proofType) return;
-                if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
-                    window.alert('仅支持 JPG / PNG / WebP / GIF');
+                if (!isProofImageFile(file)) {
+                    window.alert('请上传图片（JPG / PNG / WebP / GIF / BMP / HEIC 等）');
                     return;
                 }
                 if (file.size > MAX_PROOF_IMAGE_BYTES) {
-                    window.alert('凭证图片不能超过 1M');
+                    window.alert('凭证图片不能超过 4M');
                     return;
                 }
                 var reader = new FileReader();

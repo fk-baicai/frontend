@@ -588,9 +588,16 @@ body.sc-sync-dock-open {
     font-weight: 700;
     color: #8ee0ff;
 }
+
+.sc-user-img-review-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(16.5rem, 1fr));
     gap: 0.85rem;
+}
+
+.sc-user-img-review-list--compact {
+    grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
+    gap: 0.5rem;
 }
 
 .sc-user-img-review-card {
@@ -603,12 +610,72 @@ body.sc-sync-dock-open {
     background: rgba(8, 18, 36, 0.55);
 }
 
+.sc-user-img-review-card--compact {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.4rem 0.5rem;
+}
+
 .sc-user-img-review-thumb {
     width: 100%;
     height: 9rem;
     object-fit: contain;
     border-radius: 8px;
     background: #071018;
+}
+
+.sc-user-img-review-card--compact .sc-user-img-review-thumb {
+    width: 4.35rem;
+    height: 4.35rem;
+    flex-shrink: 0;
+    object-fit: cover;
+}
+
+.sc-user-img-review-copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.sc-user-img-review-card--compact .sc-user-img-review-copy .hint {
+    margin: 0.08rem 0 0;
+    font-size: 0.72rem;
+    line-height: 1.3;
+}
+
+.sc-user-img-review-card--compact .sc-user-img-review-actions {
+    margin-top: 0.2rem;
+}
+
+.sc-user-img-review-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem 0.85rem;
+    margin: 0 0 0.45rem;
+}
+
+.sc-user-img-review-search {
+    flex: 1;
+    min-width: 12rem;
+    max-width: 28rem;
+}
+
+.sc-user-img-review-pagesize {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+    color: rgba(148, 186, 212, 0.92);
+}
+
+.sc-user-img-review-pager {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin: 0.75rem 0 0;
+    font-size: 0.85rem;
+    color: rgba(180, 214, 236, 0.9);
 }
 
 .sc-user-img-review-name {

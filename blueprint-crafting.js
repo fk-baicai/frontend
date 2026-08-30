@@ -1495,8 +1495,54 @@
     function normalizeBlueprintStatLabelZh(text) {
         var t = String(text || '').trim();
         if (t === '完整性' || t === '结构完整性') return '组件耐久';
-        if (t === '伤害减免') return '抗 G 值';
         return t;
+    }
+
+    function compactStatToken(s) {
+        return String(s || '')
+            .replace(/^StatName_GPP_/i, '')
+            .replace(/[^a-z0-9]+/gi, '')
+            .toLowerCase();
+    }
+
+    function lookupGppLabelZh(propertyKey, label) {
+        var crafting = (state.meta && state.meta.crafting) || {};
+        var table = crafting.gpp_labels || {};
+        var locKeyMap = crafting.modifier_property_loc_keys || {};
+        var pk = String(propertyKey || '').trim();
+        var pkNorm = pk.toLowerCase();
+        if (pkNorm && locKeyMap[pkNorm] && table[compactStatToken(locKeyMap[pkNorm])]) {
+            return table[compactStatToken(locKeyMap[pkNorm])];
+        }
+        var c1 = compactStatToken(pk);
+        if (c1 && table[c1]) return table[c1];
+        var c2 = compactStatToken(label);
+        if (c2 && table[c2]) return table[c2];
+        return '';
+    }
+
+    function displayModifierLabelZh(mod) {
+        var nav = (state.blueprint && state.blueprint.nav_type) || '';
+        var crafting = (state.meta && state.meta.crafting) || {};
+        var byTypeProp = crafting.modifier_property_zh_by_nav_type || {};
+        var byTypeLabel = crafting.modifier_label_zh_by_nav_type || {};
+        var pk = String((mod && mod.property_key) || '').trim();
+        var label = String((mod && mod.label) || '').trim();
+        if (nav && byTypeProp[nav] && pk && byTypeProp[nav][pk]) {
+            return normalizeBlueprintStatLabelZh(byTypeProp[nav][pk]);
+        }
+        if (nav && byTypeLabel[nav] && label && byTypeLabel[nav][label]) {
+            return normalizeBlueprintStatLabelZh(byTypeLabel[nav][label]);
+        }
+        var fromGpp = lookupGppLabelZh(pk, label);
+        if (fromGpp) return normalizeBlueprintStatLabelZh(fromGpp);
+        var propZh = (crafting.modifier_property_zh || {})[pk] ||
+            (crafting.modifier_property_zh || {})[pk.toLowerCase()];
+        if (propZh) return normalizeBlueprintStatLabelZh(propZh);
+        if (pk === 'armor_damagemitigation') return '伤害减免';
+        if (pk === 'armor_temperaturemax') return '耐温上限';
+        if (pk === 'armor_temperaturemin') return '耐温下限';
+        return normalizeBlueprintStatLabelZh((mod && (mod.label_zh || mod.label)) || '属性');
     }
 
     function isPersonalArmorNavType(navType) {
@@ -2462,7 +2508,7 @@
             el.statHint.textContent = fpsWeaponBp
                 ? '含材料品质与配件加成'
                 : isPersonalArmorNavType(bp.nav_type)
-                  ? '基准 × 材料品质；不含详情页物理/能量减伤%'
+                  ? '基准 × 材料品质；伤害减免为蓝图 GPP，不含详情页分类型减伤%'
                   : '基准 × 材料品质后的数值';
         }
         if (el.simSummary) {
@@ -2513,7 +2559,7 @@
         quantum_fuelrequirement: ['quantum_fuel_requirement'],
         radar_maxaimassistdistance: ['max_aim_assist_distance'],
         radar_minaimassistdistance: ['min_aim_assist_distance'],
-        armor_damagemitigation: ['gforce_resistance'],
+        armor_damagemitigation: ['damage_mitigation'],
         armor_temperaturemax: ['temp_resistance_max'],
         armor_temperaturemin: ['temp_resistance_min'],
         weapon_hullscraping_efficiency: ['efficiency'],
@@ -2544,7 +2590,7 @@
         'Quantum Speed': ['quantum_speed', 'drive_speed'],
         'Quantum Fuel Burn': ['quantum_fuel_requirement'],
         'Max. Shield Strength': ['max_health'],
-        'Damage Mitigation': ['gforce_resistance'],
+        'Damage Mitigation': ['damage_mitigation'],
         'Max Temp': ['temp_resistance_max'],
         'Min Temp': ['temp_resistance_min'],
     };
@@ -2563,6 +2609,7 @@
         drive_speed: '量子速度',
         quantum_fuel_requirement: '量子燃料消耗',
         gforce_resistance: '抗 G 值',
+        damage_mitigation: '伤害减免',
         temp_resistance_max: '耐温上限',
         temp_resistance_min: '耐温下限',
         efficiency: '提取效率',
@@ -2649,7 +2696,8 @@
         量子速度: ['quantum_speed', 'drive_speed'],
         量子燃料消耗: ['quantum_fuel_requirement'],
         '抗 G 值': ['gforce_resistance'],
-        伤害减免: ['gforce_resistance'],
+        过载抗性: ['gforce_resistance'],
+        伤害减免: ['damage_mitigation'],
         耐温上限: ['temp_resistance_max'],
         耐温下限: ['temp_resistance_min'],
         提取效率: ['efficiency'],
@@ -2701,9 +2749,12 @@
             typeOverride = true;
         }
         if (!typeOverride) {
-            if (pk && propMap[pk]) keys = keys.concat(propMap[pk]);
-            if (label && labelMap[label]) keys = keys.concat(labelMap[label]);
-            if (labelZh && MODIFIER_LABEL_ZH_STAT_KEYS[labelZh]) {
+            if (pk && Array.isArray(propMap[pk])) keys = keys.concat(propMap[pk]);
+            else if (pk && Array.isArray(propMap[pk.toLowerCase()])) {
+                keys = keys.concat(propMap[pk.toLowerCase()]);
+            } else if (label && Array.isArray(labelMap[label])) {
+                keys = keys.concat(labelMap[label]);
+            } else if (!keys.length && labelZh && MODIFIER_LABEL_ZH_STAT_KEYS[labelZh]) {
                 keys = keys.concat(MODIFIER_LABEL_ZH_STAT_KEYS[labelZh]);
             }
         }
@@ -2926,6 +2977,8 @@
         if (STAT_KEY_LABEL_ZH[statKey]) {
             return normalizeBlueprintStatLabelZh(STAT_KEY_LABEL_ZH[statKey]);
         }
+        var fromGpp = lookupGppLabelZh(statKey, fallback);
+        if (fromGpp) return normalizeBlueprintStatLabelZh(fromGpp);
         return normalizeBlueprintStatLabelZh(fallback || statKey);
     }
 
@@ -3040,8 +3093,12 @@
             if (q2 < min2 || q2 > max2) continue;
             var span = max2 - min2 || 1;
             var t = (q2 - min2) / span;
-            var start = Number(seg2.modifier_at_start) || 1;
-            var end = Number(seg2.modifier_at_end) || 1;
+            var start = Number.isFinite(Number(seg2.modifier_at_start))
+                ? Number(seg2.modifier_at_start)
+                : 1;
+            var end = Number.isFinite(Number(seg2.modifier_at_end))
+                ? Number(seg2.modifier_at_end)
+                : 1;
             return { kind: 'multiplier', value: start + (end - start) * t };
         }
         return { kind: 'multiplier', value: 1 };
@@ -3212,7 +3269,7 @@
                     'bp-mat__mod' +
                     (!deltaText ? '' : isUp ? ' bp-mat__mod--up' : isDown ? ' bp-mat__mod--down' : '');
                 span.textContent =
-                    normalizeBlueprintStatLabelZh(mod.label_zh || mod.label || '属性') +
+                    displayModifierLabelZh(mod) +
                     (deltaText ? ' ' + deltaText : '');
             });
             return;
@@ -3235,7 +3292,7 @@
                 'bp-mat__mod' +
                 (!deltaText ? '' : isUp ? ' bp-mat__mod--up' : isDown ? ' bp-mat__mod--down' : '');
             span.textContent =
-                normalizeBlueprintStatLabelZh(mod.label_zh || mod.label || '属性') +
+                displayModifierLabelZh(mod) +
                 (deltaText ? ' ' + deltaText : '');
             container.appendChild(span);
         });
@@ -3441,7 +3498,13 @@
 
     function runSimulate() {
         if (!state.blueprint) return;
-        renderSimResult(buildSimResultClient(state.blueprint, state.qualities));
+        try {
+            renderSimResult(buildSimResultClient(state.blueprint, state.qualities));
+        } catch (err) {
+            if (typeof console !== 'undefined' && console.warn) {
+                console.warn('[blueprint-crafting] simulate failed', err);
+            }
+        }
     }
 
     function mergeWeaponCraftWithAttachments(craftStats) {
@@ -3554,7 +3617,7 @@
             return false;
         }
         if (!el.simStats) return true;
-        var nodes = el.simStats.querySelectorAll('.bp-sim-stat');
+        var nodes = el.simStats.querySelectorAll('.bp-sim-stat:not(.bp-sim-stat--static)');
         if (nodes.length !== stats.length || !stats.length) return false;
         for (var i = 0; i < stats.length; i++) {
             var st = stats[i];
