@@ -209,9 +209,22 @@
     function getPersonalWeaponBaseStats(weaponItem) {
         var pw = weaponItem && weaponItem.wiki_fields && weaponItem.wiki_fields.personal_weapon;
         if (!pw) return null;
+        var w = wiki();
         return {
-            damage: pw.damage_per_shot != null ? Number(pw.damage_per_shot) : null,
-            rpm: pw.rpm != null ? Number(pw.rpm) : pw.rof != null ? Number(pw.rof) : null,
+            damage:
+                w && typeof w.personalWeaponShotDamageNumber === 'function'
+                    ? w.personalWeaponShotDamageNumber(pw)
+                    : pw.damage_per_shot != null
+                      ? Number(pw.damage_per_shot)
+                      : null,
+            rpm:
+                w && typeof w.personalWeaponRpmNumber === 'function'
+                    ? w.personalWeaponRpmNumber(pw)
+                    : pw.rpm != null
+                      ? Number(pw.rpm)
+                      : pw.rof != null
+                        ? Number(pw.rof)
+                        : null,
             range:
                 pw.effective_range != null
                     ? Number(pw.effective_range)

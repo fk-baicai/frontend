@@ -17,7 +17,8 @@
         var f = global.ScDisplayFormat;
         if (f && f.formatFixedDecimal2) return f.formatFixedDecimal2(v);
         if (v == null || !Number.isFinite(Number(v))) return null;
-        return Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        var text = Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return String(text).replace(/\.00(?!\d)/g, '');
     }
 
     /** 非零但小于 0.005：写出真实小数，避免两位小数显示成 0.00 */
@@ -1361,6 +1362,137 @@
         return true;
     }
 
+    function personalWeaponDamagesParts(w) {
+        var damages = w && w.damages;
+        if (!Array.isArray(damages) || !damages.length) return [];
+        return damages.filter(function (entry) {
+            return entry && entry.damage != null && entry.damage !== '' && Number(entry.damage) !== 0;
+        });
+    }
+
+    /** Wiki 能量/光束枪常把 damage_per_shot 写成 0，真实分伤在 damages[]。 */
+    function personalWeaponShotDamageNumber(w) {
+        if (!w) return null;
+        var d = w.damage_per_shot;
+        if (d != null && d !== '' && Number(d) !== 0) return Number(d);
+        var parts = personalWeaponDamagesParts(w);
+        if (parts.length) {
+            return parts.reduce(function (sum, entry) {
+                return sum + Number(entry.damage);
+            }, 0);
+        }
+        if (d != null && d !== '') return Number(d);
+        return null;
+    }
+
+    function personalWeaponDamageTypeLabel(entry) {
+        var raw = String((entry && (entry.name || entry.type)) || '')
+            .trim()
+            .toLowerCase();
+        return PERSONAL_WEAPON_DAMAGE_LABELS[raw] || wikiFieldLabel(raw) || '伤害';
+    }
+
+    /** 分伤各自一块：能量/畸变/击晕不挤在同一格。 */
+    function listPersonalWeaponShotDamageChips(w) {
+        if (!w) return [];
+        var d = w.damage_per_shot;
+        var parts = personalWeaponDamagesParts(w);
+        var split = (d == null || d === '' || Number(d) === 0) && parts.length > 0;
+        if (split) {
+            return parts.map(function (entry) {
+                return {
+                    label: personalWeaponDamageTypeLabel(entry) + '伤害',
+                    value: formatWikiScalar(entry.damage),
+                };
+            });
+        }
+        if (d != null && d !== '') {
+            return [{ label: '单发伤害', value: formatWikiScalar(d) }];
+        }
+        return [];
+    }
+
+    function formatPersonalWeaponShotDamage(w) {
+        var chips = listPersonalWeaponShotDamageChips(w);
+        if (!chips.length) return null;
+        if (chips.length === 1) return chips[0].value;
+        return chips
+            .map(function (chip) {
+                var short = String(chip.label || '').replace(/伤害$/, '');
+                return chip.value + (short && short !== '单发' ? ' ' + short : '');
+            })
+            .join(' · ');
+    }
+
+    function personalWeaponRpmNumber(w) {
+        if (!w) return null;
+        var rpm = w.rpm != null ? w.rpm : w.rof;
+        if (rpm != null && rpm !== '' && Number(rpm) !== 0) return Number(rpm);
+        var modes = w.modes;
+        if (Array.isArray(modes)) {
+            for (var i = 0; i < modes.length; i++) {
+                var m = modes[i];
+                var r = m && (m.rpm != null ? m.rpm : m.rof);
+                if (r != null && r !== '' && Number(r) !== 0) return Number(r);
+            }
+        }
+        if (rpm != null && rpm !== '') return Number(rpm);
+        return null;
+    }
+
+    function formatPersonalWeaponRpm(w) {
+        var n = personalWeaponRpmNumber(w);
+        return n != null && Number.isFinite(n) ? formatWikiScalar(n) : null;
+    }
+
+    function sumDamageTypeMap(map) {
+        if (!map || typeof map !== 'object') return 0;
+        var sum = 0;
+        Object.keys(map).forEach(function (key) {
+            var n = Number(map[key]);
+            if (Number.isFinite(n)) sum += n;
+        });
+        return sum;
+    }
+
+    function vehicleWeaponDpsNumber(w) {
+        if (!w) return null;
+        var burst = w.damage && w.damage.burst;
+        if (burst != null && burst !== '' && Number(burst) !== 0) return Number(burst);
+        var dpsSum = sumDamageTypeMap(w.damage && w.damage.dps);
+        if (dpsSum) return dpsSum;
+        var modes = w.modes;
+        if (Array.isArray(modes)) {
+            for (var i = 0; i < modes.length; i++) {
+                var m = modes[i];
+                if (m && m.damage_per_second != null && Number(m.damage_per_second) !== 0) {
+                    return Number(m.damage_per_second);
+                }
+            }
+        }
+        if (burst != null && burst !== '') return Number(burst);
+        return null;
+    }
+
+    /** 光束炮 Wiki 常把 damage_per_shot 写成 0，真实输出在 DPS。 */
+    function formatVehicleWeaponShotDamage(w) {
+        if (!w) return null;
+        var d = w.damage_per_shot;
+        if (d != null && d !== '' && Number(d) !== 0) return formatWikiScalar(d);
+        if (vehicleWeaponDpsNumber(w) != null) return null;
+        if (d != null && d !== '') return formatWikiScalar(d);
+        return null;
+    }
+
+    function getMagazineCapacityValue(m) {
+        if (!m) return null;
+        var cap = m.max_ammo_count != null ? m.max_ammo_count : m.initial_ammo_count;
+        if ((cap == null || cap === '' || Number(cap) === 0) && m.max_restock_count != null && Number(m.max_restock_count) !== 0) {
+            return m.max_restock_count;
+        }
+        return cap;
+    }
+
     function rowsFromPersonalWeaponDamages(damages, damagePerShot) {
         if (!Array.isArray(damages) || !damages.length) return [];
         var rows = damages
@@ -2406,7 +2538,7 @@
                 label: '单发伤害',
                 get: function (item) {
                     var w = item.wiki_fields && item.wiki_fields.vehicle_weapon;
-                    return w && w.damage_per_shot != null ? formatWikiScalar(w.damage_per_shot) : null;
+                    return formatVehicleWeaponShotDamage(w);
                 },
             },
             {
@@ -2414,7 +2546,8 @@
                 label: '射速',
                 get: function (item) {
                     var w = item.wiki_fields && item.wiki_fields.vehicle_weapon;
-                    return w && w.rpm != null ? formatWikiScalar(w.rpm) + ' RPM' : null;
+                    var rpm = formatPersonalWeaponRpm(w);
+                    return rpm != null ? rpm + ' RPM' : null;
                 },
             },
             {
@@ -2430,8 +2563,8 @@
                 label: '爆发 DPS',
                 get: function (item) {
                     var w = item.wiki_fields && item.wiki_fields.vehicle_weapon;
-                    var burst = w && w.damage && w.damage.burst;
-                    return burst != null ? formatWikiScalar(burst) : null;
+                    var dps = vehicleWeaponDpsNumber(w);
+                    return dps != null ? formatWikiScalar(dps) : null;
                 },
             },
             {
@@ -2678,16 +2811,15 @@
                 label: '单发伤害',
                 get: function (item) {
                     var w = item.wiki_fields && item.wiki_fields.personal_weapon;
-                    return w && w.damage_per_shot != null ? formatWikiScalar(w.damage_per_shot) : null;
+                    return formatPersonalWeaponShotDamage(w);
                 },
             },
             {
                 key: 'wiki_pw_rpm',
                 label: '射速',
                 get: function (item) {
-                    var w = item.wiki_fields && item.wiki_fields.personal_weapon;
-                    var rpm = w && (w.rpm != null ? w.rpm : w.rof);
-                    return rpm != null ? formatWikiScalar(rpm) + ' RPM' : null;
+                    var rpm = formatPersonalWeaponRpm(item.wiki_fields && item.wiki_fields.personal_weapon);
+                    return rpm != null ? rpm + ' RPM' : null;
                 },
             },
             {
@@ -2894,7 +3026,7 @@
                 get: function (item) {
                     var m = item.wiki_fields && item.wiki_fields.magazine;
                     if (!m) return null;
-                    var cap = m.max_ammo_count != null ? m.max_ammo_count : m.initial_ammo_count;
+                    var cap = getMagazineCapacityValue(m);
                     return cap != null ? formatWikiScalar(cap) : null;
                 },
             },
@@ -3250,6 +3382,14 @@
         flattenWikiFields: flattenWikiFields,
         groupWikiFieldsForDetail: groupWikiFieldsForDetail,
         getWikiTableColumns: getWikiTableColumns,
+        formatPersonalWeaponShotDamage: formatPersonalWeaponShotDamage,
+        formatVehicleWeaponShotDamage: formatVehicleWeaponShotDamage,
+        vehicleWeaponDpsNumber: vehicleWeaponDpsNumber,
+        getMagazineCapacityValue: getMagazineCapacityValue,
+        listPersonalWeaponShotDamageChips: listPersonalWeaponShotDamageChips,
+        personalWeaponShotDamageNumber: personalWeaponShotDamageNumber,
+        formatPersonalWeaponRpm: formatPersonalWeaponRpm,
+        personalWeaponRpmNumber: personalWeaponRpmNumber,
         getWeaponAttachmentSlotCount: getWeaponAttachmentSlotCount,
         getBarrelRecoilMultiplier: getBarrelRecoilMultiplier,
         getBarrelSpreadMultiplier: getBarrelSpreadMultiplier,

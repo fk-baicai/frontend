@@ -1,13 +1,18 @@
 /**
- * 全站数值展示：统一保留两位小数（zh-CN）
- * 列表 / 详情 / 蓝图制造等页面共用
+ * 全站数值展示：先按两位小数格式化；若小数位全是 0（.00）则去掉。
+ * .01 / .50 等非零小数仍保留。列表 / 卡片 / 详情 / 蓝图共用。
  */
 (function (global) {
     'use strict';
 
+    function trimTrailingDotZeroZero(text) {
+        return String(text == null ? '' : text).replace(/\.00(?!\d)/g, '');
+    }
+
     function formatFixedDecimal2(v) {
         if (v == null || v === '' || !Number.isFinite(Number(v))) return null;
-        return Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        var text = Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return trimTrailingDotZeroZero(text);
     }
 
     function formatDisplayNumber(v, suffix) {
@@ -64,5 +69,6 @@
         formatDisplayScu: formatDisplayScu,
         formatDisplayPercentFromFraction: formatDisplayPercentFromFraction,
         roundDisplay2: roundDisplay2,
+        trimTrailingDotZeroZero: trimTrailingDotZeroZero,
     };
 })(typeof window !== 'undefined' ? window : global);

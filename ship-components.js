@@ -794,9 +794,19 @@
 
     function cardHighlightStats(item) {
         var out = [];
+        var wiki = window.ShipComponentWiki;
         getWikiTableColumns().forEach(function (col) {
             if (!col || !col.label || typeof col.get !== 'function') return;
             if (out.length >= 4) return;
+            if (col.key === 'wiki_pw_dmg' && wiki && typeof wiki.listPersonalWeaponShotDamageChips === 'function') {
+                var pw = item.wiki_fields && item.wiki_fields.personal_weapon;
+                var dmgChips = wiki.listPersonalWeaponShotDamageChips(pw) || [];
+                dmgChips.forEach(function (chip) {
+                    if (out.length >= 4) return;
+                    if (chip && chip.value) out.push({ label: chip.label, value: String(chip.value) });
+                });
+                return;
+            }
             var val = col.get(item);
             if (val == null || val === '' || val === '—') return;
             out.push({ label: col.label, value: String(val) });
@@ -2917,11 +2927,55 @@
         return expandColumnWidthCache;
     }
 
+    function fillPersonalWeaponDamageCell(td, item) {
+        if (!td) return;
+        var wiki = window.ShipComponentWiki;
+        var pw = item && item.wiki_fields && item.wiki_fields.personal_weapon;
+        var chips =
+            wiki && typeof wiki.listPersonalWeaponShotDamageChips === 'function'
+                ? wiki.listPersonalWeaponShotDamageChips(pw)
+                : [];
+        td.classList.toggle('sc-col-wiki_pw_dmg--stack', chips.length > 1);
+        if (chips.length > 1) {
+            td.innerHTML =
+                '<div class="sc-pw-dmg-stack">' +
+                chips
+                    .map(function (chip) {
+                        var short = String(chip.label || '').replace(/伤害$/, '');
+                        return (
+                            '<span class="sc-pw-dmg-stack__row">' +
+                            '<span class="sc-pw-dmg-stack__n">' +
+                            escapeHtml(chip.value) +
+                            '</span>' +
+                            '<span class="sc-pw-dmg-stack__t">' +
+                            escapeHtml(short) +
+                            '</span>' +
+                            '</span>'
+                        );
+                    })
+                    .join('') +
+                '</div>';
+            return;
+        }
+        if (chips.length === 1) {
+            td.textContent = chips[0].value || '—';
+            return;
+        }
+        var wcol = findWikiColumn('wiki_pw_dmg');
+        td.textContent = wcol ? wcol.get(item) || '—' : '—';
+    }
+
     function resetWeaponLoadoutStatCells(tr, item) {
         if (!tr || !item) return;
         ['wiki_pw_dmg', 'wiki_pw_rpm', 'wiki_pw_range', 'wiki_pw_sound', 'wiki_pw_recoil'].forEach(function (key) {
             var td = tr.querySelector('td.sc-col-' + key);
             if (!td) return;
+            if (key === 'wiki_pw_dmg') {
+                fillPersonalWeaponDamageCell(td, item);
+                td.classList.remove('sc-stat-loadout-mod');
+                td.removeAttribute('title');
+                return;
+            }
             var wcol = getWikiTableColumns().find(function (c) {
                 return c.key === key;
             });
@@ -4470,8 +4524,12 @@
         } else if (key === 'speed') {
             if (isSpeedColumnVisible()) td.textContent = formatSpeed(item.max_speed);
         } else if (key.indexOf('wiki_') === 0) {
-            var wcol = findWikiColumn(key);
-            td.textContent = wcol ? wcol.get(item) || '—' : '—';
+            if (key === 'wiki_pw_dmg') {
+                fillPersonalWeaponDamageCell(td, item);
+            } else {
+                var wcol = findWikiColumn(key);
+                td.textContent = wcol ? wcol.get(item) || '—' : '—';
+            }
         } else if (key === 'price') {
             td.classList.add('sc-price');
             td.textContent = formatPrice(item.price_buy_min);

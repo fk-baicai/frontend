@@ -2024,6 +2024,26 @@ button.sc-mission-chip--link {
     color: rgba(160, 195, 220, 0.72);
 }
 
+.sc-pw-dmg-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.14rem;
+    align-items: flex-start;
+}
+
+.sc-pw-dmg-stack__row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: 0.32rem;
+    white-space: nowrap;
+}
+
+.sc-pw-dmg-stack__t {
+    color: rgba(160, 195, 220, 0.72);
+    font-size: 0.86em;
+}
+
 .sc-loc-section {
     margin-top: 0.15rem;
 }
@@ -2434,6 +2454,13 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
     grid-template-columns: repeat(4, minmax(6.75rem, 8.5rem));
 }
 
+.sc-detail-hero-stats--5,
+.sc-detail-hero-stats--6,
+.sc-detail-hero-stats--7 {
+    grid-template-columns: repeat(auto-fill, minmax(5.75rem, 8.25rem));
+    width: 100%;
+}
+
 .sc-detail-hero-stats .sc-mission-field {
     gap: 0.3rem;
 }
@@ -2483,6 +2510,34 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
     grid-column: 2;
     grid-row: 1;
     align-self: start;
+}
+
+.sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])):has(.sc-detail-hero-stats--5),
+.sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])):has(.sc-detail-hero-stats--6),
+.sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])):has(.sc-detail-hero-stats--7) {
+    grid-template-rows: auto auto;
+    height: auto;
+    min-height: calc(var(--sc-detail-hero-media-inset) * 2 + var(--sc-detail-hero-img-h));
+}
+
+.sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])):has(.sc-detail-hero-stats--5) .sc-detail-hero-head,
+.sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])):has(.sc-detail-hero-stats--6) .sc-detail-hero-head,
+.sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])):has(.sc-detail-hero-stats--7) .sc-detail-hero-head {
+    grid-row: 1;
+}
+
+.sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])):has(.sc-detail-hero-stats--5) .sc-detail-hero-stats,
+.sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])):has(.sc-detail-hero-stats--6) .sc-detail-hero-stats,
+.sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])):has(.sc-detail-hero-stats--7) .sc-detail-hero-stats {
+    grid-row: 2;
+    align-self: start;
+    margin-bottom: var(--sc-detail-hero-media-inset);
+}
+
+.sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])):has(.sc-detail-hero-stats--5) .sc-detail-hero-media,
+.sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])):has(.sc-detail-hero-stats--6) .sc-detail-hero-media,
+.sc-detail-hero-inner:has(.sc-detail-hero-media:not([hidden])):has(.sc-detail-hero-stats--7) .sc-detail-hero-media {
+    grid-row: 1 / span 2;
 }
 
 .sc-detail-hero-media {
@@ -2682,15 +2737,20 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
 .sc-img-desk {
     position: fixed;
     inset: 0;
-    z-index: 5000;
+    z-index: 20050;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    padding: calc(var(--navbar-height, 6.3rem) + 1rem) 1rem 1.25rem;
+    padding: max(0.5rem, env(safe-area-inset-top, 0px)) 0.75rem max(0.75rem, env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
+    overflow: hidden;
     background: rgba(11, 28, 46, 0.72);
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
+}
+
+body.sc-img-desk-open {
+    overflow: hidden;
 }
 
 .sc-img-desk[hidden] {
@@ -2699,9 +2759,14 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
 
 .sc-img-desk__panel {
     width: min(40rem, 100%);
-    max-height: calc(100dvh - var(--navbar-height, 6.3rem) - 2.5rem);
+    max-width: 100%;
+    max-height: calc(100vh - max(0.5rem, env(safe-area-inset-top, 0px)) - max(0.75rem, env(safe-area-inset-bottom, 0px)));
+    max-height: calc(100dvh - max(0.5rem, env(safe-area-inset-top, 0px)) - max(0.75rem, env(safe-area-inset-bottom, 0px)));
+    max-height: calc(100svh - max(0.5rem, env(safe-area-inset-top, 0px)) - max(0.75rem, env(safe-area-inset-bottom, 0px)));
+    min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
     border-radius: var(--home-module-radius, 17px);
     border: 1px solid var(--home-module-border, rgba(84, 173, 247, 0.3));
     background: var(--navbar-bg, rgb(8, 22, 37));
@@ -2713,8 +2778,10 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
     align-items: flex-start;
     justify-content: space-between;
     gap: 0.8rem;
+    flex-shrink: 0;
     padding: 0.95rem 1rem 0.7rem;
     border-bottom: 1px solid var(--home-surface-border, rgba(95, 184, 255, 0.18));
+    background: var(--navbar-bg, rgb(8, 22, 37));
 }
 
 .sc-img-desk__title {
@@ -2755,7 +2822,9 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
+    flex-shrink: 0;
     padding: 0.7rem 1rem;
+    background: var(--navbar-bg, rgb(8, 22, 37));
 }
 
 .sc-img-desk__add {
@@ -2784,6 +2853,10 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
 
 .sc-img-desk__list {
     overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    flex: 1 1 auto;
+    min-height: 0;
     padding: 0 1rem 1rem;
     display: flex;
     flex-direction: column;
@@ -2871,6 +2944,32 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
 
 .sc-img-desk__actions button:hover {
     border-color: rgba(142, 224, 255, 0.5);
+}
+
+@media (max-width: 720px) {
+    .sc-img-desk {
+        padding: max(0.4rem, env(safe-area-inset-top, 0px)) 0.45rem max(0.5rem, env(safe-area-inset-bottom, 0px));
+    }
+
+    .sc-img-desk__panel {
+        width: 100%;
+        border-radius: 12px;
+    }
+
+    .sc-img-desk__toolbar {
+        flex-wrap: wrap;
+    }
+
+    .sc-img-desk__add {
+        width: 100%;
+        text-align: center;
+        padding: 0.7rem 0.75rem;
+        font-size: 0.9rem;
+    }
+
+    .sc-img-desk__meta {
+        width: 100%;
+    }
 }
 
 /* Mission-style body stack */
@@ -3426,7 +3525,10 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
     }
 
     .sc-detail-hero-stats--3,
-    .sc-detail-hero-stats--4 {
+    .sc-detail-hero-stats--4,
+    .sc-detail-hero-stats--5,
+    .sc-detail-hero-stats--6,
+    .sc-detail-hero-stats--7 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -3578,7 +3680,10 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
     }
 
     .sc-detail-hero-stats--3,
-    .sc-detail-hero-stats--4 {
+    .sc-detail-hero-stats--4,
+    .sc-detail-hero-stats--5,
+    .sc-detail-hero-stats--6,
+    .sc-detail-hero-stats--7 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.35rem 0.55rem;
     }

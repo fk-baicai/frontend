@@ -445,6 +445,10 @@
         );
     }
 
+    function trimTrailingDotZeroZero(text) {
+        return String(text == null ? '' : text).replace(/\.00(?!\d)/g, '');
+    }
+
     function renderFieldCell(label, value, emphasis) {
         return (
             '<div class="sc-mission-field' +
@@ -452,7 +456,7 @@
             '"><span class="sc-mission-field-label">' +
             escapeHtml(label) +
             '</span><span class="sc-mission-field-value">' +
-            escapeHtml(value) +
+            escapeHtml(trimTrailingDotZeroZero(value)) +
             '</span></div>'
         );
     }
@@ -525,12 +529,19 @@
         if (val == null || val === '') return '—';
         var n = Number(val);
         var text;
-        if (Number.isFinite(n)) {
+        if (typeof val !== 'boolean' && Number.isFinite(n)) {
             var f = displayFmt();
-            text = f && f.formatFixedDecimal2 ? f.formatFixedDecimal2(n) : n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            text =
+                f && f.formatFixedDecimal2
+                    ? f.formatFixedDecimal2(n)
+                    : n.toLocaleString('zh-CN', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                      });
             if (text == null) return '—';
+            text = trimTrailingDotZeroZero(text);
         } else {
-            text = String(val);
+            text = trimTrailingDotZeroZero(String(val));
         }
         return suffix ? text + suffix : text;
     }
@@ -579,20 +590,35 @@
             var hasCombatStats =
                 weapon &&
                 (weapon.damage_per_shot != null ||
+                    (Array.isArray(weapon.damages) && weapon.damages.length) ||
                     weapon.rpm != null ||
                     weapon.rof != null ||
                     weapon.magazine_size != null ||
                     weapon.capacity != null);
             if (hasCombatStats) {
-                chips = [
-                    { label: '最低买入价', value: formatPrice(item.price_buy_min), accent: true },
-                    { label: '单发伤害', value: formatWikiChipValue(weapon && weapon.damage_per_shot) },
+                var rpmNum =
+                    wiki && wiki.personalWeaponRpmNumber
+                        ? wiki.personalWeaponRpmNumber(weapon)
+                        : weapon && (weapon.rpm != null ? weapon.rpm : weapon.rof);
+                var dmgChips =
+                    wiki && typeof wiki.listPersonalWeaponShotDamageChips === 'function'
+                        ? wiki.listPersonalWeaponShotDamageChips(weapon)
+                        : [];
+                if (!dmgChips.length) {
+                    dmgChips = [
+                        {
+                            label: '单发伤害',
+                            value: formatWikiChipValue(weapon && weapon.damage_per_shot),
+                        },
+                    ];
+                }
+                chips = [{ label: '最低买入价', value: formatPrice(item.price_buy_min), accent: true }].concat(
+                    dmgChips
+                );
+                chips.push(
                     {
                         label: '射速',
-                        value: formatWikiChipValue(
-                            weapon && (weapon.rpm != null ? weapon.rpm : weapon.rof),
-                            ' 发/分'
-                        ),
+                        value: formatWikiChipValue(rpmNum, ' 发/分'),
                     },
                     {
                         label: '弹匣容量',
@@ -600,8 +626,8 @@
                             weapon &&
                                 (weapon.magazine_size != null ? weapon.magazine_size : weapon.capacity)
                         ),
-                    },
-                ];
+                    }
+                );
             } else {
                 chips = [
                     { label: '最低买入价', value: formatPrice(item.price_buy_min), accent: true },
@@ -626,6 +652,7 @@
                 },
             ];
         } else if (group === 'fps_magazine') {
+            var wiki = window.ShipComponentWiki;
             var wf = item.wiki_fields || {};
             var mag = wf.magazine;
             var ammo = wf.ammunition;
@@ -638,7 +665,11 @@
                     { label: '最低买入价', value: formatPrice(item.price_buy_min), accent: true },
                     {
                         label: '最大弹药',
-                        value: formatWikiChipValue(mag && (mag.max_ammo_count != null ? mag.max_ammo_count : mag.initial_ammo_count)),
+                        value: formatWikiChipValue(
+                            wiki && wiki.getMagazineCapacityValue
+                                ? wiki.getMagazineCapacityValue(mag)
+                                : mag && (mag.max_ammo_count != null ? mag.max_ammo_count : mag.initial_ammo_count)
+                        ),
                     },
                     { label: '弹速', value: formatWikiChipValue(ammo && ammo.speed, ' m/s') },
                 ];
@@ -1300,6 +1331,7 @@
 
     function closeImgDesk() {
         imgDeskOpen = false;
+        document.body.classList.remove('sc-img-desk-open');
         if (els.imgDesk) els.imgDesk.hidden = true;
     }
 
@@ -1505,7 +1537,11 @@
     function openImgDesk() {
         if (!els.imgDesk) return;
         imgDeskOpen = true;
+        document.body.classList.add('sc-img-desk-open');
         els.imgDesk.hidden = false;
+        els.imgDesk.scrollTop = 0;
+        var panel = els.imgDesk.querySelector('.sc-img-desk__panel');
+        if (panel) panel.scrollTop = 0;
         loadImgDesk();
     }
 
