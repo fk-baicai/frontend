@@ -163,29 +163,50 @@
     }
 
     var previewUrlCache = Object.create(null);
+    var previewInflight = 0;
+    var previewWait = [];
 
-    async function loadPreview(token, id, imgEl) {
-        if (!id || !imgEl) return;
+    function loadPreview(token, id, imgEl) {
+        if (!id || !imgEl) return Promise.resolve();
         if (previewUrlCache[id]) {
             imgEl.src = previewUrlCache[id];
-            return;
+            return Promise.resolve();
         }
-        var res = await fetch(
-            apiBase() +
-                '/api/admin/sc/image-submissions/' +
-                encodeURIComponent(id) +
-                '/preview?size=thumb',
-            {
-                headers: adminHeaders(token),
+        return new Promise(function (resolve, reject) {
+            function pump() {
+                if (previewInflight >= 2) {
+                    previewWait.push(pump);
+                    return;
+                }
+                previewInflight += 1;
+                fetch(
+                    apiBase() +
+                        '/api/admin/sc/image-submissions/' +
+                        encodeURIComponent(id) +
+                        '/preview?size=thumb',
+                    { headers: adminHeaders(token) }
+                )
+                    .then(function (res) {
+                        if (!res.ok) throw new Error('预览失败');
+                        return res.blob();
+                    })
+                    .then(function (blob) {
+                        var url = URL.createObjectURL(blob);
+                        previewUrlCache[id] = url;
+                        imgEl.src = url;
+                        imgEl.loading = 'lazy';
+                        imgEl.decoding = 'async';
+                        resolve();
+                    })
+                    .catch(reject)
+                    .then(function () {
+                        previewInflight -= 1;
+                        var next = previewWait.shift();
+                        if (next) next();
+                    });
             }
-        );
-        if (!res.ok) throw new Error('预览失败');
-        var blob = await res.blob();
-        var url = URL.createObjectURL(blob);
-        previewUrlCache[id] = url;
-        imgEl.src = url;
-        imgEl.loading = 'lazy';
-        imgEl.decoding = 'async';
+            pump();
+        });
     }
 
     function mount(root, token) {

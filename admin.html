@@ -2233,7 +2233,7 @@
     <script src="api-error.js"></script>
     <script src="auth-api.js?v=17"></script>
     <script src="admin-step-up.js?v=2"></script>
-    <script src="admin-sc-image-review.js?v=8"></script>
+    <script src="admin-sc-image-review.js?v=9"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         (function () {
@@ -2451,9 +2451,27 @@
                 loadOopzTtsUi();
                 loadWhitelist();
                 loadAuditLog();
-                if (window.UssScUserImageReview && typeof window.UssScUserImageReview.mount === 'function') {
-                    window.UssScUserImageReview.mount(document.getElementById('scUserImageReviewRoot'), s.token);
-                }
+                (function lazyMountImageReview() {
+                    var root = document.getElementById('scUserImageReviewRoot');
+                    if (!root || !window.UssScUserImageReview || typeof window.UssScUserImageReview.mount !== 'function') return;
+                    var started = false;
+                    function start() {
+                        if (started) return;
+                        started = true;
+                        window.UssScUserImageReview.mount(root, s.token);
+                    }
+                    if ('IntersectionObserver' in window) {
+                        var io = new IntersectionObserver(function (entries) {
+                            if (entries.some(function (en) { return en.isIntersecting; })) {
+                                io.disconnect();
+                                start();
+                            }
+                        }, { rootMargin: '200px' });
+                        io.observe(root);
+                    } else {
+                        start();
+                    }
+                })();
             }
 
             function formatAuditAt(iso) {
