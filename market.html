@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"></noscript>
-    <link rel="stylesheet" href="market.css?v=104">
+    <link rel="stylesheet" href="market.css?v=107">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -215,6 +215,13 @@
                     </div>
                 </header>
             </div>
+
+            <section class="market-ticker" id="marketTicker" hidden aria-label="近期成交">
+                <span class="market-ticker__tag">成交</span>
+                <div class="market-ticker__viewport">
+                    <div class="market-ticker__track" id="marketTickerTrack"></div>
+                </div>
+            </section>
 
             <div class="market-toolbar">
                 <div class="market-search-wrap">
@@ -691,6 +698,6 @@
     <script src="community-image-lightbox.js" defer></script>
     <script src="market-notify.js?v=6" defer></script>
     <script src="market-chat.js?v=2" defer></script>
-    <script src="market.js?v=82" defer></script>
+    <script src="market.js?v=84" defer></script>
 </body>
 </html>

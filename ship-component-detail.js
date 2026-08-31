@@ -332,6 +332,32 @@
         return getStoredItemId();
     }
 
+    function componentDetailHref(idItem) {
+        var id = String(idItem || '').trim();
+        if (!id) return '';
+        try {
+            var url = new URL('ship-component-detail', window.location.href);
+            url.searchParams.set('id', id);
+            return url.pathname + url.search;
+        } catch (e) {
+            return 'ship-component-detail?id=' + encodeURIComponent(id);
+        }
+    }
+
+    function bindCardOpenDetail(root, itemId) {
+        if (!root) return;
+        var href = componentDetailHref(itemId);
+        if (!href) return;
+        root.setAttribute('title', '打开配件详情');
+        root.setAttribute('role', 'link');
+        root.addEventListener('click', function (ev) {
+            if (ev.target && ev.target.closest && ev.target.closest('button, textarea, input, label, a, select')) {
+                return;
+            }
+            window.location.href = href;
+        });
+    }
+
     function syncDetailUrlId(id) {
         var cid = String(id || '').trim();
         if (!cid) return;
@@ -922,7 +948,9 @@
                   ? String(item.uuid).trim()
                   : '';
         if (!id) return '';
-        return absoluteAssetUrl('/api/sc/components/image/' + encodeURIComponent(id) + '?layer=wiki');
+        return absoluteAssetUrl(
+            '/api/sc/components/image/' + encodeURIComponent(id) + '?layer=wiki&size=thumb'
+        );
     }
 
     function componentImageDirectUrl(item) {
@@ -1036,6 +1064,23 @@
     var detailImageLayers = [];
     var detailImageIndex = 0;
 
+    function toThumbImageUrl(url) {
+        var u = String(url || '').trim();
+        if (!u) return '';
+        if (u.indexOf('/api/sc/components/image/') < 0) return u;
+        if (/[?&]size=/.test(u)) return u;
+        return u + (u.indexOf('?') >= 0 ? '&' : '?') + 'size=thumb';
+    }
+
+    function toOriginalImageUrl(url) {
+        var u = String(url || '').trim();
+        if (!u) return '';
+        return u.replace(/([?&])size=thumb(&|$)/, function (_, sep, tail) {
+            if (tail === '&') return sep;
+            return '';
+        }).replace(/[?&]$/, '');
+    }
+
     function orderedImageLayers(item) {
         var user = [];
         var wiki = [];
@@ -1055,9 +1100,9 @@
         if (!detailImageLayers.length) return;
         detailImageIndex = (index + detailImageLayers.length) % detailImageLayers.length;
         var layer = detailImageLayers[detailImageIndex];
-        currentImageLightboxSrc = layer.url;
+        currentImageLightboxSrc = toOriginalImageUrl(layer.url);
         currentImageLightboxBy = layer.by || '';
-        if (els.image) els.image.src = layer.url;
+        if (els.image) els.image.src = toThumbImageUrl(layer.url);
         if (els.imagePrev) els.imagePrev.hidden = detailImageLayers.length < 2;
         if (els.imageNext) els.imageNext.hidden = detailImageLayers.length < 2;
     }
@@ -1099,7 +1144,7 @@
             if (i !== detailImageIndex && row.url) fallbacks.push(row.url);
         });
         var directSrc = componentImageDirectUrl(item);
-        currentImageLightboxSrc = src;
+        currentImageLightboxSrc = toOriginalImageUrl(src);
         currentImageLightboxBy = picked.by || '';
         wireDetailImageLightbox();
         wireHeroImageFrameSync();
@@ -1115,8 +1160,8 @@
             }
             var next = fallbacks.shift();
             if (next) {
-                els.image.src = next;
-                currentImageLightboxSrc = next;
+                els.image.src = toThumbImageUrl(next);
+                currentImageLightboxSrc = toOriginalImageUrl(next);
                 return;
             }
             if (directSrc && els.image.src !== directSrc) {
@@ -1282,12 +1327,22 @@
         return reward && reward.fleet ? '未录用，不增加积分。' : '未录用。';
     }
 
+    var deskPreviewCache = Object.create(null);
+    var deskAllItems = [];
+    var deskReward = null;
+    var deskPage = 1;
+    var DESK_PAGE_SIZE = 8;
+
     function loadDeskThumbs() {
         if (!els.imgDeskList) return;
         var tok = readAuthToken();
         els.imgDeskList.querySelectorAll('img[data-sub-id]').forEach(function (img) {
             var id = img.getAttribute('data-sub-id');
-            fetch(apiUrl('/api/sc/my-image-submissions/' + encodeURIComponent(id) + '/preview'), {
+            if (deskPreviewCache[id]) {
+                img.src = deskPreviewCache[id];
+                return;
+            }
+            fetch(apiUrl('/api/sc/my-image-submissions/' + encodeURIComponent(id) + '/preview?size=thumb'), {
                 headers: { Authorization: 'Bearer ' + tok },
             })
                 .then(function (res) {
@@ -1295,7 +1350,9 @@
                     return res.blob();
                 })
                 .then(function (blob) {
-                    img.src = URL.createObjectURL(blob);
+                    var url = URL.createObjectURL(blob);
+                    deskPreviewCache[id] = url;
+                    img.src = url;
                 })
                 .catch(function () {
                     img.alt = '无法预览';
@@ -1304,21 +1361,43 @@
     }
 
     function renderImgDesk(data) {
-        var items = (data && data.items) || [];
-        var reward = data && data.reward;
+        deskAllItems = (data && data.items) || [];
+        deskReward = data && data.reward;
+        var items = deskAllItems;
+        var reward = deskReward;
         if (els.imgDeskReward) {
             var copy = rewardCopy(reward);
             els.imgDeskReward.textContent = copy;
             els.imgDeskReward.hidden = !copy;
         }
-        if (els.imgDeskMeta) els.imgDeskMeta.textContent = items.length ? '共 ' + items.length + ' 条投稿' : '还没有投稿';
         if (!els.imgDeskList) return;
         if (!items.length) {
+            if (els.imgDeskMeta) els.imgDeskMeta.textContent = '还没有投稿';
             els.imgDeskList.innerHTML = '<p class="sc-img-desk__empty">还没有上传记录。点上方按钮为当前配件提交图片，管理员审核后会出现在这里。</p>';
             return;
         }
-        els.imgDeskList.innerHTML = items
-            .map(function (row) {
+        var pages = Math.max(1, Math.ceil(items.length / DESK_PAGE_SIZE));
+        if (deskPage > pages) deskPage = pages;
+        if (deskPage < 1) deskPage = 1;
+        var start = (deskPage - 1) * DESK_PAGE_SIZE;
+        var slice = items.slice(start, start + DESK_PAGE_SIZE);
+        if (els.imgDeskMeta) {
+            els.imgDeskMeta.textContent =
+                '共 ' + items.length + ' 条投稿 · 第 ' + deskPage + '/' + pages + ' 页';
+        }
+        var pager =
+            items.length > DESK_PAGE_SIZE
+                ? '<div class="sc-img-desk__pager">' +
+                  '<button type="button" class="sc-img-desk__page" data-desk-page="-1"' +
+                  (deskPage <= 1 ? ' disabled' : '') +
+                  '>上一页</button>' +
+                  '<button type="button" class="sc-img-desk__page" data-desk-page="1"' +
+                  (deskPage >= pages ? ' disabled' : '') +
+                  '>下一页</button></div>'
+                : '';
+        els.imgDeskList.innerHTML =
+            slice
+                .map(function (row) {
                 var why = String(row.reject_reason || '').trim();
                 var approved = row.status === 'approved';
                 var actions =
@@ -1335,7 +1414,9 @@
                           '">删除</button>') +
                     '</div>';
                 return (
-                    '<article class="sc-img-desk__card">' +
+                    '<article class="sc-img-desk__card" data-item-id="' +
+                    escapeHtml(row.id_item || '') +
+                    '">' +
                     '<img alt="" class="sc-img-desk__thumb" data-sub-id="' +
                     escapeHtml(row.id) +
                     '">' +
@@ -1356,8 +1437,11 @@
                     '</div></article>'
                 );
             })
-            .join('');
+            .join('') + pager;
         loadDeskThumbs();
+        els.imgDeskList.querySelectorAll('.sc-img-desk__card').forEach(function (card) {
+            bindCardOpenDetail(card, card.getAttribute('data-item-id'));
+        });
         els.imgDeskList.querySelectorAll('[data-replace-item]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 if (btn.getAttribute('data-replace-approved') === '1') {
@@ -1387,6 +1471,12 @@
                     .catch(function () {
                         if (els.imgDeskMeta) els.imgDeskMeta.textContent = '删除失败';
                     });
+            });
+        });
+        els.imgDeskList.querySelectorAll('[data-desk-page]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                deskPage += Number(btn.getAttribute('data-desk-page')) || 0;
+                renderImgDesk({ items: deskAllItems, reward: deskReward });
             });
         });
     }
@@ -1436,46 +1526,66 @@
         }
         if (els.imageUploadBtn) els.imageUploadBtn.disabled = true;
         if (els.imgDeskMeta) els.imgDeskMeta.textContent = '正在压缩并提交…';
-        var reader = new FileReader();
-        reader.onerror = function () {
-            if (els.imageUploadBtn) els.imageUploadBtn.disabled = false;
-            if (els.imgDeskMeta) els.imgDeskMeta.textContent = '读取图片失败';
-        };
-        reader.onload = function () {
-            fetch(apiUrl('/api/sc/components/' + encodeURIComponent(id) + '/image-submission'), {
-                method: 'POST',
-                headers: {
-                    Authorization: 'Bearer ' + tok,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ image: String(reader.result || '') }),
-            })
-                .then(function (res) {
+        compressImageFile(file, 1280, 0.8)
+            .then(function (dataUrl) {
+                return fetch(apiUrl('/api/sc/components/' + encodeURIComponent(id) + '/image-submission'), {
+                    method: 'POST',
+                    headers: {
+                        Authorization: 'Bearer ' + tok,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: dataUrl }),
+                }).then(function (res) {
                     return res.json().then(function (data) {
                         return { res: res, data: data };
                     });
-                })
-                .then(function (pack) {
-                    if (els.imageUploadBtn) els.imageUploadBtn.disabled = false;
-                    if (!pack.res.ok) {
-                        var msg =
-                            window.UssApiError && pack.data && pack.data.code
-                                ? window.UssApiError.formatUserError(pack.data.code)
-                                : '提交失败';
-                        if (els.imgDeskMeta) els.imgDeskMeta.textContent = msg;
-                        setUploadHint(msg);
-                        return;
-                    }
-                    setUploadHint('已提交，等待管理员审核');
-                    showUploadToast(pack.data && pack.data.reward);
-                    if (imgDeskOpen) loadImgDesk();
-                })
-                .catch(function () {
-                    if (els.imageUploadBtn) els.imageUploadBtn.disabled = false;
-                    if (els.imgDeskMeta) els.imgDeskMeta.textContent = '网络异常，请稍后重试';
                 });
-        };
-        reader.readAsDataURL(file);
+            })
+            .then(function (pack) {
+                if (els.imageUploadBtn) els.imageUploadBtn.disabled = false;
+                if (!pack.res.ok) {
+                    var msg =
+                        window.UssApiError && pack.data && pack.data.code
+                            ? window.UssApiError.formatUserError(pack.data.code)
+                            : '提交失败';
+                    if (els.imgDeskMeta) els.imgDeskMeta.textContent = msg;
+                    setUploadHint(msg);
+                    return;
+                }
+                setUploadHint('已提交，等待管理员审核');
+                showUploadToast(pack.data && pack.data.reward);
+                if (imgDeskOpen) loadImgDesk();
+            })
+            .catch(function () {
+                if (els.imageUploadBtn) els.imageUploadBtn.disabled = false;
+                if (els.imgDeskMeta) els.imgDeskMeta.textContent = '网络异常，请稍后重试';
+            });
+    }
+
+    function compressImageFile(file, maxDim, quality) {
+        return new Promise(function (resolve, reject) {
+            var url = URL.createObjectURL(file);
+            var img = new Image();
+            img.onload = function () {
+                URL.revokeObjectURL(url);
+                var w = img.naturalWidth || 1;
+                var h = img.naturalHeight || 1;
+                var scale = Math.min(1, maxDim / Math.max(w, h));
+                var canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(w * scale));
+                canvas.height = Math.max(1, Math.round(h * scale));
+                var ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#0a1018';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = function () {
+                URL.revokeObjectURL(url);
+                reject(new Error('decode'));
+            };
+            img.src = url;
+        });
     }
 
     function renderFootnote(meta) {

@@ -3890,6 +3890,67 @@
         }
     }
 
+    function formatTickerAgo(iso) {
+        var ms = Date.now() - Date.parse(iso);
+        if (!Number.isFinite(ms) || ms < 0) ms = 0;
+        var mins = Math.floor(ms / 60000);
+        if (mins < 1) return '刚刚';
+        if (mins < 60) return mins + ' 分钟前';
+        var hours = Math.floor(mins / 60);
+        if (hours < 24) return hours + ' 小时前';
+        var days = Math.floor(hours / 24);
+        return days + ' 天前';
+    }
+
+    function tickerItemHtml(row) {
+        var seller = row.sellerMasked || '用户';
+        var buyer = row.buyerMasked || '用户';
+        return (
+            '<span class="market-ticker__item">' +
+            '<span class="market-ticker__party">' +
+            escapeHtml(seller) +
+            '</span>' +
+            '<span class="market-ticker__arrow" aria-hidden="true">→</span>' +
+            '<span class="market-ticker__party">' +
+            escapeHtml(buyer) +
+            '</span>' +
+            '<span class="market-ticker__kind">' +
+            escapeHtml(row.kind || '成交') +
+            '</span>' +
+            '<span class="market-ticker__name">' +
+            escapeHtml(row.itemName || '') +
+            '</span>' +
+            '<span class="market-ticker__ago">' +
+            escapeHtml(formatTickerAgo(row.at)) +
+            '</span></span>'
+        );
+    }
+
+    function loadRecentCompletionsTicker() {
+        if (!el.ticker || !el.tickerTrack) return;
+        fetch(joinUrl('/api/market/recent-completions?limit=16'))
+            .then(function (r) {
+                return r.json();
+            })
+            .then(function (data) {
+                var items = (data && data.items) || [];
+                if (!items.length) {
+                    el.ticker.hidden = true;
+                    return;
+                }
+                var unit = items.slice();
+                while (unit.length && unit.length < 8) {
+                    unit = unit.concat(items);
+                }
+                var html = unit.map(tickerItemHtml).join('');
+                el.tickerTrack.innerHTML = html + html;
+                el.ticker.hidden = false;
+            })
+            .catch(function () {
+                el.ticker.hidden = true;
+            });
+    }
+
     function cacheElements() {
         el.gate = $('marketGate');
         el.content = $('marketContent');
@@ -3901,6 +3962,8 @@
         el.gridEmpty = $('marketGridEmpty');
         el.pager = $('marketPager');
         el.btnCreate = $('marketBtnCreate');
+        el.ticker = $('marketTicker');
+        el.tickerTrack = $('marketTickerTrack');
         el.modalBackdrop = $('marketModalBackdrop');
         el.modal = el.modalBackdrop ? el.modalBackdrop.querySelector('.market-modal') : null;
         el.formRoot = document.querySelector('.market-form');
@@ -4025,6 +4088,7 @@
         syncTabs();
         hideGate();
         fetchOrders();
+        loadRecentCompletionsTicker();
         if (isLoggedIn() && window.UssMarketNotify && typeof window.UssMarketNotify.init === 'function') {
             window.UssMarketNotify.init();
         }

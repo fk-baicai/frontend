@@ -20,6 +20,27 @@
             .replace(/"/g, '&quot;');
     }
 
+    function componentDetailHref(idItem) {
+        var id = String(idItem || '').trim();
+        if (!id || /^demo-/i.test(id)) return '';
+        return 'ship-component-detail?id=' + encodeURIComponent(id);
+    }
+
+    function bindCardOpenDetail(root, itemId) {
+        if (!root || !itemId) return;
+        var href = componentDetailHref(itemId);
+        if (!href) return;
+        root.setAttribute('data-item-id', itemId);
+        root.setAttribute('title', '打开配件详情');
+        root.style.cursor = 'pointer';
+        root.addEventListener('click', function (ev) {
+            if (ev.target && ev.target.closest && ev.target.closest('button, textarea, input, label, a, select')) {
+                return;
+            }
+            window.location.href = href;
+        });
+    }
+
     function hintFromRes(data, fallback) {
                 if (global.UssApiError && typeof global.UssApiError.formatUserError === 'function' && data && data.code) {
             return global.UssApiError.formatUserError(data.code);
@@ -141,13 +162,30 @@
         ];
     }
 
+    var previewUrlCache = Object.create(null);
+
     async function loadPreview(token, id, imgEl) {
-        var res = await fetch(apiBase() + '/api/admin/sc/image-submissions/' + encodeURIComponent(id) + '/preview', {
-            headers: adminHeaders(token),
-        });
+        if (!id || !imgEl) return;
+        if (previewUrlCache[id]) {
+            imgEl.src = previewUrlCache[id];
+            return;
+        }
+        var res = await fetch(
+            apiBase() +
+                '/api/admin/sc/image-submissions/' +
+                encodeURIComponent(id) +
+                '/preview?size=thumb',
+            {
+                headers: adminHeaders(token),
+            }
+        );
         if (!res.ok) throw new Error('预览失败');
         var blob = await res.blob();
-        imgEl.src = URL.createObjectURL(blob);
+        var url = URL.createObjectURL(blob);
+        previewUrlCache[id] = url;
+        imgEl.src = url;
+        imgEl.loading = 'lazy';
+        imgEl.decoding = 'async';
     }
 
     function mount(root, token) {
@@ -157,6 +195,11 @@
             '<div id="scUserImgReviewErr" class="err" hidden></div>' +
             '<h3 class="sc-user-img-review-h">待审核</h3>' +
             '<div id="scUserImgReviewList" class="sc-user-img-review-list"></div>' +
+            '<div class="sc-user-img-review-pager" id="scUserImgPendingPager" hidden>' +
+            '<button type="button" class="btn-secondary" id="scUserImgPendingPrev">上一页</button>' +
+            '<span id="scUserImgPendingPageLabel"></span>' +
+            '<button type="button" class="btn-secondary" id="scUserImgPendingNext">下一页</button>' +
+            '</div>' +
             '<h3 class="sc-user-img-review-h">已通过记录</h3>' +
             '<div class="sc-user-img-review-toolbar">' +
             '<input type="search" id="scUserImgApprovedSearch" class="sc-user-img-review-search" placeholder="搜索配件中文名、英文名、类型、上传者…" autocomplete="off">' +
@@ -186,6 +229,13 @@
         var approvedPrevEl = root.querySelector('#scUserImgApprovedPrev');
         var approvedNextEl = root.querySelector('#scUserImgApprovedNext');
         var approvedPageLabelEl = root.querySelector('#scUserImgApprovedPageLabel');
+        var pendingPagerEl = root.querySelector('#scUserImgPendingPager');
+        var pendingPrevEl = root.querySelector('#scUserImgPendingPrev');
+        var pendingNextEl = root.querySelector('#scUserImgPendingNext');
+        var pendingPageLabelEl = root.querySelector('#scUserImgPendingPageLabel');
+        var pendingAll = [];
+        var pendingPage = 1;
+        var PENDING_PAGE_SIZE = 8;
         var approvedAll = [];
         var approvedPage = 1;
 
@@ -304,6 +354,8 @@
                     return (
                         '<article class="sc-user-img-review-card sc-user-img-review-card--compact" data-id="' +
                         esc(row.id) +
+                        '" data-item-id="' +
+                        esc(row.id_item || '') +
                         '">' +
                         '<img alt="" class="sc-user-img-review-thumb" data-preview-id="' +
                         esc(row.id) +
@@ -341,6 +393,9 @@
                 loadPreview(token, id, img).catch(function () {
                     img.replaceWith(document.createTextNode('无法预览'));
                 });
+            });
+            approvedListEl.querySelectorAll('.sc-user-img-review-card').forEach(function (card) {
+                bindCardOpenDetail(card, card.getAttribute('data-item-id'));
             });
             approvedListEl.querySelectorAll('[data-del-approved]').forEach(function (btn) {
                 btn.onclick = function () {
@@ -385,36 +440,91 @@
             renderApprovedPage();
         }
 
-        async function load() {
-            showErr('');
-            var res = await fetch(apiBase() + '/api/admin/sc/image-submissions', {
-                headers: adminHeaders(token),
+        function dropPending(id) {
+            pendingAll = pendingAll.filter(function (r) {
+                return String(r.id) !== String(id);
             });
-            var data = {};
-            try {
-                data = await res.json();
-            } catch (e) {
-                data = {};
-            }
-            if (!res.ok) {
-                throw new Error(hintFromRes(data, '加载失败'));
-            }
-            var items = data.items || [];
-            if (metaEl) metaEl.textContent = items.length ? '待审核 ' + items.length + ' 张' : '暂无待审核图片';
+            var pages = Math.max(1, Math.ceil(pendingAll.length / PENDING_PAGE_SIZE) || 1);
+            if (pendingPage > pages) pendingPage = pages;
+            renderPendingPage();
+        }
+
+        function bindPendingActions() {
             if (!listEl) return;
-            if (!items.length) {
+            listEl.querySelectorAll('img[data-preview-id]').forEach(function (img) {
+                loadPreview(token, img.getAttribute('data-preview-id'), img).catch(function () {
+                    img.replaceWith(document.createTextNode('无法预览'));
+                });
+            });
+            listEl.querySelectorAll('.sc-user-img-review-card').forEach(function (card) {
+                bindCardOpenDetail(card, card.getAttribute('data-item-id'));
+            });
+            listEl.querySelectorAll('[data-approve]').forEach(function (btn) {
+                btn.onclick = function () {
+                    var id = btn.getAttribute('data-approve');
+                    btn.disabled = true;
+                    review(id, 'approve')
+                        .then(function () {
+                            dropPending(id);
+                            return loadApproved();
+                        })
+                        .catch(function (e) {
+                            btn.disabled = false;
+                            showErr((e && e.message) || '通过失败');
+                        });
+                };
+            });
+            listEl.querySelectorAll('[data-reject]').forEach(function (btn) {
+                btn.onclick = function () {
+                    var id = btn.getAttribute('data-reject');
+                    var card = btn.closest('.sc-user-img-review-card');
+                    var area = card && card.querySelector('.sc-user-img-review-reason');
+                    var reason = area ? String(area.value || '').trim() : '';
+                    if (!window.confirm(reason ? '确定驳回？理由将发给上传人。' : '确定驳回这张图片？（未填写理由）')) return;
+                    btn.disabled = true;
+                    review(id, 'reject', reason)
+                        .then(function () {
+                            dropPending(id);
+                        })
+                        .catch(function (e) {
+                            btn.disabled = false;
+                            showErr((e && e.message) || '驳回失败');
+                        });
+                };
+            });
+        }
+
+        function renderPendingPage() {
+            if (!listEl) return;
+            var pages = Math.max(1, Math.ceil(pendingAll.length / PENDING_PAGE_SIZE) || 1);
+            if (pendingPage > pages) pendingPage = pages;
+            if (pendingPage < 1) pendingPage = 1;
+            var start = (pendingPage - 1) * PENDING_PAGE_SIZE;
+            var slice = pendingAll.slice(start, start + PENDING_PAGE_SIZE);
+            if (metaEl) {
+                metaEl.textContent = pendingAll.length
+                    ? '待审核 ' + pendingAll.length + ' 张 · 本页 ' + slice.length
+                    : '暂无待审核图片';
+            }
+            if (pendingPagerEl) pendingPagerEl.hidden = pendingAll.length <= PENDING_PAGE_SIZE;
+            if (pendingPageLabelEl) pendingPageLabelEl.textContent = '第 ' + pendingPage + ' / ' + pages + ' 页';
+            if (pendingPrevEl) pendingPrevEl.disabled = pendingPage <= 1;
+            if (pendingNextEl) pendingNextEl.disabled = pendingPage >= pages;
+            if (!slice.length) {
                 listEl.innerHTML = '';
                 return;
             }
-            listEl.innerHTML = items
+            listEl.innerHTML = slice
                 .map(function (row) {
                     return (
                         '<article class="sc-user-img-review-card" data-id="' +
                         esc(row.id) +
+                        '" data-item-id="' +
+                        esc(row.id_item || '') +
                         '">' +
                         '<img alt="" class="sc-user-img-review-thumb" data-preview-id="' +
                         esc(row.id) +
-                        '">' +
+                        '" loading="lazy" decoding="async">' +
                         '<div class="sc-user-img-review-copy">' +
                         '<p class="sc-user-img-review-name">' +
                         esc(row.item_name_zh || row.item_name_en || row.id_item) +
@@ -442,41 +552,26 @@
                     );
                 })
                 .join('');
-            listEl.querySelectorAll('img[data-preview-id]').forEach(function (img) {
-                loadPreview(token, img.getAttribute('data-preview-id'), img).catch(function () {
-                    img.replaceWith(document.createTextNode('无法预览'));
-                });
+            bindPendingActions();
+        }
+
+        async function load() {
+            showErr('');
+            var res = await fetch(apiBase() + '/api/admin/sc/image-submissions', {
+                headers: adminHeaders(token),
             });
-            listEl.querySelectorAll('[data-approve]').forEach(function (btn) {
-                btn.onclick = function () {
-                    var id = btn.getAttribute('data-approve');
-                    btn.disabled = true;
-                    review(id, 'approve')
-                        .then(function () {
-                            return Promise.all([load(), loadApproved()]);
-                        })
-                        .catch(function (e) {
-                            btn.disabled = false;
-                            showErr((e && e.message) || '通过失败');
-                        });
-                };
-            });
-            listEl.querySelectorAll('[data-reject]').forEach(function (btn) {
-                btn.onclick = function () {
-                    var id = btn.getAttribute('data-reject');
-                    var card = btn.closest('.sc-user-img-review-card');
-                    var area = card && card.querySelector('.sc-user-img-review-reason');
-                    var reason = area ? String(area.value || '').trim() : '';
-                    if (!window.confirm(reason ? '确定驳回？理由将发给上传人。' : '确定驳回这张图片？（未填写理由）')) return;
-                    btn.disabled = true;
-                    review(id, 'reject', reason)
-                        .then(load)
-                        .catch(function (e) {
-                            btn.disabled = false;
-                            showErr((e && e.message) || '驳回失败');
-                        });
-                };
-            });
+            var data = {};
+            try {
+                data = await res.json();
+            } catch (e) {
+                data = {};
+            }
+            if (!res.ok) {
+                throw new Error(hintFromRes(data, '加载失败'));
+            }
+            pendingAll = data.items || [];
+            pendingPage = 1;
+            renderPendingPage();
         }
 
         if (approvedSearchEl) {
@@ -503,6 +598,21 @@
             approvedNextEl.addEventListener('click', function () {
                 approvedPage += 1;
                 renderApprovedPage();
+            });
+        }
+
+        if (pendingPrevEl) {
+            pendingPrevEl.addEventListener('click', function () {
+                if (pendingPage > 1) {
+                    pendingPage -= 1;
+                    renderPendingPage();
+                }
+            });
+        }
+        if (pendingNextEl) {
+            pendingNextEl.addEventListener('click', function () {
+                pendingPage += 1;
+                renderPendingPage();
             });
         }
 

@@ -3455,16 +3455,25 @@
     ];
 
     var WEAPON_SLUG_BASE_ANCHORS = [
-        'pistol',
+        'hmg',
+        'lmg',
         'smg',
+        'mg',
+        'pistol',
         'rifle',
         'shotgun',
         'sniper',
         'launcher',
         'railgun',
         'crossbow',
-        'lmg',
         'scattergun',
+        'minigun',
+        'gatling',
+        'cannon',
+        'repeater',
+        'carbine',
+        'pdw',
+        'dmr',
         'knife',
         'sword',
         'grenade',
@@ -3478,6 +3487,11 @@
         'blade',
         'baton',
     ];
+
+    var WEAPON_TYPE_EN_FOR_NAME =
+        'HMG|LMG|SMG|MG|Pistol|Rifle|Shotgun|Sniper|Launcher|Railgun|Crossbow|Scattergun|Minigun|Gatling|Cannon|Repeater|Carbine|PDW|Knife|Sword|Grenade';
+    var WEAPON_TYPE_ZH_FOR_NAME =
+        '重机枪|轻机枪|机枪|冲锋枪|突击步枪|狙击步枪|霰弹枪|手枪|发射器|电磁炮|十字弩|投掷物|近战武器|工具';
 
     function getVariantSlugBaseAnchors() {
         return state.group === 'fps_weapon' ? WEAPON_SLUG_BASE_ANCHORS : ARMOR_SLUG_BASE_ANCHORS;
@@ -3643,8 +3657,24 @@
         return inferred;
     }
 
+    function longestExistingSlugPrefix(slug, slugCatalog) {
+        var parts = String(slug || '')
+            .trim()
+            .toLowerCase()
+            .split('-')
+            .filter(Boolean);
+        if (parts.length < 3 || !slugCatalog) return '';
+        for (var i = parts.length - 1; i >= 2; i--) {
+            var key = parts.slice(0, i).join('-');
+            if (slugCatalog[key]) return key;
+        }
+        return '';
+    }
+
     function resolveArmorSlugFamilyKey(slug, slugCatalog, brandAnchorCounts) {
+        var prefixKey = longestExistingSlugPrefix(slug, slugCatalog);
         var familyKey = canonicalizeArmorSlugFamilyKey(getArmorSlugFamilyKey(slug, slugCatalog), slugCatalog);
+        if (prefixKey) familyKey = prefixKey;
         return maybeInferBrandAnchorFamilyKey(slug, familyKey, slugCatalog, brandAnchorCounts);
     }
 
@@ -3666,12 +3696,20 @@
         if (zhQuoted) return { base: zhQuoted[1].trim(), suffix: zhQuoted[2].trim() };
         var enQuoted = s.match(/^(.+?)\s+"(.+?)"\s+(\S+)$/i);
         if (enQuoted) return { base: enQuoted[1].trim() + ' ' + enQuoted[3].trim(), suffix: enQuoted[2].trim() };
+        var zhTypeTail = s.match(new RegExp('^(.+?)\\s+(.+)\\s+(' + WEAPON_TYPE_ZH_FOR_NAME + ')\\s*$'));
+        if (zhTypeTail) {
+            return { base: zhTypeTail[1].trim() + ' ' + zhTypeTail[3].trim(), suffix: zhTypeTail[2].trim() };
+        }
+        var enTypeTail = s.match(new RegExp('^(.+?)\\s+(.+)\\s+(' + WEAPON_TYPE_EN_FOR_NAME + ')\\s*$', 'i'));
+        if (enTypeTail) {
+            return { base: enTypeTail[1].trim() + ' ' + enTypeTail[3].trim(), suffix: enTypeTail[2].trim() };
+        }
         var zhArmor = s.match(/^(.+?\s+(?:头盔|胸甲|腿甲|臂甲|护甲|背包))\s+(.+)$/);
         if (zhArmor) return { base: zhArmor[1].trim(), suffix: zhArmor[2].trim() };
         var zhFlightSuit = s.match(/^(.+?\s+飞行服)\s+(.+)$/);
         if (zhFlightSuit) return { base: zhFlightSuit[1].trim(), suffix: zhFlightSuit[2].trim() };
         var zhWeapon = s.match(
-            /^(.+?\s+(?:手枪|冲锋枪|突击步枪|狙击步枪|霰弹枪|轻机枪|机枪|发射器|电磁炮|十字弩|投掷物|近战武器|工具))\s+(.+)$/
+            new RegExp('^(.+?\\s+(?:' + WEAPON_TYPE_ZH_FOR_NAME + '))\\s+(.+)$')
         );
         if (zhWeapon) return { base: zhWeapon[1].trim(), suffix: zhWeapon[2].trim() };
         var zhArmorVariant = s.match(/^(.+?\s+(?:头盔|胸甲|腿甲|臂甲|护甲|背包))(?:\s+(.+))?$/);
@@ -3683,7 +3721,10 @@
         var enFlightSuit = s.match(/^(.+\s+Flight\s+Suit)\s+(.+)$/i);
         if (enFlightSuit) return { base: enFlightSuit[1].trim(), suffix: enFlightSuit[2].trim() };
         var enWeapon = s.match(
-            /^(.+\s+(?:Pistol|SMG|Rifle|Shotgun|Sniper|Launcher|Railgun|Crossbow|Knife|Sword|Grenade|LMG|Scattergun))\s+(.+)$/i
+            new RegExp(
+                '^(.+\\s+(?:' + WEAPON_TYPE_EN_FOR_NAME + '))\\s+(.+)$',
+                'i'
+            )
         );
         if (enWeapon) return { base: enWeapon[1].trim(), suffix: enWeapon[2].trim() };
         var parts = s.split(/\s+/);
@@ -3694,6 +3735,14 @@
         };
     }
 
+    function isBareWeaponLineName(name, lang) {
+        var s = String(name || '').trim();
+        if (!s || s.indexOf(' ') < 0) return false;
+        var alts = lang === 'zh' ? WEAPON_TYPE_ZH_FOR_NAME : WEAPON_TYPE_EN_FOR_NAME;
+        var flags = lang === 'zh' ? '' : 'i';
+        return new RegExp('(?:' + alts + ')\\s*$', flags).test(s);
+    }
+
     function armorVariantGroupKey(item, slugCatalog, brandAnchorCounts) {
         if (!item) return '';
         var familyKey = resolveArmorSlugFamilyKey(item.slug, slugCatalog, brandAnchorCounts);
@@ -3702,9 +3751,9 @@
         }
         var zhParts = getVariantNameParts(item && item.name_zh);
         var enParts = getVariantNameParts(item && item.name_en);
-        if (!zhParts.suffix && !enParts.suffix) return '';
-        var zhBase = zhParts.base || '';
-        var enBase = enParts.base || '';
+        var zhBase = zhParts.suffix ? zhParts.base : isBareWeaponLineName(item.name_zh, 'zh') ? String(item.name_zh || '').trim() : '';
+        var enBase = enParts.suffix ? enParts.base : isBareWeaponLineName(item.name_en, 'en') ? String(item.name_en || '').trim() : '';
+        if (!zhParts.suffix && !enParts.suffix && !zhBase && !enBase) return '';
         if (!zhBase && !enBase) return '';
         return String((item && item.type) || '') + '\0name\0' + zhBase + '\0' + enBase;
     }
@@ -3963,7 +4012,9 @@
     function componentImageProxyUrl(item) {
         var id = resolveComponentId(item);
         if (!id) return '';
-        return absoluteAssetUrl('/api/sc/components/image/' + encodeURIComponent(id) + '?layer=wiki');
+        return absoluteAssetUrl(
+            '/api/sc/components/image/' + encodeURIComponent(id) + '?layer=wiki&size=thumb'
+        );
     }
 
     function componentImageDirectUrl(item) {
@@ -3973,6 +4024,14 @@
         if (/^https?:\/\//i.test(raw)) return raw;
         if (raw.charAt(0) === '/') return absoluteAssetUrl(raw);
         return '';
+    }
+
+    function toThumbImageUrl(url) {
+        var u = String(url || '').trim();
+        if (!u) return '';
+        if (u.indexOf('/api/sc/components/image/') < 0) return u;
+        if (/[?&]size=/.test(u)) return u;
+        return u + (u.indexOf('?') >= 0 ? '&' : '?') + 'size=thumb';
     }
 
     function collectNameImageCandidates(item) {
@@ -3987,7 +4046,6 @@
         var layers = orderedImageLayers(item);
         for (var i = 0; i < layers.length; i += 1) add(layers[i].url);
         add(componentImageProxyUrl(item));
-        add(componentImageDirectUrl(item));
         return out;
     }
 
@@ -3997,7 +4055,7 @@
         var list = item && Array.isArray(item.images) ? item.images : [];
         for (var i = 0; i < list.length; i += 1) {
             var row = list[i];
-            var raw = row && row.url ? absoluteAssetUrl(row.url) : '';
+            var raw = row && row.url ? toThumbImageUrl(absoluteAssetUrl(row.url)) : '';
             if (!raw) continue;
             var pack = { url: raw, by: String(row.by || '').trim(), source: row.source || '' };
             if (row.source === 'user') user.push(pack);
@@ -4048,7 +4106,7 @@
     function ensureGlobalNameHoverPreview() {
         if (nameHoverPreviewEl) return nameHoverPreviewEl;
         var figure = document.createElement('figure');
-        figure.className = 'sc-detail-hero-media sc-name-hover-media';
+        figure.className = 'sc-name-hover-media';
         figure.hidden = true;
         figure.setAttribute('aria-hidden', 'true');
         var frame = document.createElement('span');
