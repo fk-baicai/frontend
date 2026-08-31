@@ -622,6 +622,8 @@
     function itemSwapQty(it) {
         if (!it) return 1;
         if (isHqPointsItem(it)) return Math.max(1, parseInt(it.hqPointsAmount || it.quantity, 10) || 1);
+        var give = parseInt(it.swapGiveQty, 10);
+        if (Number.isFinite(give) && give >= 1) return give;
         return Math.max(1, parseInt(it.quantity, 10) || 1);
     }
 
