@@ -2736,12 +2736,15 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
 
 .sc-img-desk {
     position: fixed;
-    inset: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
     z-index: 20050;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
-    padding: max(0.5rem, env(safe-area-inset-top, 0px)) 0.75rem max(0.75rem, env(safe-area-inset-bottom, 0px));
+    padding: max(0.75rem, env(safe-area-inset-top, 0px)) 0.75rem max(0.75rem, env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
     overflow: hidden;
     background: rgba(11, 28, 46, 0.72);
@@ -2758,11 +2761,12 @@ body.sc-img-desk-open {
 }
 
 .sc-img-desk__panel {
-    width: min(40rem, 100%);
+    width: min(40rem, calc(100vw - 1.5rem));
     max-width: 100%;
-    max-height: calc(100vh - max(0.5rem, env(safe-area-inset-top, 0px)) - max(0.75rem, env(safe-area-inset-bottom, 0px)));
-    max-height: calc(100dvh - max(0.5rem, env(safe-area-inset-top, 0px)) - max(0.75rem, env(safe-area-inset-bottom, 0px)));
-    max-height: calc(100svh - max(0.5rem, env(safe-area-inset-top, 0px)) - max(0.75rem, env(safe-area-inset-bottom, 0px)));
+    height: auto;
+    max-height: min(36rem, calc(100vh - 1.5rem));
+    max-height: min(36rem, calc(100dvh - 1.5rem));
+    max-height: min(36rem, calc(100svh - 1.5rem));
     min-height: 0;
     display: flex;
     flex-direction: column;
@@ -2894,9 +2898,32 @@ body.sc-img-desk-open {
 
 .sc-img-desk__pager {
     display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
     gap: 0.5rem;
-    grid-column: 1 / -1;
-    margin-top: 0.35rem;
+    margin: 0;
+    padding: 0.55rem 1rem 0.85rem;
+    border-top: 1px solid var(--home-surface-border, rgba(95, 184, 255, 0.18));
+}
+
+.sc-img-desk__pager[hidden] {
+    display: none !important;
+}
+
+.sc-img-desk__page {
+    border: 1px solid var(--home-module-border, rgba(84, 173, 247, 0.3));
+    border-radius: 8px;
+    background: transparent;
+    color: #8ee0ff;
+    padding: 0.35rem 0.75rem;
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.sc-img-desk__page:disabled {
+    opacity: 0.4;
+    cursor: default;
 }
 
 .sc-img-desk__name {

@@ -1002,11 +1002,30 @@
         return tokens.length ? tokens.join(' ') : s.replace(/_/g, ' ');
     }
 
+    function looksChineseBlueprintName(text) {
+        return /[\u4e00-\u9fff]/.test(String(text || ''));
+    }
+
+    function overlayListItemLocalizedName(item) {
+        if (!item || !item.uuid) return item;
+        var cached = BLUEPRINT_DETAIL_CACHE[item.uuid];
+        if (!cached || !looksChineseBlueprintName(cached.name_zh)) return item;
+        if (item.name_zh === cached.name_zh) return item;
+        return Object.assign({}, item, {
+            name_zh: cached.name_zh,
+            name_en: cached.name_en || item.name_en,
+        });
+    }
+
     function blueprintDisplayName(item) {
+        item = overlayListItemLocalizedName(item);
         var zh = item && item.name_zh;
         var en = item && item.name_en;
-        if (zh && !isPlaceholderBlueprintName(zh)) return zh;
+        if (zh && !isPlaceholderBlueprintName(zh) && looksChineseBlueprintName(zh)) return zh;
+        if (en && !isPlaceholderBlueprintName(en) && looksChineseBlueprintName(en)) return en;
+        if (zh && !isPlaceholderBlueprintName(zh) && looksChineseBlueprintName(zh)) return zh;
         if (en && !isPlaceholderBlueprintName(en)) return en;
+        if (zh && !isPlaceholderBlueprintName(zh)) return zh;
         return humanizeBlueprintKey(item && item.key) || (item && item.key) || '未命名蓝图';
     }
 
@@ -1728,9 +1747,16 @@
         return base.replace(/\/$/, '') + (raw.charAt(0) === '/' ? raw : '/' + raw);
     }
 
-    function componentImageUrl(componentId) {
+    function componentImageUrl(componentId, forLightbox) {
         if (!componentId) return '';
-        return absoluteAssetUrl('/api/sc/components/image/' + encodeURIComponent(componentId));
+        var path = '/api/sc/components/image/' + encodeURIComponent(componentId);
+        if (!forLightbox) path += '?size=thumb';
+        return absoluteAssetUrl(path);
+    }
+
+    function blueprintImageComponentId(bp) {
+        if (!bp) return '';
+        return String(bp.component_id || bp.output_item_uuid || '').trim();
     }
 
     function isBpHeroImageStackedLayout() {
@@ -1842,7 +1868,9 @@
         if (!el.outputImage || !el.outputImagePh) return;
         wireBpHeroImageFrameSync();
         wireBpImageLightbox();
-        var url = bp && bp.component_id ? componentImageUrl(bp.component_id) : '';
+        var imageId = blueprintImageComponentId(bp);
+        var url = imageId ? componentImageUrl(imageId, false) : '';
+        var lightboxUrl = imageId ? componentImageUrl(imageId, true) : '';
         var displayName = (bp && blueprintDisplayName(bp)) || '蓝图成品';
 
         if (
@@ -1854,7 +1882,7 @@
             el.outputImageFrame &&
             !el.outputImageFrame.hidden
         ) {
-            currentBpImageLightboxSrc = url;
+            currentBpImageLightboxSrc = lightboxUrl || url;
             el.outputImage.alt = displayName;
             el.outputImagePh.hidden = true;
             el.outputImagePh.classList.remove('is-loading');
@@ -1862,7 +1890,7 @@
         }
 
         if (url && url === bpImageActiveUrl && el.outputImage.src === url) {
-            currentBpImageLightboxSrc = url;
+            currentBpImageLightboxSrc = lightboxUrl || url;
             el.outputImage.alt = displayName;
             if (el.outputImage.complete && el.outputImage.naturalWidth > 0) {
                 el.outputImagePh.hidden = true;
@@ -1885,7 +1913,7 @@
         }
 
         bpImageActiveUrl = url;
-        currentBpImageLightboxSrc = url;
+        currentBpImageLightboxSrc = lightboxUrl || url;
         setBpOutputImagePlaceholder('loading');
         el.outputImage.alt = displayName;
         el.outputImage.onload = function () {
@@ -1949,6 +1977,22 @@
         });
     }
 
+    function patchListCacheItemNames(bp) {
+        if (!bp || !bp.uuid || !looksChineseBlueprintName(bp.name_zh)) return;
+        Object.keys(LIST_CACHE).forEach(function (key) {
+            var cached = LIST_CACHE[key];
+            if (!cached || !Array.isArray(cached.items)) return;
+            for (var i = 0; i < cached.items.length; i++) {
+                if (cached.items[i] && cached.items[i].uuid === bp.uuid) {
+                    cached.items[i] = Object.assign({}, cached.items[i], {
+                        name_zh: bp.name_zh,
+                        name_en: bp.name_en || cached.items[i].name_en,
+                    });
+                }
+            }
+        });
+    }
+
     function syncBlueprintUsageToListItem(bp) {
         if (!bp || !bp.uuid) return;
         var idx = -1;
@@ -1958,14 +2002,25 @@
                 break;
             }
         }
-        if (idx < 0) return;
-        state.items[idx] = Object.assign({}, state.items[idx], {
+        if (idx < 0) {
+            patchListCacheItemNames(bp);
+            return;
+        }
+        var next = Object.assign({}, state.items[idx], {
             class_zh: bp.class_zh || state.items[idx].class_zh,
             class_short_zh: bp.class_short_zh || state.items[idx].class_short_zh,
             armor_class_zh: bp.armor_class_zh || state.items[idx].armor_class_zh,
             grade_letter: bp.grade_letter || state.items[idx].grade_letter,
         });
-        updateBlueprintListItemUsage(bp);
+        if (looksChineseBlueprintName(bp.name_zh)) {
+            next.name_zh = bp.name_zh;
+            if (bp.name_en) next.name_en = bp.name_en;
+        }
+        state.items[idx] = next;
+        patchListCacheItemNames(next);
+        var btn = el.blueprintList && el.blueprintList.querySelector('.bp-list-item[data-uuid="' + bp.uuid + '"]');
+        if (btn) populateBlueprintListItem(btn, next);
+        else updateBlueprintListItemUsage(bp);
     }
 
     function blueprintDetailUsableForSim(bp) {
@@ -1980,6 +2035,7 @@
     function cacheBlueprintDetail(bp) {
         if (!bp || !bp.uuid) return;
         BLUEPRINT_DETAIL_CACHE[bp.uuid] = bp;
+        syncBlueprintUsageToListItem(bp);
         var keys = Object.keys(BLUEPRINT_DETAIL_CACHE);
         while (keys.length > BLUEPRINT_DETAIL_CACHE_MAX) {
             delete BLUEPRINT_DETAIL_CACHE[keys.shift()];

@@ -40,6 +40,7 @@
         imgDeskMeta: document.getElementById('scImgDeskMeta'),
         imgDeskClose: document.getElementById('scImgDeskClose'),
         imgDeskAdd: document.getElementById('scImgDeskAdd'),
+        imgDeskPager: document.getElementById('scImgDeskPager'),
     };
 
     var uploadToastTimer = 0;
@@ -1301,6 +1302,7 @@
         refreshOwnSubmission(item);
         if (els.imageUploadBtn.dataset.wired === '1') return;
         els.imageUploadBtn.dataset.wired = '1';
+        mountImgDeskOverlay();
         els.imageUploadBtn.addEventListener('click', function () {
             openImgDesk();
         });
@@ -1328,6 +1330,11 @@
 
     var uploadItemId = '';
     var imgDeskOpen = false;
+
+    function mountImgDeskOverlay() {
+        if (!els.imgDesk || els.imgDesk.parentNode === document.body) return;
+        document.body.appendChild(els.imgDesk);
+    }
 
     function closeImgDesk() {
         imgDeskOpen = false;
@@ -1363,7 +1370,7 @@
     var deskAllItems = [];
     var deskReward = null;
     var deskPage = 1;
-    var DESK_PAGE_SIZE = 8;
+    var DESK_PAGE_SIZE = 3;
 
     function loadDeskThumbs() {
         if (!els.imgDeskList) return;
@@ -1406,6 +1413,10 @@
         if (!items.length) {
             if (els.imgDeskMeta) els.imgDeskMeta.textContent = '还没有投稿';
             els.imgDeskList.innerHTML = '<p class="sc-img-desk__empty">还没有上传记录。点上方按钮为当前配件提交图片，管理员审核后会出现在这里。</p>';
+            if (els.imgDeskPager) {
+                els.imgDeskPager.hidden = true;
+                els.imgDeskPager.innerHTML = '';
+            }
             return;
         }
         var pages = Math.max(1, Math.ceil(items.length / DESK_PAGE_SIZE));
@@ -1417,19 +1428,23 @@
             els.imgDeskMeta.textContent =
                 '共 ' + items.length + ' 条投稿 · 第 ' + deskPage + '/' + pages + ' 页';
         }
-        var pager =
-            items.length > DESK_PAGE_SIZE
-                ? '<div class="sc-img-desk__pager">' +
-                  '<button type="button" class="sc-img-desk__page" data-desk-page="-1"' +
-                  (deskPage <= 1 ? ' disabled' : '') +
-                  '>上一页</button>' +
-                  '<button type="button" class="sc-img-desk__page" data-desk-page="1"' +
-                  (deskPage >= pages ? ' disabled' : '') +
-                  '>下一页</button></div>'
-                : '';
-        els.imgDeskList.innerHTML =
-            slice
-                .map(function (row) {
+        if (els.imgDeskPager) {
+            if (items.length > DESK_PAGE_SIZE) {
+                els.imgDeskPager.hidden = false;
+                els.imgDeskPager.innerHTML =
+                    '<button type="button" class="sc-img-desk__page" data-desk-page="-1"' +
+                    (deskPage <= 1 ? ' disabled' : '') +
+                    '>上一页</button>' +
+                    '<button type="button" class="sc-img-desk__page" data-desk-page="1"' +
+                    (deskPage >= pages ? ' disabled' : '') +
+                    '>下一页</button>';
+            } else {
+                els.imgDeskPager.hidden = true;
+                els.imgDeskPager.innerHTML = '';
+            }
+        }
+        els.imgDeskList.innerHTML = slice
+            .map(function (row) {
                 var why = String(row.reject_reason || '').trim();
                 var approved = row.status === 'approved';
                 var actions =
@@ -1469,7 +1484,7 @@
                     '</div></article>'
                 );
             })
-            .join('') + pager;
+            .join('');
         loadDeskThumbs();
         els.imgDeskList.querySelectorAll('.sc-img-desk__card').forEach(function (card) {
             bindCardOpenDetail(card, card.getAttribute('data-item-id'));
@@ -1505,12 +1520,14 @@
                     });
             });
         });
-        els.imgDeskList.querySelectorAll('[data-desk-page]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                deskPage += Number(btn.getAttribute('data-desk-page')) || 0;
-                renderImgDesk({ items: deskAllItems, reward: deskReward });
+        if (els.imgDeskPager) {
+            els.imgDeskPager.querySelectorAll('[data-desk-page]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    deskPage += Number(btn.getAttribute('data-desk-page')) || 0;
+                    renderImgDesk({ items: deskAllItems, reward: deskReward });
+                });
             });
-        });
+        }
     }
 
     function loadImgDesk() {
@@ -1536,6 +1553,7 @@
 
     function openImgDesk() {
         if (!els.imgDesk) return;
+        mountImgDeskOverlay();
         imgDeskOpen = true;
         document.body.classList.add('sc-img-desk-open');
         els.imgDesk.hidden = false;
