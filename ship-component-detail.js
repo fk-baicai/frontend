@@ -502,9 +502,18 @@
             { label: '尺寸', value: item.size_label || item.size || '—' },
         ];
         var wf = item.wiki_fields || {};
+        var wiki = window.ShipComponentWiki;
         if (item.type === 'ship_weapon') {
             var weapon = vehicleWeaponWiki(item);
             chips.push({ label: '武器类型', value: formatLocalizedWikiScalar(weapon && weapon.type) });
+            if (wiki && typeof wiki.detailPersonalWeaponShotDamageChips === 'function') {
+                (wiki.detailPersonalWeaponShotDamageChips(weapon) || []).forEach(function (chip) {
+                    chips.push({
+                        label: chip.label,
+                        value: formatWikiChipValue(chip.value),
+                    });
+                });
+            }
         } else if (item.type === 'ship_turret') {
             chips.push({
                 label: '炮台类型',
@@ -516,6 +525,14 @@
                 label: '信号类型',
                 value: formatLocalizedWikiScalar(missile && missile.signal_type),
             });
+            if (wiki && typeof wiki.detailPersonalWeaponShotDamageChips === 'function') {
+                (wiki.detailPersonalWeaponShotDamageChips(missile) || []).forEach(function (chip) {
+                    chips.push({
+                        label: chip.label,
+                        value: formatWikiChipValue(chip.value),
+                    });
+                });
+            }
         } else if (item.type === 'missile_rack') {
             var rack = wf.missile_rack || {};
             var count = rack.missile_count != null ? rack.missile_count : wf.max_missiles;
@@ -602,8 +619,8 @@
                         ? wiki.personalWeaponRpmNumber(weapon)
                         : weapon && (weapon.rpm != null ? weapon.rpm : weapon.rof);
                 var dmgChips =
-                    wiki && typeof wiki.listPersonalWeaponShotDamageChips === 'function'
-                        ? wiki.listPersonalWeaponShotDamageChips(weapon)
+                    wiki && typeof wiki.detailPersonalWeaponShotDamageChips === 'function'
+                        ? wiki.detailPersonalWeaponShotDamageChips(weapon)
                         : [];
                 if (!dmgChips.length) {
                     dmgChips = [
@@ -612,6 +629,13 @@
                             value: formatWikiChipValue(weapon && weapon.damage_per_shot),
                         },
                     ];
+                } else {
+                    dmgChips = dmgChips.map(function (chip) {
+                        return {
+                            label: chip.label,
+                            value: formatWikiChipValue(chip.value),
+                        };
+                    });
                 }
                 chips = [{ label: '最低买入价', value: formatPrice(item.price_buy_min), accent: true }].concat(
                     dmgChips
@@ -624,11 +648,20 @@
                     {
                         label: '弹匣容量',
                         value: formatWikiChipValue(
-                            weapon &&
-                                (weapon.magazine_size != null ? weapon.magazine_size : weapon.capacity)
+                            wiki && typeof wiki.getPersonalWeaponMagazineCapacity === 'function'
+                                ? wiki.getPersonalWeaponMagazineCapacity(weapon, item)
+                                : weapon &&
+                                      (weapon.magazine_size != null && Number(weapon.magazine_size) !== 0
+                                          ? weapon.magazine_size
+                                          : weapon.capacity)
                         ),
                     }
                 );
+                chips = chips.filter(function (chip) {
+                    if (chip.label !== '弹匣容量') return true;
+                    var v = String(chip.value == null ? '' : chip.value);
+                    return v && v !== '—' && Number(v) !== 0;
+                });
             } else {
                 chips = [
                     { label: '最低买入价', value: formatPrice(item.price_buy_min), accent: true },
@@ -1146,14 +1179,7 @@
             if (layers[i].source === 'user') userCount += 1;
         }
         if (!layers.length) {
-            var proxySrc = componentImageProxyUrl(item);
-            var directSrc = componentImageDirectUrl(item);
-            var only = proxySrc || directSrc;
-            return {
-                url: only,
-                by: '',
-                layers: only ? [{ url: only, by: '', source: 'official' }] : [],
-            };
+            return { url: '', by: '', layers: [] };
         }
         var start = userCount ? Math.floor(Math.random() * userCount) : 0;
         var pageable = userCount ? layers.filter(function (row) { return row.source === 'user'; }) : layers;
@@ -1175,7 +1201,6 @@
         detailImageLayers.forEach(function (row, i) {
             if (i !== detailImageIndex && row.url) fallbacks.push(row.url);
         });
-        var directSrc = componentImageDirectUrl(item);
         currentImageLightboxSrc = toOriginalImageUrl(src);
         currentImageLightboxBy = picked.by || '';
         wireDetailImageLightbox();
@@ -1194,12 +1219,6 @@
             if (next) {
                 els.image.src = toThumbImageUrl(next);
                 currentImageLightboxSrc = toOriginalImageUrl(next);
-                return;
-            }
-            if (directSrc && els.image.src !== directSrc) {
-                els.image.src = directSrc;
-                currentImageLightboxSrc = directSrc;
-                currentImageLightboxBy = '';
                 return;
             }
             hideDetailImage();

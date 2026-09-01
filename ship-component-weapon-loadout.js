@@ -549,9 +549,16 @@
         if (sndPct) pushTag({ label: '声响', text: sndPct, tone: combined.sound <= 1 ? 'good' : 'bad' });
 
         var pw = weaponItem && weaponItem.wiki_fields && weaponItem.wiki_fields.personal_weapon;
-        if (pw && combined.damage !== 1 && pw.damage_per_shot != null) {
-            var nextDmg = Math.round(Number(pw.damage_per_shot) * combined.damage * 10) / 10;
-            pushTag({ label: '预估伤害', text: String(nextDmg), tone: 'accent' });
+        if (pw && combined.damage !== 1) {
+            var wikiApi = wiki();
+            var baseDmg =
+                wikiApi && typeof wikiApi.personalWeaponShotDamageNumber === 'function'
+                    ? wikiApi.personalWeaponShotDamageNumber(pw)
+                    : pw.damage_per_shot;
+            if (baseDmg != null && Number.isFinite(Number(baseDmg))) {
+                var nextDmg = Math.round(Number(baseDmg) * combined.damage * 10) / 10;
+                pushTag({ label: '预估伤害', text: String(nextDmg), tone: 'accent' });
+            }
         }
 
         return tags;
@@ -661,24 +668,46 @@
         var modal = overlayEl.querySelector('.sc-loadout-modal');
         if (!modal) return;
         var rect = activeAnchor.getBoundingClientRect();
-        var gap = 8;
+        var gap = 10;
         var margin = 10;
         var width = modal.offsetWidth || 400;
         var height = modal.offsetHeight || 360;
+        var left = rect.left;
         var top = rect.bottom + gap;
-        var left = Math.min(rect.left, rect.right - width);
 
-        if (left < margin) left = margin;
         if (left + width > window.innerWidth - margin) {
             left = Math.max(margin, window.innerWidth - width - margin);
         }
+        if (left < margin) left = margin;
+
         if (top + height > window.innerHeight - margin) {
-            top = rect.top - height - gap;
+            top = Math.max(margin, window.innerHeight - height - margin);
         }
-        if (top < margin) top = margin;
 
         modal.style.top = Math.round(top) + 'px';
         modal.style.left = Math.round(left) + 'px';
+    }
+
+    function scrollAnchorIntoPopoverView() {
+        if (!activeAnchor) return;
+        var modal = overlayEl && overlayEl.querySelector('.sc-loadout-modal');
+        var panelH = (modal && modal.offsetHeight) || 380;
+        var gap = 10;
+        var navReserve = 80;
+        var section = activeAnchor.closest('.sc-loadout-detail') || activeAnchor;
+        var sectionRect = section.getBoundingClientRect();
+        var rect = activeAnchor.getBoundingClientRect();
+        var delta = 0;
+        if (sectionRect.top < navReserve) {
+            delta += sectionRect.top - navReserve - 8;
+        }
+        var roomBelow = window.innerHeight - rect.bottom - gap - 12;
+        if (roomBelow < panelH) {
+            delta += panelH - roomBelow;
+        }
+        if (Math.abs(delta) > 6) {
+            window.scrollBy({ top: delta, behavior: 'smooth' });
+        }
     }
 
     function schedulePositionLoadoutPanel() {
@@ -924,7 +953,9 @@
         else await refreshEffectsPanel();
 
         syncAnchorState();
+        scrollAnchorIntoPopoverView();
         schedulePositionLoadoutPanel();
+        window.setTimeout(positionLoadoutPanel, 280);
     }
 
     function buildSlotChipsHtml(weaponItem, options) {
@@ -1070,11 +1101,7 @@
             slotsMount.addEventListener('click', function (e) {
                 var chip = e.target.closest('[data-slot-id]');
                 if (!chip) return;
-                openModal(
-                    weaponItem,
-                    resolveOpenAnchor(mountEl.querySelector('[data-loadout-open]')),
-                    chip.getAttribute('data-slot-id')
-                );
+                openModal(weaponItem, chip, chip.getAttribute('data-slot-id'));
             });
         }
 

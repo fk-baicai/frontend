@@ -355,9 +355,34 @@
         return 'market-hq-points.webp';
     }
 
-    function componentImageUrl(componentId) {
+    function componentImageUrl(componentId, size) {
         if (!componentId) return '';
-        return joinUrl('/api/sc/components/image/' + encodeURIComponent(componentId));
+        var path = '/api/sc/components/image/' + encodeURIComponent(componentId);
+        if (size === 'thumb') path += '?size=thumb';
+        return joinUrl(path);
+    }
+
+    function marketThumbUrl(url) {
+        var u = String(url || '').trim();
+        if (!u) return '';
+        if (/\/api\/sc\/components\/image\//.test(u)) {
+            if (/[?&]size=/.test(u)) return u;
+            return u + (u.indexOf('?') >= 0 ? '&' : '?') + 'size=thumb';
+        }
+        if (/\/(?:api\/market\/uploads|market-uploads)\//i.test(u) && !/-thumb\./i.test(u)) {
+            return u.replace(/\.(webp|jpe?g|png|gif)(\?|$)/i, '-thumb.webp$2');
+        }
+        return u;
+    }
+
+    function marketOriginalUrl(url) {
+        var u = String(url || '').trim();
+        if (!u) return '';
+        u = u.replace(/([?&])size=thumb(&|$)/, function (_, sep, tail) {
+            if (tail === '&') return sep;
+            return '';
+        }).replace(/[?&]$/, '');
+        return u.replace(/-thumb\.(webp|jpe?g|png|gif)(\?|$)/i, '.$1$2');
     }
 
     function defaultAvatar() {
@@ -979,16 +1004,18 @@
     }
 
     function cardMediaHtml(order) {
-        var img = orderImageSrc(order);
-        if (img) {
-            var fallback = '';
+        var orig = orderImageSrc(order);
+        if (orig) {
+            var thumb = marketThumbUrl(orig);
+            var fallback = orig;
             var it0 = (order.items && order.items[0]) || {};
             if (it0.componentId && !isHqPointsItem(it0)) {
                 fallback = componentImageUrl(it0.componentId);
             }
-            return '<img src="' + escapeHtml(img) + '"' +
-                (fallback && fallback !== img ? ' data-fallback="' + escapeHtml(fallback) + '"' : '') +
-                ' alt="" loading="lazy" decoding="async" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.onerror=null;this.classList.add(\'is-broken\');this.alt=\'\';var p=this.parentNode;if(p&&!p.querySelector(\'.market-card__media--empty\')){var s=document.createElement(\'span\');s.className=\'market-card__media--empty\';s.textContent=\'?\';p.appendChild(s);}}">';
+            return '<img class="market-card__zoom" src="' + escapeHtml(thumb) + '"' +
+                ' data-full="' + escapeHtml(orig) + '"' +
+                (fallback && fallback !== orig ? ' data-fallback="' + escapeHtml(fallback) + '"' : '') +
+                ' alt="" loading="lazy" decoding="async" onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}else if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.onerror=null;this.classList.add(\'is-broken\');this.alt=\'\';var p=this.parentNode;if(p&&!p.querySelector(\'.market-card__media--empty\')){var s=document.createElement(\'span\');s.className=\'market-card__media--empty\';s.textContent=\'?\';p.appendChild(s);}}">';
         }
         var it0m = (order.items && order.items[0]) || {};
         if (isHqPointsItem(it0m)) {
@@ -2604,7 +2631,7 @@
         if (el.qtyLabel) el.qtyLabel.textContent = offerPts ? '积分数' : (isBarter ? '给出数量' : '数量');
         if (el.wantQtyLabel) el.wantQtyLabel.textContent = wantPts ? '积分数' : '换取数量';
         if (el.wantQtyField) el.wantQtyField.hidden = !isBarter;
-        var giftOn = isBarter && (state.create.categoryGroup === 'gift' || isGiftItem(currentItem()));
+        var giftOn = isBarter && isGiftCategorySelected();
         var showStock = isBarter && !offerPts;
         if (el.stockField) el.stockField.hidden = !showStock;
         if (el.giveQtyField) el.giveQtyField.hidden = !!(isBarter && giftOn);
@@ -2651,7 +2678,7 @@
         var n = Math.max(1, parseInt(it && it.quantity, 10) || giftUrlsOf(it).length || 1);
         n = resizeGiftUrls(it, n);
         el.giftLinksList.innerHTML = it.giftRedeemUrls.map(function (url, i) {
-            return '<input type="url" class="market-control" data-gift-url-idx="' + i + '" maxlength="2048" placeholder="链接 ' + (i + 1) + '" autocomplete="off" spellcheck="false" value="' + String(url || '').replace(/"/g, '&quot;') + '">';
+            return '<input type="text" class="market-control" data-gift-url-idx="' + i + '" maxlength="2048" placeholder="兑换链接或兑换说明 ' + (i + 1) + '" autocomplete="off" spellcheck="false" value="' + String(url || '').replace(/"/g, '&quot;') + '">';
         }).join('');
     }
 
@@ -2665,13 +2692,28 @@
         });
     }
 
+    function isGiftCategorySelected() {
+        return String(state.create.categoryGroup || '').trim() === 'gift';
+    }
+
+    function clearGiftItemIfNeeded() {
+        if (isGiftCategorySelected()) return;
+        var it = currentItem();
+        if (!it) return;
+        if (it.componentId === 'uss-gift') it.componentId = null;
+        delete it.giftRedeemUrls;
+        delete it.giftRedeemUrl;
+        if (el.giftLinksList) el.giftLinksList.innerHTML = '';
+    }
+
     function syncGiftFormUi() {
         var isBarter = state.create.tradeType === 'barter';
         var admin = isSuperAdminSession();
-        var giftOn = isBarter && admin && (state.create.categoryGroup === 'gift' || isGiftItem(currentItem()));
+        if (!isGiftCategorySelected()) clearGiftItemIfNeeded();
+        var giftOn = isBarter && admin && isGiftCategorySelected();
         if (el.giftCategoryOption) el.giftCategoryOption.hidden = !(isBarter && admin);
         if (el.giftField) el.giftField.hidden = !giftOn;
-        if (el.giftHint) el.giftHint.hidden = !(isBarter && admin);
+        if (el.giftHint) el.giftHint.hidden = !giftOn;
         if (giftOn) {
             var it = currentItem();
             if (el.stockInput) el.stockInput.value = it.quantity || 1;
@@ -2964,7 +3006,7 @@
             if (isHqPointsItem(it)) {
                 it.quantity = qv;
                 it.hqPointsAmount = qv;
-            } else if (c.categoryGroup === 'gift' || isGiftItem(it)) {
+            } else if (isGiftCategorySelected()) {
                 it.swapGiveQty = 1;
             } else if (c.tradeType === 'barter') {
                 it.swapGiveQty = qv;
@@ -2974,7 +3016,7 @@
         }
         if (el.stockInput && c.tradeType === 'barter' && !isHqPointsItem(it)) {
             it.quantity = Math.max(1, parseInt(el.stockInput.value, 10) || 1);
-            if (c.categoryGroup === 'gift' || isGiftItem(it)) {
+            if (isGiftCategorySelected()) {
                 resizeGiftUrls(it, it.quantity);
             }
         }
@@ -2993,6 +3035,8 @@
             it.categoryGroup = 'gift';
             it.componentId = 'uss-gift';
             it.typeLabel = '礼物';
+        } else {
+            clearGiftItemIfNeeded();
         }
         if (c.tradeType === 'barter') {
             var want = currentWantItem();
@@ -3241,11 +3285,11 @@
         if (offerPts) row.hqPointsAmount = offerAmount;
         if (c.tradeType === 'barter' && !offerPts) {
             row.quantity = Math.max(1, parseInt(it.quantity, 10) || 1);
-            row.swapGiveQty = isGiftItem(it) || c.categoryGroup === 'gift'
+            row.swapGiveQty = isGiftCategorySelected()
                 ? 1
                 : Math.max(1, parseInt(it.swapGiveQty, 10) || 1);
         }
-        if (isGiftItem(it) || c.categoryGroup === 'gift') {
+        if (isGiftCategorySelected()) {
             row.categoryGroup = 'gift';
             row.componentId = 'uss-gift';
             readGiftLinksFromDom();
@@ -3324,11 +3368,11 @@
             if (!offerPts) {
                 var stockN = Math.max(1, parseInt(items[0].quantity, 10) || 1);
                 var giveN = Math.max(1, parseInt(items[0].swapGiveQty, 10) || 1);
-                if (!(isGiftItem(items[0]) || c.categoryGroup === 'gift') && stockN < giveN) {
+                if (!(isGiftCategorySelected()) && stockN < giveN) {
                     return failRequired('我方总数须不少于单次给出数量', el.stockInput);
                 }
             }
-            if (isGiftItem(items[0]) || c.categoryGroup === 'gift') {
+            if (isGiftCategorySelected()) {
                 if (!isSuperAdminSession()) {
                     return failRequired('仅超级管理员可发布礼物互换', el.categorySelect);
                 }
@@ -3395,7 +3439,7 @@
                     body: JSON.stringify(patchBody),
                 });
                 var patchData = await patchRes.json().catch(function () { return {}; });
-                if (!patchRes.ok) throw new Error((patchData && patchData.message) || '保存失败');
+                if (!patchRes.ok) throw new Error(apiErrorText(patchData, '保存失败'));
                 closeModal();
                 if (typeof window.USS_MARKET_ON_ORDER_SAVED === 'function') {
                     window.USS_MARKET_ON_ORDER_SAVED();
@@ -3474,6 +3518,16 @@
         }
         if (el.grid) {
             el.grid.addEventListener('click', function (ev) {
+                var zoom = ev.target.closest('.market-card__zoom');
+                if (zoom) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    var full = zoom.getAttribute('data-full') || zoom.getAttribute('src');
+                    if (full && window.UssCommunityImageLightbox && typeof window.UssCommunityImageLightbox.open === 'function') {
+                        window.UssCommunityImageLightbox.open(marketOriginalUrl(full));
+                    }
+                    return;
+                }
                 var card = ev.target.closest('.market-card');
                 if (!card) return;
                 var id = card.getAttribute('data-order-id');
@@ -3660,6 +3714,8 @@
                     if (!it.name) it.name = '礼物';
                     if (el.itemInput && !el.itemInput.value.trim()) el.itemInput.value = '礼物';
                     if (el.qtyInput) el.qtyInput.value = '1';
+                } else {
+                    clearGiftItemIfNeeded();
                 }
                 syncGiftFormUi();
                 syncHqPointsFormHints();
@@ -3669,7 +3725,7 @@
             el.stockInput.addEventListener('input', function () {
                 var it = currentItem();
                 var n = Math.max(1, parseInt(el.stockInput.value, 10) || 1);
-                if (state.create.categoryGroup === 'gift' || isGiftItem(it)) {
+                if (isGiftCategorySelected()) {
                     n = Math.min(GIFT_MAX_URLS, n);
                     resizeGiftUrls(it, n);
                     renderGiftLinksList();
@@ -3706,9 +3762,9 @@
             inputEl.addEventListener('change', function () {
                 var file = inputEl.files && inputEl.files[0];
                 if (!file) return;
-                if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
+                if (!/^image\//i.test(file.type) && file.type) {
                     if (el.formError) {
-                        el.formError.textContent = '仅支持 JPG / PNG / WebP / GIF 图片';
+                        el.formError.textContent = '请上传图片文件';
                         el.formError.hidden = false;
                     }
                     inputEl.value = '';

@@ -1261,6 +1261,52 @@
         return isShipComponentsListPath(pathname) || isEquipmentListPath(pathname);
     }
 
+    function catalogListPathnameForGroup(groupKey) {
+        var wantEquip = isFpsGroupKey(groupKey);
+        var p = String(window.location.pathname || '');
+        var html = /\.html$/i.test(p);
+        if (wantEquip) {
+            if (isEquipmentListPath(p)) return p;
+            return html ? p.replace(/[^/]+$/, 'personal-equipment.html') : '/personal-equipment';
+        }
+        if (isShipComponentsListPath(p)) return p;
+        return html ? p.replace(/[^/]+$/, 'ship-components.html') : '/ship-components';
+    }
+
+    function resolveGroupForTypeKey(typeKey) {
+        var key = String(typeKey || '').trim();
+        var t = state.types && state.types[key];
+        return (t && t.group) || inferGroupFromTypeKey(key) || '';
+    }
+
+    /** 搜索命中另一套目录（装备↔舰船）时整页跳转，避免分类条停在手枪、结果却是舰炮。 */
+    function navigateToOtherCatalogIfNeeded(typeKey, query) {
+        var group = resolveGroupForTypeKey(typeKey);
+        if (!group || isGroupForCurrentPage(group)) return false;
+        var path = catalogListPathnameForGroup(group);
+        try {
+            var url = new URL(path, window.location.href);
+            url.searchParams.set('group', group);
+            url.searchParams.set('type', typeKey);
+            if (query) url.searchParams.set('q', query);
+            else url.searchParams.delete('q');
+            CATALOG_FILTER_KEYS.forEach(function (key) {
+                url.searchParams.delete(key);
+            });
+            window.location.assign(url.pathname + url.search);
+        } catch (e) {
+            var href =
+                path +
+                '?group=' +
+                encodeURIComponent(group) +
+                '&type=' +
+                encodeURIComponent(typeKey);
+            if (query) href += '&q=' + encodeURIComponent(query);
+            window.location.assign(href);
+        }
+        return true;
+    }
+
     function listPagePathname() {
         var p = window.location.pathname || '';
         if (isCatalogListPath(p)) return p;
@@ -4099,7 +4145,6 @@
         }
         var layers = orderedImageLayers(item);
         for (var i = 0; i < layers.length; i += 1) add(layers[i].url);
-        add(componentImageProxyUrl(item));
         return out;
     }
 
@@ -4918,12 +4963,21 @@
 
     function applySuggestPick(item) {
         if (!item || !item.type) return;
+        var query = item.name_en || item.name_zh || '';
+        if (navigateToOtherCatalogIfNeeded(item.type, query)) return;
         var t = state.types[item.type];
         if (t && t.group) state.group = t.group;
+        else {
+            var inferred = inferGroupFromTypeKey(item.type);
+            if (inferred) state.group = inferred;
+        }
+        normalizeGroupState();
         state.type = item.type;
+        ensureTypeInGroup();
+        if (state.type !== item.type) state.type = item.type;
         state.expanded = {};
         clearArmorVariantExpanded();
-        if (els.search) els.search.value = item.name_en || item.name_zh || '';
+        if (els.search) els.search.value = query;
         hideSuggest();
         updateHero();
         updateUrlState();
@@ -5374,6 +5428,10 @@
             });
             els.search.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape') hideSuggest();
+                if (e.key === 'Enter' && state.suggestItems.length) {
+                    e.preventDefault();
+                    applySuggestPick(state.suggestItems[0]);
+                }
             });
         }
         document.addEventListener('click', function (e) {

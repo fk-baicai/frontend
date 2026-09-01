@@ -265,7 +265,7 @@
                                 </div>
                                 <div class="market-product-media__actions">
                                     <label class="market-product-media__upload">
-                                        <input type="file" id="marketImageInput" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                                        <input type="file" id="marketImageInput" accept="image/*" hidden>
                                         上传替换
                                     </label>
                                     <button type="button" class="market-product-media__reset" id="marketImageRemove" hidden>恢复默认图</button>
@@ -333,7 +333,7 @@
                             <div class="market-field" id="marketGiftLinkField" hidden>
                                 <span class="market-field__label">兑换链接</span>
                                 <div id="marketGiftLinksList" class="market-gift-links"></div>
-                                <p class="market-field__hint" id="marketGiftHint">我方总数是几，就填几条 HTTPS 官方兑换链接；成交一次消耗一条，不会展示给买家。</p>
+                                <p class="market-field__hint" id="marketGiftHint">仅「礼物」分类显示。我方总数是几就填几条兑换链接或兑换说明；成交一次消耗一条，只会发到对方已验证邮箱。</p>
                             </div>
 
                             <div class="market-field">
@@ -399,7 +399,7 @@
                                 </div>
                                 <div class="market-product-media__actions">
                                     <label class="market-product-media__upload">
-                                        <input type="file" id="marketWantImageInput" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                                        <input type="file" id="marketWantImageInput" accept="image/*" hidden>
                                         上传替换
                                     </label>
                                     <button type="button" class="market-product-media__reset" id="marketWantImageRemove" hidden>恢复默认图</button>
@@ -698,6 +698,6 @@
     <script src="community-image-lightbox.js" defer></script>
     <script src="market-notify.js?v=6" defer></script>
     <script src="market-chat.js?v=2" defer></script>
-    <script src="market.js?v=85" defer></script>
+    <script src="market.js?v=86" defer></script>
 </body>
 </html>
