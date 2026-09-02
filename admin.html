@@ -318,6 +318,135 @@
                 grid-template-columns: 1fr;
             }
         }
+        #secVisitStats .vs-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            align-items: center;
+            margin: 0.4rem 0 0.85rem;
+        }
+        #secVisitStats .vs-kpis {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.65rem;
+            margin-bottom: 0.9rem;
+        }
+        #secVisitStats .vs-kpi {
+            padding: 0.75rem 0.85rem;
+            border: 1px solid rgba(95, 184, 255, 0.22);
+            border-radius: 12px;
+            background: rgba(8, 18, 36, 0.55);
+        }
+        #secVisitStats .vs-kpi b {
+            display: block;
+            font-size: 1.35rem;
+            letter-spacing: 0.02em;
+            color: #fff;
+        }
+        #secVisitStats .vs-kpi span {
+            color: var(--muted);
+            font-size: 0.75rem;
+        }
+        #secVisitStats .vs-kpi em {
+            font-style: normal;
+            font-size: 0.72rem;
+            margin-left: 0.35rem;
+        }
+        #secVisitStats .vs-kpi em.is-up { color: var(--ok); }
+        #secVisitStats .vs-kpi em.is-down { color: var(--danger); }
+        #secVisitStats .vs-grid {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 0.85rem;
+            margin-bottom: 0.9rem;
+        }
+        #secVisitStats .vs-panel {
+            border: 1px solid rgba(95, 184, 255, 0.18);
+            border-radius: 12px;
+            padding: 0.75rem 0.85rem 0.9rem;
+            background: rgba(6, 14, 28, 0.4);
+            min-width: 0;
+        }
+        #secVisitStats .vs-panel h3 {
+            margin: 0 0 0.65rem;
+            font-size: 0.82rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        #secVisitStats .vs-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.28rem;
+            height: 108px;
+        }
+        #secVisitStats .vs-bar {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            height: 100%;
+            gap: 0.2rem;
+        }
+        #secVisitStats .vs-bar i {
+            display: block;
+            width: 100%;
+            max-width: 18px;
+            border-radius: 4px 4px 0 0;
+            background: linear-gradient(180deg, #7ae8ff, #5fb8ff);
+            min-height: 2px;
+        }
+        #secVisitStats .vs-bar small {
+            color: var(--muted);
+            font-size: 0.62rem;
+            transform: scale(0.92);
+            white-space: nowrap;
+        }
+        #secVisitStats table.vs-table {
+            width: 100%;
+            font-size: 0.8rem;
+        }
+        #secVisitStats table.vs-table th {
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        #secVisitStats .vs-dist {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        #secVisitStats .vs-dist-row {
+            display: grid;
+            grid-template-columns: 5.5rem 1fr 2.5rem;
+            gap: 0.45rem;
+            align-items: center;
+            font-size: 0.78rem;
+        }
+        #secVisitStats .vs-dist-row b {
+            height: 8px;
+            border-radius: 99px;
+            background: rgba(95, 184, 255, 0.15);
+            overflow: hidden;
+        }
+        #secVisitStats .vs-dist-row b i {
+            display: block;
+            height: 100%;
+            background: #5fb8ff;
+        }
+        @media (max-width: 980px) {
+            #secVisitStats .vs-kpis,
+            #secVisitStats .vs-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        @media (max-width: 640px) {
+            #secVisitStats .vs-kpis,
+            #secVisitStats .vs-grid {
+                grid-template-columns: 1fr;
+            }
+        }
         .hint {
             color: var(--muted);
             font-size: 0.8rem;
@@ -1914,6 +2043,56 @@
                 <p class="hint">注册用户在配件详情页上传的图片，通过后压缩为 WebP 进入图库随机展示；点击缩略图可放大检查，点击名称打开配件详情；已通过记录可在下方删除。</p>
                 <div id="scUserImageReviewRoot"></div>
             </section>
+            <section id="secVisitStats" style="display: none;">
+                <h2>访问统计</h2>
+                <p class="hint">统计站点页面浏览（PV）、独立会话（UV）、登录用户、来源与设备。时间为北京时间，不含超管/管理页。新数据在成员访问前台后写入，刷新本页即可看到。</p>
+                <div class="vs-toolbar">
+                    <label>范围
+                        <select id="visitRange">
+                            <option value="today">今日</option>
+                            <option value="7d" selected>近 7 日</option>
+                            <option value="30d">近 30 日</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                    </label>
+                    <label>从 <input type="date" id="visitFrom" /></label>
+                    <label>到 <input type="date" id="visitTo" /></label>
+                    <button type="button" class="btn-secondary" id="btnReloadVisitStats">刷新</button>
+                    <span class="hint" id="visitRangeMeta"></span>
+                </div>
+                <div id="visitStatsErr" class="err" hidden></div>
+                <div class="vs-kpis" id="visitKpis"></div>
+                <div class="vs-grid">
+                    <div class="vs-panel">
+                        <h3>浏览趋势</h3>
+                        <div class="vs-bars" id="visitTrend"></div>
+                    </div>
+                    <div class="vs-panel">
+                        <h3>时段分布（北京时间）</h3>
+                        <div class="vs-bars" id="visitHours"></div>
+                    </div>
+                </div>
+                <div class="vs-grid">
+                    <div class="vs-panel">
+                        <h3>热门页面</h3>
+                        <table class="vs-table"><thead><tr><th>页面</th><th>PV</th><th>UV</th></tr></thead><tbody id="visitTopPages"></tbody></table>
+                    </div>
+                    <div class="vs-panel">
+                        <h3>用户访问（登录成员）</h3>
+                        <table class="vs-table"><thead><tr><th>绑定 ID</th><th>PV</th><th>最近页面</th></tr></thead><tbody id="visitTopUsers"></tbody></table>
+                    </div>
+                </div>
+                <div class="vs-grid">
+                    <div class="vs-panel">
+                        <h3>来源 / 设备 / 浏览器</h3>
+                        <div class="vs-dist" id="visitDist"></div>
+                    </div>
+                    <div class="vs-panel">
+                        <h3>最近访问</h3>
+                        <table class="vs-table"><thead><tr><th>时间</th><th>页面</th><th>访客</th></tr></thead><tbody id="visitRecent"></tbody></table>
+                    </div>
+                </div>
+            </section>
             <section id="secSchedule">
                 <h2>分部签到开放窗口（北京时间）</h2>
                 <details class="branch-help-details">
@@ -2468,6 +2647,7 @@
                 setSectionVisible('secWhitelist', superPage);
                 setSectionVisible('secAdmins', superPage);
                 setSectionVisible('secComponentImageReview', superPage);
+                setSectionVisible('secVisitStats', superPage);
             }
 
             function shanghaiDateKeysAhead(count) {
@@ -2650,6 +2830,11 @@
                     document.getElementById('btnReloadAnnouncements').onclick = loadAnnouncements;
                     document.getElementById('annCtaPreset').onchange = syncAnnCtaPreset;
                     loadAnnouncements();
+                    document.getElementById('btnReloadVisitStats').onclick = loadVisitStats;
+                    document.getElementById('visitRange').onchange = loadVisitStats;
+                    document.getElementById('visitFrom').onchange = onVisitCustomDates;
+                    document.getElementById('visitTo').onchange = onVisitCustomDates;
+                    loadVisitStats();
                     (function lazyMountImageReview() {
                         var root = document.getElementById('scUserImageReviewRoot');
                         if (!root || !window.UssScUserImageReview || typeof window.UssScUserImageReview.mount !== 'function') return;
@@ -3298,6 +3483,204 @@
                     await loadAnnouncements();
                 } catch (e) {
                     showErr('annErr', (e && e.message) || '删除失败');
+                }
+            }
+
+            function vsDeltaHtml(n) {
+                var v = Number(n);
+                if (!Number.isFinite(v) || v === 0) return '<em>持平</em>';
+                var cls = v > 0 ? 'is-up' : 'is-down';
+                var sign = v > 0 ? '+' : '';
+                return '<em class="' + cls + '">' + sign + v + '%</em>';
+            }
+
+            function vsFmtDur(sec) {
+                var s = Math.max(0, Math.round(Number(sec) || 0));
+                if (s < 60) return s + ' 秒';
+                var m = Math.floor(s / 60);
+                var r = s % 60;
+                if (m < 60) return m + ' 分' + (r ? r + ' 秒' : '');
+                return Math.floor(m / 60) + ' 小时' + (m % 60) + ' 分';
+            }
+
+            function vsFmtTime(iso) {
+                if (!iso) return '—';
+                try {
+                    return new Intl.DateTimeFormat('zh-CN', {
+                        timeZone: 'Asia/Shanghai',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                    }).format(new Date(iso));
+                } catch (e) {
+                    return String(iso).slice(11, 16);
+                }
+            }
+
+            function vsRenderBars(el, items) {
+                if (!el) return;
+                var max = 1;
+                items.forEach(function (it) {
+                    if (it.value > max) max = it.value;
+                });
+                el.innerHTML = items
+                    .map(function (it) {
+                        var h = Math.max(3, Math.round((it.value / max) * 88));
+                        return (
+                            '<div class="vs-bar" title="' +
+                            String(it.label || '') +
+                            ' ' +
+                            it.value +
+                            '"><i style="height:' +
+                            h +
+                            'px"></i><small>' +
+                            String(it.label || '') +
+                            '</small></div>'
+                        );
+                    })
+                    .join('');
+            }
+
+            function vsRenderDist(el, groups) {
+                if (!el) return;
+                var html = '';
+                groups.forEach(function (g) {
+                    html += '<div class="hint" style="margin:0.35rem 0 0.2rem">' + g.title + '</div>';
+                    var max = 1;
+                    g.items.forEach(function (it) {
+                        if (it.value > max) max = it.value;
+                    });
+                    g.items.forEach(function (it) {
+                        var pct = Math.round((it.value / max) * 100);
+                        html +=
+                            '<div class="vs-dist-row"><span>' +
+                            String(it.label || it.key) +
+                            '</span><b><i style="width:' +
+                            pct +
+                            '%"></i></b><span>' +
+                            it.value +
+                            '</span></div>';
+                    });
+                });
+                el.innerHTML = html || '<p class="hint">暂无数据</p>';
+            }
+
+            function onVisitCustomDates() {
+                var sel = document.getElementById('visitRange');
+                if (sel) sel.value = 'custom';
+                loadVisitStats();
+            }
+
+            async function loadVisitStats() {
+                var s = loadSess();
+                showErr('visitStatsErr', '');
+                var range = document.getElementById('visitRange').value;
+                var query = { range: range };
+                if (range === 'custom') {
+                    query.from = document.getElementById('visitFrom').value;
+                    query.to = document.getElementById('visitTo').value;
+                }
+                try {
+                    var data = await window.UssAuthApi.adminGetVisitStats(s.token, query);
+                    var k = data.kpis || {};
+                    var c = data.compare || {};
+                    document.getElementById('visitRangeMeta').textContent =
+                        (data.from || '') + ' ~ ' + (data.to || '') + '（对比上一同等时段）';
+                    document.getElementById('visitKpis').innerHTML =
+                        '<div class="vs-kpi"><span>浏览量 PV</span><b>' +
+                        (k.pv || 0) +
+                        vsDeltaHtml(c.pv) +
+                        '</b></div>' +
+                        '<div class="vs-kpi"><span>独立会话 UV</span><b>' +
+                        (k.uv || 0) +
+                        vsDeltaHtml(c.uv) +
+                        '</b></div>' +
+                        '<div class="vs-kpi"><span>登录用户</span><b>' +
+                        (k.loggedInUsers || 0) +
+                        vsDeltaHtml(c.loggedInUsers) +
+                        '</b></div>' +
+                        '<div class="vs-kpi"><span>登录浏览 / 游客浏览</span><b>' +
+                        (k.loggedInPv || 0) +
+                        ' / ' +
+                        (k.guestPv || 0) +
+                        '</b></div>' +
+                        '<div class="vs-kpi"><span>跳出率</span><b>' +
+                        (k.bounceRate || 0) +
+                        '%</b></div>' +
+                        '<div class="vs-kpi"><span>人均页数</span><b>' +
+                        (k.pagesPerSession || 0) +
+                        '</b></div>' +
+                        '<div class="vs-kpi"><span>平均停留</span><b>' +
+                        vsFmtDur(k.avgDurationSec) +
+                        '</b></div>' +
+                        '<div class="vs-kpi"><span>新访客 / 回访</span><b>' +
+                        (k.newVisitors || 0) +
+                        ' / ' +
+                        (k.returningVisitors || 0) +
+                        '</b></div>';
+                    vsRenderBars(
+                        document.getElementById('visitTrend'),
+                        (data.trend || []).map(function (d) {
+                            return { label: String(d.date || '').slice(5), value: Number(d.pv) || 0 };
+                        })
+                    );
+                    vsRenderBars(
+                        document.getElementById('visitHours'),
+                        (data.hours || []).map(function (v, i) {
+                            return { label: String(i), value: Number(v) || 0 };
+                        })
+                    );
+                    document.getElementById('visitTopPages').innerHTML = (data.topPages || [])
+                        .map(function (p) {
+                            return (
+                                '<tr><td>' +
+                                (p.title || p.path) +
+                                '</td><td>' +
+                                (p.pv || 0) +
+                                '</td><td>' +
+                                (p.uv || 0) +
+                                '</td></tr>'
+                            );
+                        })
+                        .join('') || '<tr><td colspan="3">暂无</td></tr>';
+                    document.getElementById('visitTopUsers').innerHTML = (data.topUsers || [])
+                        .map(function (u) {
+                            return (
+                                '<tr><td>' +
+                                (u.bindingId || '—') +
+                                '</td><td>' +
+                                (u.pv || 0) +
+                                '</td><td>' +
+                                (u.lastTitle || '—') +
+                                '</td></tr>'
+                            );
+                        })
+                        .join('') || '<tr><td colspan="3">暂无登录访问</td></tr>';
+                    vsRenderDist(document.getElementById('visitDist'), [
+                        { title: '来源', items: data.sources || [] },
+                        { title: '设备', items: data.devices || [] },
+                        { title: '浏览器', items: data.browsers || [] },
+                        { title: '外部域名', items: data.topHosts || [] },
+                    ]);
+                    document.getElementById('visitRecent').innerHTML = (data.recent || [])
+                        .map(function (r) {
+                            return (
+                                '<tr><td>' +
+                                vsFmtTime(r.t) +
+                                '</td><td>' +
+                                (r.title || r.path || '') +
+                                '</td><td>' +
+                                (r.loggedIn ? r.bindingId || '已登录' : '游客') +
+                                ' · ' +
+                                (r.device || '') +
+                                '</td></tr>'
+                            );
+                        })
+                        .join('') || '<tr><td colspan="3">暂无</td></tr>';
+                } catch (e) {
+                    showErr('visitStatsErr', (e && e.message) || '加载访问统计失败');
                 }
             }
 

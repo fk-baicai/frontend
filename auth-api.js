@@ -716,6 +716,16 @@
         async adminListAnnouncements(token) {
             return adminJson(token, '/api/admin/announcements');
         },
+        async adminGetVisitStats(token, query) {
+            var q = query && typeof query === 'object' ? query : {};
+            var parts = [];
+            Object.keys(q).forEach(function (k) {
+                if (q[k] == null || q[k] === '') return;
+                parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(q[k])));
+            });
+            var suffix = parts.length ? '?' + parts.join('&') : '';
+            return adminJson(token, '/api/admin/visit-stats' + suffix);
+        },
         async adminCreateAnnouncement(token, body) {
             return adminJson(token, '/api/admin/announcements', {
                 method: 'POST',

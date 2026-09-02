@@ -96,4 +96,11 @@
     syncMegaContentLeft();
     window.addEventListener('resize', syncMegaContentLeft);
     window.addEventListener('load', syncMegaContentLeft);
+
+    if (!document.querySelector('script[src*="visit-tracker.js"]')) {
+        var vs = document.createElement('script');
+        vs.src = 'visit-tracker.js?v=2';
+        vs.defer = true;
+        document.body.appendChild(vs);
+    }
 })();

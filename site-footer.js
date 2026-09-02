@@ -120,4 +120,10 @@
         annScript.setAttribute('data-uss-site-ann', '1');
         document.body.appendChild(annScript);
     }
+    if (!document.querySelector('script[src*="visit-tracker.js"]')) {
+        var visitScript = document.createElement('script');
+        visitScript.src = 'visit-tracker.js?v=2';
+        visitScript.defer = true;
+        document.body.appendChild(visitScript);
+    }
 })();
