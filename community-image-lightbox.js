@@ -1,7 +1,4 @@
-/**
- * 社区图片灯箱：滚轮缩放、按住拖动平移。
- * 首页聊天区与帖子详情页共用。
- */
+
 (function (global) {
     const MIN_SCALE = 0.5;
     const MAX_SCALE = 8;

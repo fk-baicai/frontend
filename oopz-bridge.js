@@ -3,7 +3,7 @@
 
     var POLL_MS = 5000;
     var expandedChannels = {};
-    /** 与 styles.css --oopz-member-h 折叠高度一致，约可显示 3 行成员 */
+
     var COLLAPSED_MEMBER_ROWS = 3;
 
     var statusDot = document.getElementById('oopzBridgeStatusDot');
@@ -181,7 +181,6 @@
         return text || '—';
     }
 
-    /** 相同文案合并为一行，减少重复刷屏 */
     function groupLogsForDisplay(list) {
         var sorted = list.slice().sort(function (a, b) {
             var ta = new Date(a.at).getTime();

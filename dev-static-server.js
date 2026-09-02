@@ -1,8 +1,4 @@
-/**
- * 本地前端静态服务（正确 video/mp4 MIME，避免 Chrome 首帧闪白）。
- * 用法：node dev-static-server.js
- * 访问：http://127.0.0.1:8080/
- */
+
 const http = require('http');
 const fs = require('fs');
 const path = require('path');

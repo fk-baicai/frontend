@@ -6,7 +6,7 @@
     <title>配件详情 · USSXC</title>
     <meta name="description" content="星际公民舰船配件详细参数与购买地点。">
     <link rel="stylesheet" href="styles.css?v=sc-lb4">
-    <link rel="stylesheet" href="ship-components.css?v=95">
+    <link rel="stylesheet" href="ship-components.css?v=96">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -125,11 +125,6 @@
             </div>
         </nav>
 
-        <div id="scDetailUploadToast" class="sc-upload-toast" hidden role="status" aria-live="polite">
-            <p class="sc-upload-toast__title" id="scDetailUploadToastTitle">上传成功</p>
-            <p class="sc-upload-toast__sub" id="scDetailUploadToastSub"></p>
-        </div>
-
         <div id="scImgDesk" class="sc-img-desk" hidden>
             <div class="sc-img-desk__panel" role="dialog" aria-modal="true" aria-labelledby="scImgDeskTitle">
                 <header class="sc-img-desk__head">
@@ -146,6 +141,11 @@
                 <div id="scImgDeskList" class="sc-img-desk__list"></div>
                 <div id="scImgDeskPager" class="sc-img-desk__pager" hidden></div>
             </div>
+        </div>
+
+        <div id="scDetailUploadToast" class="sc-upload-toast" hidden role="status" aria-live="polite">
+            <p class="sc-upload-toast__title" id="scDetailUploadToastTitle">上传成功</p>
+            <p class="sc-upload-toast__sub" id="scDetailUploadToastSub"></p>
         </div>
 
         <div id="scDetailGate" class="sc-gate" role="alert">加载中…</div>

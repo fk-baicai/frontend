@@ -1,7 +1,4 @@
-/**
- * 全站数值展示：先按两位小数格式化；若小数位全是 0（.00）则去掉。
- * .01 / .50 等非零小数仍保留。列表 / 卡片 / 详情 / 蓝图共用。
- */
+
 (function (global) {
     'use strict';
 
@@ -33,13 +30,11 @@
         return formatDisplayNumber(v, ' m/s');
     }
 
-    /** raw volume（µSCU 等原始单位）→ SCU，两位小数 */
     function formatDisplayVolumeScuFromRaw(v) {
         if (v == null || !Number.isFinite(Number(v))) return '—';
         return formatDisplayNumber(Number(v) / 1000000, ' SCU');
     }
 
-    /** 已是 SCU 单位 */
     function formatDisplayScu(v) {
         return formatDisplayNumber(v, ' SCU');
     }

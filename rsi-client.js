@@ -1,7 +1,4 @@
-/**
- * 经本站 API 代理 RSI 公民资料（服务端 Headless Edge 抓取，浏览器不直连 RSI）。
- * 注册/登录主路径均为服务端 Edge；本模块供 /api/rsi/citizen-profile 兜底同步。
- */
+
 (function (global) {
     'use strict';
 
@@ -283,7 +280,7 @@
         };
     }
 
-    /** RSI 公民头像：profile 卡片内 .thumb img（URL 可能为 heap_infobox 或 heap_thumb） */
+
     function extractProfileThumbAvatarUrl(doc) {
         var profileCol = doc.querySelector('.profile.left-col') || doc.querySelector('.left-col.profile');
         if (!profileCol) return null;

@@ -1,6 +1,4 @@
-/**
- * 首页状态聚合加载：尽早请求 /api/home-dashboard，sessionStorage 刷新秒开。
- */
+
 (function (global) {
     'use strict';
 

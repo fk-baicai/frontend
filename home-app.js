@@ -1,6 +1,4 @@
-/**
- * 首页应用逻辑（自 index.html 拆出，defer 加载以缩短 HTML 解析时间）
- */
+
         function defaultSiteAvatarSrc() {
             if (typeof window.ussDefaultAvatarSrc === 'function') return window.ussDefaultAvatarSrc();
             return String(window.USS_DEFAULT_AVATAR || 'default-avatar.webp');
@@ -76,7 +74,7 @@
             const alertOpen = alertModal && alertModal.style.display === 'block';
             if (ticketOpen || loginOpen || alertOpen) {
                 overlay.classList.add('active');
-                /* 仅账户侧栏：透明遮罩，避免礼品区等主内容被压暗变色 */
+
                 overlay.classList.toggle('overlay--login-only', !!(loginOpen && !ticketOpen && !alertOpen));
             } else {
                 overlay.classList.remove('active', 'overlay--login-only');
@@ -126,10 +124,9 @@
             closeLoginDrawer();
         }
 
-        // QQ号白名单列表
         const whitelistedQQNumbers = [
-            '33009004043', 
-            '2418299632',           
+            '33009004043',
+            '2418299632',
             '52640099364'
         ];
 
@@ -163,19 +160,17 @@
                 return;
             }
 
-            // 首先验证QQ号是否在白名单中
             if (!isQQInWhitelist(qqNumber)) {
                 showAlert(' 未查询到你的预约！ 请联系主办方 ');
                 return;
             }
 
-            // 验证年龄
             const age = calculateAge(idNumber);
-            
+
             if (ticketType === 'UEE海军门票') {
-                // UEE海军门票需要小于18岁
+
                 if (age < 18) {
-                    // 存储信息
+
                     localStorage.setItem('userInfo', JSON.stringify({
                         qq: qqNumber,
                         gameId: gameId,
@@ -190,9 +185,9 @@
                     showAlert('UEE海军门票仅限18岁以下购买！');
                 }
             } else {
-                // 巴奴门票需要大于等于18岁
+
                 if (age >= 18) {
-                    // 存储信息
+
                     localStorage.setItem('userInfo', JSON.stringify({
                         qq: qqNumber,
                         gameId: gameId,
@@ -210,21 +205,21 @@
         }
 
         function calculateAge(idNumber) {
-            // 简单的示例验证，实际应该有更严格的验证
+
             if (idNumber.length === 18) {
                 const year = parseInt(idNumber.substring(6, 10));
                 const month = parseInt(idNumber.substring(10, 12));
                 const day = parseInt(idNumber.substring(12, 14));
-                
+
                 const today = new Date();
                 const birthDate = new Date(year, month - 1, day);
                 let age = today.getFullYear() - birthDate.getFullYear();
                 const monthDiff = today.getMonth() - birthDate.getMonth();
-                
+
                 if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
                     age--;
                 }
-                
+
                 return age;
             }
             return 0;
@@ -241,11 +236,8 @@
             }
         }
 
-        // 点击遮罩层关闭弹窗
         const overlayEl = document.getElementById('overlay');
         if (overlayEl) overlayEl.addEventListener('click', onOverlayClick);
-
-        /* 登录/注册：账号在自建 API（仓库 backend/），浏览器只存会话 token。本机先启动 backend；公网基址由 auth-config.js / USS_AUTH_API_BASE 决定。 */
 
         function registerFormErrorHint(err) {
             var code = '';
@@ -357,7 +349,6 @@
             return null;
         }
 
-        // remember: true → localStorage；false → sessionStorage（「一次」登录）。省略则保持当前存储位置。
         function saveAuthSession(data, remember) {
             if (window.UssAuthSessionSync && typeof window.UssAuthSessionSync.saveAuthSession === 'function') {
                 window.UssAuthSessionSync.saveAuthSession(data, remember);
@@ -507,7 +498,7 @@
         }
 
         const AUTH_BUTTON_FEEDBACK_MS = 1600;
-        /** 登录按钮至少显示「登录中」时长，避免接口太快用户以为没点上 */
+
         const LOGIN_MIN_LOADING_MS = 600;
 
         function resetLoginSubmitBtn() {
@@ -1371,14 +1362,13 @@
                 rsiAssetsPending:
                     u.rsiAssetsPending !== undefined ? !!u.rsiAssetsPending : p.rsiAssetsPending,
                 isAdmin: u.isAdmin !== undefined ? !!u.isAdmin : !!p.isAdmin,
-                isSuperAdmin: u.isSuperAdmin !== undefined ? !!u.isSuperAdmin : !!p.isSuperAdmin,
+                isSuperAdmin: !!u.isSuperAdmin,
                 memberKind: u.memberKind !== undefined && u.memberKind !== null ? u.memberKind : p.memberKind,
                 hasFleetPrivilege:
                     u.hasFleetPrivilege !== undefined ? !!u.hasFleetPrivilege : p.hasFleetPrivilege,
             };
         }
 
-        /** 抓取全部失败时，用进入流程前的快照 + 本地资料缓存恢复展示 */
         function restoreProfileFromSnapshot(token, snapshot, remember) {
             if (!snapshot || !token) return null;
             var cached =
@@ -1412,9 +1402,6 @@
             return payload;
         }
 
-        /** 服务端重新抓取 RSI 由登录后 scheduleLoginRsiRefresh 负责；页面侧不重复包装 */
-
-        /** 会话中 RSI 公民资料是否明显未抓取成功 */
         function sessionProfileLooksIncomplete(sess) {
             if (
                 window.UssRsiSync &&
@@ -1427,7 +1414,6 @@
 
         let ensureUserProfilePromise = null;
 
-        /** 优先 /api/me；F5 刷新不触发 Edge/CDP，仅登录或打开账户抽屉且资料过期时才抓取 RSI */
         async function ensureUserProfileWithRetry(options) {
             if (!isLoggedIn()) return null;
             if (ensureUserProfilePromise) return ensureUserProfilePromise;
@@ -1509,7 +1495,6 @@
             return ensureUserProfilePromise;
         }
 
-        /** 进入页/打开抽屉时：若当前会话资料为空，先用 localStorage 里的历史资料填充展示 */
         function hydrateProfileCacheIfNeeded() {
             if (!isLoggedIn() || !window.UssAuthSessionSync) return false;
             const sess = loadAuthSession();
@@ -1632,7 +1617,6 @@
             refreshCommunitySessionUi();
         }
 
-        /** 首页舰员交流区（论坛式发帖 + 图片/GIF） */
         const COMMUNITY_MAX_IMAGES = 6;
         const COMMUNITY_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
         const COMMUNITY_CHAT_POLL_MS = 3500;
@@ -1659,12 +1643,12 @@
         let communityChatDmPeer = '';
         let communityChatDmLabel = '';
         let communityDmMaxSeq = 0;
-        /** 舰队成员列表搜索关键字（列表重绘时保留） */
+
         let communityRosterSearchQuery = '';
         let communityInboxSnapshot = { fleetMaxSeq: 0, dmMaxByPeer: {} };
-        /** 全量成员（含自己），用于 @ 补全 */
+
         let communityChatRosterMembersList = [];
-        /** 聊天历史懒渲染：先画可见区，上滑再补更早消息 */
+
         const COMMUNITY_CHAT_HISTORY_BATCH = 24;
         let communityChatBufferedMessages = [];
         let communityChatBufferedLineKind = 'fleet';
@@ -1713,7 +1697,7 @@
                 const o = Object.assign({ at: Date.now() }, payload || {});
                 sessionStorage.setItem(key, JSON.stringify(o));
             } catch (e) {
-                /* sessionStorage 满时忽略 */
+
             }
         }
 
@@ -1805,7 +1789,6 @@
             }
         }
 
-        /** 私聊往来后置顶该成员（时间戳越大越靠前） */
         function touchCommunityDmPeer(peerBindingId, at) {
             const k = String(peerBindingId || '').trim().toLowerCase();
             if (!k || !communityDmPinStorageKey()) return false;
@@ -1925,11 +1908,10 @@
                 syncCommunityFleetPollCursorFromInbox();
                 if (pinChanged) reorderCommunityChatRosterPeers();
             } catch (e) {
-                /* 静默 */
+
             }
         }
 
-        /** 从未打开过舰队聊天时，用收件箱 maxSeq 对齐轮询游标，避免用 afterSeq=0 拉整页历史并误触发 @ 提醒。 */
         function syncCommunityFleetPollCursorFromInbox() {
             const fm = communityInboxSnapshot.fleetMaxSeq || 0;
             if (communityChatKind !== 'fleet' && fm > 0 && (communityChatMaxSeq || 0) === 0) {
@@ -3037,7 +3019,7 @@
                 delete img.dataset.src;
                 delete img.dataset.loadedSrc;
             };
-            /* 真实头像优先；无自制肖像时用 default-avatar.webp */
+
             if (!remote || remote === fallback || communityIsGenericDefaultAvatarUrl(remote)) return;
             if (eager || !window.UssLazyMedia) {
                 img.src = remote;
@@ -3589,7 +3571,6 @@
                 .trim();
         }
 
-        /** 根路径 + 查询参数 + hash，避免相对路径/宿主丢弃 ?id= */
         function communityPostDetailHref(postId) {
             const id = String(postId != null ? postId : '').trim();
             if (!id) return '/community-post.html';
@@ -3644,7 +3625,7 @@
                 const postHref = communityPostDetailHref(pid);
                 card.href = postHref;
                 card.setAttribute('data-post-id', pid);
-                /* 强制同页跳转，避免外层监听/遮罩导致 <a> 默认行为被吞掉 */
+
                 card.addEventListener('click', function (ev) {
                     if (ev.defaultPrevented) return;
                     if (ev.button != null && ev.button !== 0) return;
@@ -3829,7 +3810,7 @@
                 sc.scrollTop = sc.scrollHeight;
             }
             pin();
-            /* display:none → 显示后 / 图片解码后 scrollHeight 会变；多次钉底（用户上滑后不再钉） */
+
             requestAnimationFrame(function () {
                 pin();
                 requestAnimationFrame(pin);
@@ -3872,7 +3853,7 @@
                     sc._ussChatPinRo = null;
                 }
             }, 4000);
-            /* 聊天图片懒加载完成后高度会变，再钉一次 */
+
             log.querySelectorAll('img').forEach(function (img) {
                 if (img.dataset.ussPinBound === '1') return;
                 img.dataset.ussPinBound = '1';
@@ -3901,7 +3882,7 @@
             function rebindAvatars() {
                 if (!isLoggedIn()) return;
                 if (communityChatKind !== 'fleet' && communityChatKind !== 'dm') return;
-                /* 会员区从 display:none 恢复后补绑懒加载头像（不强制滚到底） */
+
                 bindCommunityAuthorAvatars(document.getElementById('communityChatRosterInner'), {
                     eager: true,
                 });
@@ -4190,7 +4171,7 @@
                 const img = document.createElement('img');
                 img.className = 'community-chat-roster-avatar-img';
                 img.alt = bid;
-                /* 优先本站 /avatars；失败再试 RSI 原图；无图才字母（等登录抓取回填） */
+
                 communityPrepareAvatarImg(img, bid, mem.avatarUrl, null, true, mem.rsiAvatarUrl);
                 av.appendChild(img);
                 const lab = document.createElement('span');
@@ -4219,7 +4200,7 @@
                 return;
             }
             inner.hidden = false;
-            /* 先用缓存立刻画出用户名，避免刷新后左侧空白 */
+
             const cached = readCommunityUiCache('roster');
             if (
                 cached &&
@@ -4238,7 +4219,7 @@
             try {
                 const sess = loadAuthSession();
                 if (!sess || !sess.token) throw new Error('未登录');
-                /* inbox 与 roster 并行，不再串行等待 */
+
                 const inboxP = refreshCommunityInboxSnapshot();
                 const data = await window.UssAuthApi.communityRoster(sess.token);
                 const members = data.members || [];
@@ -4568,7 +4549,6 @@
                 if (!file || !file.size) return;
                 const mime = String(file.type || '').toLowerCase();
                 if (mime && mime.indexOf('image/') !== 0 && mime !== 'application/octet-stream') return;
-                // 剪贴板同一张图常同时出现在 items 与 files，用体积去重即可
                 const key = String(file.size);
                 if (seen.has(key)) return;
                 seen.add(key);
@@ -4995,7 +4975,6 @@
             loadCommunityChatFull({ scrollToBottom: true }).catch(function () {});
             loadCommunityRoster().catch(function () {});
             startCommunityChatPoll();
-            /* 名单/聊天已在上面拉起，这里只刷新输入框态，避免再延迟排一次 roster */
             refreshCommunitySessionUi({ deferNetwork: true });
             ensureUserProfileWithRetry({ reason: 'boot', skipServerRefresh: true })
                 .catch(function () {
@@ -5018,7 +4997,6 @@
             }, 300);
         }
 
-        /** 舰队职务等级：每级一颗 SVG 图标（与抽屉青色风格一致） */
         var ORG_RANK_ICON_SVG =
             '<svg class="drawer-org-rank-svg" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
             '<path d="M512 890.35c-51.06 0-100.62-10.01-147.28-29.75-45.06-19.06-85.52-46.33-120.25-81.07s-62.01-75.2-81.07-120.25c-19.74-46.67-29.75-96.22-29.75-147.28 0-71.37 19.98-140.89 57.79-201.05 36.76-58.5 88.74-105.84 150.32-136.92 15.37-7.76 34.13-1.58 41.89 13.79 7.76 15.37 1.58 34.13-13.79 41.89-51.46 25.97-94.89 65.53-125.62 114.42-31.55 50.21-48.23 108.26-48.23 167.87 0 84.4 32.87 163.76 92.55 223.44S427.6 827.99 512 827.99s163.76-32.87 223.44-92.55c59.68-59.68 92.55-139.04 92.55-223.44s-32.87-163.76-92.55-223.44C675.76 228.88 596.4 196.01 512 196.01c-17.22 0-31.18-13.96-31.18-31.18s13.96-31.18 31.18-31.18c51.06 0 100.62 10.01 147.28 29.75 45.06 19.06 85.52 46.33 120.25 81.07s62.01 75.2 81.07 120.25c19.74 46.67 29.75 96.22 29.75 147.28s-10.01 100.62-29.75 147.28c-19.06 45.06-46.33 85.52-81.07 120.25s-75.2 62.01-120.25 81.07c-46.66 19.74-96.22 29.75-147.28 29.75z"/>' +
@@ -5033,7 +5011,6 @@
             return !!(orgName || orgSid);
         }
 
-        /** 已有公民基础资料、但无组织 SID/名称时展示 RSI 无舰队提示 */
         function shouldShowNoMainOrgMessage(sess) {
             if (!sess || hasOrgFleetIdentity(sess)) return false;
             const hasIdentity =
@@ -5181,6 +5158,10 @@
                 if (admL) {
                     admL.style.display = sess && sess.isAdmin ? 'block' : 'none';
                 }
+                var superL = document.getElementById('drawerSuperAdminLink');
+                if (superL) {
+                    superL.style.display = sess && sess.isSuperAdmin ? 'block' : 'none';
+                }
                 if (rankRow && rankIcon && rankLbl) {
                     const iconUrl = sess && sess.rsiRankIconUrl;
                     const rankText = sess && sess.rsiRankLabel;
@@ -5220,7 +5201,7 @@
                         row.hidden = !t;
                     }
                 }
-                /** 网站未抓取到内容时显示占位符，不隐藏整行 */
+
                 function fillRsiMetaRowPlaceholder(row, valEl, v, placeholder) {
                     const ph = placeholder != null && String(placeholder).trim() !== '' ? String(placeholder).trim() : '------';
                     const empty = v == null || String(v).trim() === '';

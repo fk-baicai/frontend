@@ -1,6 +1,4 @@
-/**
- * Wiki 配件字段：列表列定义与详情页展平（ship-components / ship-component-detail 共用）
- */
+
 (function (global) {
     'use strict';
 
@@ -21,7 +19,7 @@
         return String(text).replace(/\.00(?!\d)/g, '');
     }
 
-    /** 非零但小于 0.005：写出真实小数，避免两位小数显示成 0.00 */
+
     function formatTinyDecimal(v) {
         var n = Number(v);
         if (!Number.isFinite(n)) return null;
@@ -43,7 +41,7 @@
         return formatTinyDecimal(n);
     }
 
-    /** 仅量子驱动：按数值本身展示，不四舍五入到 0.01 */
+
     function formatQuantumExactNumber(v) {
         var n = Number(v);
         if (!Number.isFinite(n)) return null;
@@ -85,7 +83,7 @@
         return s;
     }
 
-    /** 详情/列表字段值后缀单位（空字符串表示不加单位） */
+
     var WIKI_FIELD_UNITS = {
         rpm: ' RPM',
         range: ' m',
@@ -243,7 +241,7 @@
         'damage.max': '弹匣总伤害',
     };
 
-    /** Wiki 同义键：渲染时跳过后者，避免重复展示 */
+
     var WIKI_DUPLICATE_FIELD_SKIP = {
         maximum: 'max',
         minimum: 'min',
@@ -254,7 +252,7 @@
         capacity: 'magazine_size',
     };
 
-    /** 汉化库未收录时的兜底（优先使用 global.WIKI_SCALAR_LOC） */
+
     var WIKI_SCALAR_ZH = {
         'µSCU': 'µSCU',
         '[AUTO]': '全自动',
@@ -1432,7 +1430,7 @@
         return parts;
     }
 
-    /** 任意武器块：damages[] / damage_map / 弹药 impact 图。同类合并。 */
+
     function collectTypedDamageParts(w) {
         var fromArr = personalWeaponDamagesParts(w);
         if (fromArr.length) return fromArr;
@@ -1447,10 +1445,7 @@
         }, 0);
     }
 
-    /**
-     * 列表单发伤害：多种类型则合计；仅一种则优先 wiki 单发总值（含霰弹总伤）。
-     * 个人武器 / 舰炮 / 导弹同一套。
-     */
+
     function personalWeaponShotDamageNumber(w) {
         if (!w) return null;
         var parts = collectTypedDamageParts(w);
@@ -1471,7 +1466,7 @@
         return PERSONAL_WEAPON_DAMAGE_LABELS[raw] || wikiFieldLabel(raw) || '伤害';
     }
 
-    /** 列表只展示一格单发伤害：多分伤合计，不标类型。 */
+
     function listPersonalWeaponShotDamageChips(w) {
         var n = personalWeaponShotDamageNumber(w);
         if (n == null || !Number.isFinite(n)) return [];
@@ -1497,7 +1492,7 @@
         return chips;
     }
 
-    /** 详情页标注每一种伤害类型及数值。 */
+
     function detailPersonalWeaponShotDamageChips(w) {
         if (!w) return [];
         var parts = collectTypedDamageParts(w);
@@ -1569,7 +1564,7 @@
         return null;
     }
 
-    /** 光束炮 Wiki 常把 damage_per_shot 写成 0，真实输出在 DPS。 */
+
     function formatVehicleWeaponShotDamage(w) {
         if (!w) return null;
         var n = personalWeaponShotDamageNumber(w);
@@ -2163,7 +2158,7 @@
         return '';
     }
 
-    /** 详情页顶栏摘要已展示的字段标签（下方区块不再重复） */
+
     var DETAIL_HIGHLIGHT_LABELS = {
         ship_weapon: {
             武器类型: true,

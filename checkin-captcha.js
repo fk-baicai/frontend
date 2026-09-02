@@ -1,7 +1,4 @@
-/**
- * 签到滑动拼图人机验证
- * 缺口坐标仅保存在服务端；拼图由 GET /api/checkin/captcha/:id/puzzle 返回
- */
+
 (function (global) {
     'use strict';
 
@@ -124,7 +121,7 @@
                 };
             }
 
-            /** 拼图块在 300px 逻辑坐标系中的 left（与后端 targetX 一致） */
+
             function logicalCaptchaX() {
                 return Math.round(state.sliderX + SLIDER_PAD);
             }

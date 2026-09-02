@@ -1,6 +1,4 @@
-/**
- * 顶栏主菜单：点击展开全宽 Mega 子菜单（RSI 风格面板）；Esc / 点外部关闭。
- */
+
 (function () {
     if (typeof document === 'undefined') return;
 

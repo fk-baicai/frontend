@@ -1,6 +1,4 @@
-/**
- * 首页节日倒计时（数据源经本站 /api/sc-festival-countdown 代理 SCToolBox）
- */
+
 (function () {
     'use strict';
 

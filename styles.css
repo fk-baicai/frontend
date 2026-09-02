@@ -12,7 +12,6 @@ body {
  color: #ffffff;
 }
 
-/* 首页：上深下浅纵向渐变底板 */
 html.page-scroll-locked,
 body.page-scroll-locked {
  overflow: hidden !important;
@@ -44,39 +43,38 @@ body.home-page-body .nav-mega-panel {
  background: var(--navbar-bg);
 }
 
-/* 顶栏 + 主导航随页面滚动（非 fixed）；--navbar-height 供抽屉等布局参考 */
 :root {
  --navbar-top-height: 37px;
  --navbar-main-height: 4rem;
  --navbar-height: calc(var(--navbar-top-height) + var(--navbar-main-height));
  --navbar-pad-x: 2rem;
- /* 与 .navbar-start 左边距一致，顶栏英文与下方 LOGO 左缘对齐 */
+
  --navbar-logo-offset: calc(2.75rem + 50px);
  --home-content-max: 1400px;
- --home-content-pad-x: 40px; /* 首页内容区域左右内边距 */
- --hero-overlay-inset-x: var(--home-content-pad-x); /* Hero 左下文案与右上搜索左右留白对称 */
- /* 首页大板块之间（视频↔服务器状态、服务器状态↔节日、节日↔OOPZ 等）统一竖向留白 */
+ --home-content-pad-x: 40px;
+ --hero-overlay-inset-x: var(--home-content-pad-x);
+
  --home-section-block-gap: clamp(52px, 6vw, 68px);
- --home-section-block-gap-split: calc(var(--home-section-block-gap) / 2); /* 工具子页等仍用上下分缝 */
+ --home-section-block-gap-split: calc(var(--home-section-block-gap) / 2);
  --home-section-title-size: clamp(17px, 1.85vw, 20px);
  --home-section-title-weight: 500;
  --home-section-title-tracking: 0.06em;
  --home-section-head-gap: clamp(12px, 1.8vw, 16px);
  --home-section-lead-size: 0.8125rem;
  --navbar-bg: rgb(8, 22, 37);
- /* 首页双色：深 = 菜单栏底；浅 = 视频下方内容区 */
+
  --home-page-bg-light: #0b1c2e;
  --home-page-bg-top: var(--home-page-bg-light);
  --home-page-bg-bottom: var(--home-page-bg-light);
  --home-page-bg: var(--home-page-bg-light);
  --home-page-gradient: none;
- /* 卡片/面板统一铺深色底 */
+
  --home-surface-tint: var(--navbar-bg);
  --home-surface-border: rgba(95, 184, 255, 0.18);
- /* 首页 OOPZ / 聊天 / 贴子 等大模块外框（略深于 --home-surface-border） */
+
  --home-module-border: rgba(84, 173, 247, 0.3);
  --home-module-radius: 17px;
- /* 视频进度条：原宽 360px/64vw 的 60%，右缘与下方内容区对齐 */
+
  --hero-progress-track-max: min(112px, 18vw);
  --hero-progress-btn-size: 34px;
 }
@@ -170,7 +168,6 @@ body.home-page-body .nav-mega-panel {
  position: relative;
 }
 
-/* —— 顶栏 Mega 子菜单（全宽面板，参考 RSI COMMUNITY 下拉）—— */
 .site-header.is-mega-open .navbar {
  border-bottom-color: transparent;
 }
@@ -255,7 +252,6 @@ body.home-page-body .nav-mega-panel {
  color: #8ee0ff;
 }
 
-/* 舰船 mega：首行 3 列（组件 / 武器 / 燃料喷嘴），次行 2 列 */
 #navMegaShip .nav-mega-list {
  display: grid;
  grid-template-columns: repeat(3, minmax(200px, max-content));
@@ -264,7 +260,6 @@ body.home-page-body .nav-mega-panel {
  align-items: start;
 }
 
-/* 装备 mega：每行横排 2 项，满行换行 */
 #navMegaEquipment .nav-mega-list {
  display: grid;
  grid-template-columns: repeat(2, minmax(220px, max-content));
@@ -295,7 +290,6 @@ body.home-page-body .nav-mega-panel {
  max-width: none;
 }
 
-/* 工具 mega：上行横排 2 项，下行 1 项 */
 #navMegaTools .nav-mega-inner {
  grid-template-columns: minmax(0, max-content);
 }
@@ -326,7 +320,6 @@ body.home-page-body .nav-mega-panel {
  }
 }
 
-/* 顶栏下拉：与侧栏个人信息/职务同色（#8ee0ff 系列） */
 .nav-dropdown-toggle {
  display: inline-flex;
  align-items: center;
@@ -399,7 +392,6 @@ body.home-page-body .nav-mega-panel {
  transform: rotate(180deg);
 }
 
-/* 旧版小下拉（已由 .nav-mega-panel 替代） */
 .nav-dropdown-menu {
  display: none !important;
 }
@@ -457,7 +449,6 @@ body.points-subpage-body {
  margin-left: auto;
 }
 
-/* 顶栏登录/注册：纯文字，非按钮样式 */
 .nav-login-trigger {
  display: inline-flex;
  align-items: center;
@@ -512,7 +503,6 @@ body.points-subpage-body {
  display: none !important;
 }
 
-/* index.html 若检测到本地已有 token，首屏即按已登录展示顶栏，避免先闪「登录/注册」 */
 html.auth-session-cached #navLoginGuestWrap {
  display: none !important;
 }
@@ -525,7 +515,6 @@ html.auth-session-cached #navLoginBtn {
  padding: 0.12rem;
 }
 
-/* 未登录或普通成员（无舰队特权）隐藏会员区；不再依赖 hero 视频就绪 */
 html:not(.auth-session-cached) .auth-member-gated,
 html.auth-session-cached:not(.auth-fleet-member) .auth-member-gated {
  display: none !important;
@@ -557,7 +546,7 @@ html:not(.auth-session-cached) .auth-fleet-only {
 }
 
 .drawer-profile-row {
- /* 资料区字号/间距在 .login-drawer-authed 内由 --dps 统一放大（默认 1） */
+
  --drawer-name-main: calc(1.05rem * var(--dps, 1));
  --drawer-name-main-lh: 1.22;
  --drawer-name-sub: calc(0.78rem * var(--dps, 1));
@@ -720,7 +709,6 @@ html:not(.auth-session-cached) .auth-fleet-only {
  line-height: var(--drawer-name-sub-lh);
 }
 
-/* 舰队块（与上方个人信息分隔；LOGO 边长与头像 --drawer-avatar-display 一致） */
 .drawer-org-section {
  width: 100%;
  min-width: 0;
@@ -812,7 +800,6 @@ html:not(.auth-session-cached) .auth-fleet-only {
  filter: drop-shadow(0 0 calc(6px * var(--dps, 1)) rgba(95, 184, 255, 0.6));
 }
 
-/* RSI 公民页无公开主组织时的终端风格提示 */
 .drawer-org-no-fleet {
  width: 100%;
  margin: calc(0.12rem * var(--dps, 1)) 0 0;
@@ -858,7 +845,6 @@ html:not(.auth-session-cached) .auth-fleet-only {
  }
 }
 
-/* —— 登录抽屉：RSI 风格（深色面板、描边输入、斜切主按钮）—— */
 .login-drawer.sidebar-modal {
  top: var(--navbar-height);
  height: calc(100vh - var(--navbar-height));
@@ -1069,7 +1055,6 @@ html:not(.auth-session-cached) .auth-fleet-only {
  box-shadow: 0 0 0 1px rgba(95, 184, 255, 0.22);
 }
 
-/* 浏览器自动填充会套默认浅色背景，用 inset 阴影盖住以贴合深色主题 */
 .rsi-input:-webkit-autofill,
 .rsi-input:-webkit-autofill:hover,
 .rsi-input:-webkit-autofill:active {
@@ -1329,7 +1314,6 @@ html:not(.auth-session-cached) .auth-fleet-only {
  cursor: pointer;
 }
 
-/* RSI 主按钮：浅蓝底深字；宽度随文案，不占满整行 */
 .rsi-submit-btn {
  display: flex;
  align-items: center;
@@ -1481,7 +1465,6 @@ html:not(.auth-session-cached) .auth-fleet-only {
  min-height: 0;
 }
 
-/* 已登录抽屉：右下退出 + 设置并排（退出在左、设置在右） */
 .drawer-footer-actions {
  position: absolute;
  left: var(--drawer-content-inset-x);
@@ -1548,7 +1531,6 @@ html:not(.auth-session-cached) .auth-fleet-only {
  flex-shrink: 0;
 }
 
-/* 账户设置弹窗 — 主色 #0b1726，与站点 navbar / 首页背景协调 */
 .account-settings-backdrop {
  position: fixed;
  inset: 0;
@@ -2070,7 +2052,6 @@ html:not(.auth-session-cached) .auth-fleet-only {
  font-weight: 700;
 }
 
-/* 舰队 / 资料区与快捷入口分隔 */
 .drawer-profile-nav {
     margin-top: calc(0.5rem * var(--dps, 1));
     padding-top: calc(0.55rem * var(--dps, 1));
@@ -2081,12 +2062,10 @@ html:not(.auth-session-cached) .auth-fleet-only {
     gap: calc(0.28rem * var(--dps, 1));
 }
 
-/* 非舰队成员（Civilian / hasFleetPrivilege=false）不展示签到入口 */
 html:not(.auth-fleet-member) #drawerCheckinLink {
  display: none;
 }
 
-/* 舰队下方：签到纯文字（非按钮块） */
 .drawer-checkin-textlink {
  display: inline-block;
  width: auto;
@@ -2548,7 +2527,6 @@ html:not(.hero-video-live) .video-player {
  opacity: 0.35;
 }
 
-/* 首页 Hero 右上角 — 配件搜索（透明底 + 白色底线，左右留白与左下文案对称） */
 .hero-sc-search {
  position: absolute;
  top: calc(clamp(24px, 4.5vh, 48px) + 10px);
@@ -3012,7 +2990,6 @@ html:not(.hero-video-live) .video-player {
  transform: translateY(-2px);
 }
 
-/* --- 首页 RSI 服务器状态 --- */
 body.home-page-body .rsi-status-section,
 body.home-page-body .sc-festival-section,
 body.home-page-body .home-exec-hangar-section,
@@ -3236,7 +3213,6 @@ body.home-page-body .home-exec-hangar-section {
  flex-shrink: 0;
 }
 
-/* 板块更新时间：默认不占位隐藏，悬停标题区时在原位显示（仅精细指针设备） */
 @media (hover: hover) and (pointer: fine) {
  .rsi-status-updated:not([hidden]),
  .rsi-funding-updated:not([hidden]) {
@@ -3278,7 +3254,6 @@ body.home-page-body .home-exec-hangar-section {
  color: #ffb4b4;
 }
 
-/* --- RSI 众筹资金统计（工具页） --- */
 .rsi-funding-section {
  position: relative;
  z-index: 2;
@@ -3688,7 +3663,6 @@ body.home-page-body .home-exec-hangar-section {
  color: rgba(255, 196, 120, 0.88);
 }
 
-/* --- 首页节日倒计时 --- */
 .sc-festival-section {
  position: relative;
  z-index: 2;
@@ -3850,7 +3824,6 @@ body.home-page-body .home-exec-hangar-section {
  }
 }
 
-/* --- 首页行政机库（简化版） --- */
 .home-exec-hangar-section {
  position: relative;
  z-index: 2;
@@ -4052,7 +4025,6 @@ body.home-page-body .home-exec-hangar-section {
  }
 }
 
-/* --- 首页 OOPZ 语音桥接 --- */
 .oopz-bridge-section {
  position: relative;
  z-index: 2;
@@ -5507,7 +5479,6 @@ body.oopz-bind-open {
  color: rgba(220, 240, 255, 0.92);
 }
 
-/* --- 首页舰员交流区（论坛式） --- */
 .community-section {
  position: relative;
  z-index: 2;
@@ -5568,8 +5539,7 @@ body.oopz-bind-open {
  min-height: 0;
  min-width: 0;
  max-height: 100%;
- /* 勿同时写 overflow-x: hidden + overflow-y: visible：规范会把 y 算成 auto，
- 绝对定位的下拉菜单会撑出垂直滚动条（系统默认白条）。横向靠子项 min-width:0 收敛。 */
+
  overflow: visible;
 }
 
@@ -5646,7 +5616,6 @@ body.oopz-bind-open {
  box-shadow: 0 0 0 2px rgba(84, 173, 247, 0.15);
 }
 
-/* 成员行用 hidden 过滤时，须压过 .community-chat-roster-item 的 display:flex */
 .community-chat-roster-inner .community-chat-roster-peer[hidden] {
  display: none !important;
 }
@@ -6008,7 +5977,6 @@ body.oopz-bind-open {
  margin-left: 0;
 }
 
-/* 聊天 / 发帖：输入框与「发送 + 下拉」同高 */
 .community-chat-compose-row .community-send-split .community-chat-send.primary-btn,
 .community-post-compose-row .community-send-split .community-post-btn--main.primary-btn {
  height: 48px;
@@ -6122,7 +6090,6 @@ body.oopz-bind-open {
  display: block;
 }
 
-/* 聊天输入在面板底部：菜单向上展开，避免向下伸出触发布局/滚动异常 */
 .community-chat-compose .community-send-menu {
  top: auto;
  bottom: calc(100% + 8px);
@@ -6401,7 +6368,7 @@ body.oopz-bind-open {
 }
 
 .community-post-detail-main {
- /* 与首页舰员交流区 .community-wrap 同宽（--home-content-max） */
+
  max-width: var(--home-content-max);
  width: 100%;
  margin: 0 auto;
@@ -6716,7 +6683,6 @@ a.community-author-avatar-link:focus-visible {
  color: #ffb4b4;
 }
 
-/* 实时聊天 */
 .community-col-chat {
  display: flex;
  flex-direction: column;
@@ -7066,7 +7032,7 @@ a.community-author-avatar-link:focus-visible {
  width: 100%;
  box-sizing: border-box;
  padding: 12px 14px 14px;
- /* 消息不足一屏时贴底，避免刷新后大片空白 */
+
  margin-top: auto;
 }
 
@@ -7389,7 +7355,6 @@ a.community-author-avatar-link:focus-visible {
  display: none !important;
 }
 
-/* 舰员交流区：撤回 / 删除确认 — 与签到中心 USS 网格主题一致 */
 .community-confirm-modal {
  position: fixed;
  inset: 0;
@@ -7845,7 +7810,6 @@ a.community-author-avatar-link:focus-visible {
  overflow: hidden;
 }
 
-/* 全站交流区图片点击放大（滚轮缩放 + 拖动平移） */
 .community-image-lightbox {
  display: none;
  position: fixed;
@@ -8035,7 +7999,6 @@ a.community-author-avatar-link:focus-visible {
  z-index: 2;
 }
 
-/* 侧边弹出框（全高；顶栏随页滚动后从视口顶部展开） */
 .sidebar-modal {
  position: fixed;
  top: 0;
@@ -8128,7 +8091,6 @@ a.community-author-avatar-link:focus-visible {
  display: block;
 }
 
-/* 账户侧栏：仅拦截点击，不压暗主页面；自顶栏下缘起，不遮挡导航头像 */
 .overlay.overlay--login-only {
  top: var(--navbar-height);
  height: calc(100vh - var(--navbar-height));
@@ -8136,7 +8098,6 @@ a.community-author-avatar-link:focus-visible {
  background: transparent;
 }
 
-/* 中央提示框样式 */
 .alert-modal {
  position: fixed;
  top: 50%;
@@ -8194,7 +8155,6 @@ a.community-author-avatar-link:focus-visible {
  transform: translateY(-2px);
 }
 
-/* 礼品区域样式 */
 .gifts-section {
  padding: 60px 40px;
  background: transparent;
@@ -8295,7 +8255,6 @@ a.community-author-avatar-link:focus-visible {
  min-height: 300px;
 }
 
-/* 与 .gifts-container 同宽，左右与活动礼品板块对齐 */
 .event-venue-images {
  max-width: 1400px;
  margin: 24px auto 0;
@@ -8694,7 +8653,6 @@ a.community-author-avatar-link:focus-visible {
  }
 }
 
-/* 全站底部条 */
 .uss-site-footer {
  position: relative;
  z-index: 2;

@@ -1,4 +1,4 @@
-/* 资金统计工具页（勿用 rsi-funding-body，该名已用于面板内双栏网格） */
+
 
 .rsi-funding-page-body {
     margin: 0;
@@ -44,7 +44,7 @@
     padding: 0;
 }
 
-/* 工具页整体放大 */
+
 .rsi-funding-page-body .rsi-funding-wrap {
     max-width: none;
     width: 100%;

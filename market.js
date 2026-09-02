@@ -1,6 +1,4 @@
-/**
- * 商城 — 售卖 / 收购列表与新建交易单据
- */
+
 (function () {
     'use strict';
 
@@ -521,7 +519,7 @@
                 });
                 catalogTypeGroup = next;
             })
-            .catch(function () { /* 沿用静态映射 */ });
+            .catch(function () {});
     }
 
     function itemDisplayName(it) {

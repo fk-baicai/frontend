@@ -1,6 +1,4 @@
-/**
- * 管理员二次验证（可选 7/30/180/360 天 step-up 会话，localStorage 持久化）
- */
+
 (function () {
     var TOKEN_KEY = 'ussAdminStepUpToken';
     var EXPIRES_KEY = 'ussAdminStepUpExpiresAt';
@@ -262,10 +260,6 @@
         return '已验证 · 到期 ' + tail;
     }
 
-    /**
-     * 挂载 gate UI，验证通过后 resolve(true)。
-     * @param {{ authToken: string, gateEl?: HTMLElement, onVerified?: function }} opts
-     */
     function mountGate(opts) {
         opts = opts || {};
         var authToken = opts.authToken;
@@ -355,9 +349,6 @@
         });
     }
 
-    /**
-     * 若已有有效 step-up 会话则直接通过，否则显示 gate 并等待验证。
-     */
     async function ensureVerified(authToken, opts) {
         opts = opts || {};
         if (!authToken) return false;

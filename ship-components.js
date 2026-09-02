@@ -159,7 +159,6 @@
         armor_undersuit: '基底服',
     };
 
-    /** Wiki 同步前的聚合类目，已拆分为 weapon_* / armor_*，不应出现在子 Tab */
     var LEGACY_AGGREGATE_TYPES = {
         personal_weapon: true,
         personal_armor: true,
@@ -1279,7 +1278,6 @@
         return (t && t.group) || inferGroupFromTypeKey(key) || '';
     }
 
-    /** 搜索命中另一套目录（装备↔舰船）时整页跳转，避免分类条停在手枪、结果却是舰炮。 */
     function navigateToOtherCatalogIfNeeded(typeKey, query) {
         var group = resolveGroupForTypeKey(typeKey);
         if (!group || isGroupForCurrentPage(group)) return false;
@@ -1856,7 +1854,6 @@
         applyListScrollRestore(pending.scrollY);
     }
 
-    /** 按配件类型的列表列顺序（未列出的类型仍用默认顺序） */
     var COLUMN_ORDER_BY_TYPE = {
         cooling: [
             'name',
@@ -2421,7 +2418,6 @@
             return map[id];
         });
     }
-
 
     function parseUrlState() {
         try {

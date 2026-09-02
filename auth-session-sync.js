@@ -1,6 +1,4 @@
-/**
- * 各页面载入时刷新 /api/me 会话字段（不抓取 RSI；RSI 在登录/注册时由服务端抓取并覆盖写库）。
- */
+
 (function (global) {
     'use strict';
 
@@ -11,7 +9,7 @@
         return authSessionEpoch;
     }
 
-    /** 异步刷新会话前捕获 epoch+token；退出后 epoch 变化或 token 不匹配则视为失效 */
+
     function isAuthSessionOpValid(epoch, token) {
         if (epoch !== authSessionEpoch) return false;
         var t = token != null ? String(token) : '';
@@ -125,7 +123,7 @@
         return false;
     }
 
-    /** 抓取失败或服务端返回空值时保留 prev 中的旧资料 */
+
     function mergeProfileField(next, prev) {
         if (isEmptyProfileValue(next)) {
             return prev !== undefined ? prev : next;
@@ -278,7 +276,7 @@
                     ? !!user.rsiAssetsPending
                     : prev.rsiAssetsPending,
             isAdmin: user.isAdmin !== undefined ? !!user.isAdmin : !!prev.isAdmin,
-            isSuperAdmin: user.isSuperAdmin !== undefined ? !!user.isSuperAdmin : !!prev.isSuperAdmin,
+            isSuperAdmin: !!user.isSuperAdmin,
             memberKind:
                 user.memberKind !== undefined && user.memberKind !== null
                     ? user.memberKind
@@ -320,7 +318,7 @@
         });
     }
 
-    /** 仅从服务端刷新会话，不访问 RSI */
+
     async function refreshAuthSessionFromServer(options) {
         options = options || {};
         if (!global.UssAuthApi) return null;
@@ -360,7 +358,7 @@
         return merged;
     }
 
-    /** /api/me 失败时指数退避重试 */
+
     async function refreshAuthSessionFromServerWithRetry(options) {
         options = options || {};
         var maxAttempts = options.maxAttempts != null ? options.maxAttempts : 3;

@@ -1,8 +1,4 @@
-/**
- * 认证 API 客户端。
- * 默认基址：auth-config.js 按域名设置；若无则退回 http://127.0.0.1:3789（与 backend 默认端口一致）。
- * 本地：在仓库根目录启动 backend（npm start）；先于本文件设置 window.USS_AUTH_API_BASE 可覆盖。
- */
+
 (function () {
     var AUTH_API_BASE = (typeof window !== 'undefined' && window.USS_AUTH_API_BASE) || 'http://127.0.0.1:3789';
     var Err = typeof UssApiError !== 'undefined' ? UssApiError : null;
@@ -41,7 +37,7 @@
         }
     }
 
-    /** 非 2xx 时抛出仅含错误码的用户可见 Error */
+
     function throwIfNotOk(r, data, fallbackCode) {
         if (r.ok) return;
         var err;
@@ -160,7 +156,7 @@
             this.base = AUTH_API_BASE;
         },
 
-        /** 将 API 返回的相对路径（如 /avatars/uuid.webp）拼成可给 <img src> 使用的绝对地址 */
+
         resolveAssetUrl: function (rel) {
             if (!rel || typeof rel !== 'string') return '';
             if (/^https?:\/\//i.test(rel)) return rel;
@@ -168,7 +164,7 @@
             return joinUrl(p);
         },
 
-        /** 社区上传图缩略图 URL（列表/聊天用；点击查看原图用 resolveAssetUrl） */
+
         communityImageThumbUrl: function (rel) {
             if (!rel || typeof rel !== 'string') return '';
             if (/^https?:\/\//i.test(rel)) return rel;
@@ -364,7 +360,7 @@
             return data;
         },
 
-        /** 服务端重新抓取 RSI 公民页并全量覆盖用户资料（登录/注册与手动刷新） */
+
         async refreshRsiProfile(token) {
             return this.syncRsiProfile(token, { refreshFromWeb: true, forceLoginSync: true });
         },
@@ -578,10 +574,10 @@
             return data;
         },
 
-        /** 分部页合并接口：日历 + 排行 + 积分/连续 + 今日是否已签 + 历史日期（一次请求） */
+
         checkinUnit: fetchCheckinBranchUnit,
 
-        /** 与 checkinUnit 相同，兼容旧代码 */
+
         checkinSummary: fetchCheckinBranchUnit,
 
         async checkinCaptcha(token) {
@@ -717,6 +713,50 @@
                 body: JSON.stringify(body || {}),
             });
         },
+        async adminListAnnouncements(token) {
+            return adminJson(token, '/api/admin/announcements');
+        },
+        async adminCreateAnnouncement(token, body) {
+            return adminJson(token, '/api/admin/announcements', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body || {}),
+            });
+        },
+        async adminUpdateAnnouncement(token, id, body) {
+            return adminJson(token, '/api/admin/announcements/' + encodeURIComponent(id), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body || {}),
+            });
+        },
+        async adminDeleteAnnouncement(token, id) {
+            return adminJson(token, '/api/admin/announcements/' + encodeURIComponent(id), {
+                method: 'DELETE',
+            });
+        },
+        async announcementsActive(token) {
+            var r = await fetch(joinUrl('/api/announcements/active?_=' + Date.now()), {
+                cache: 'no-store',
+                headers: { Authorization: 'Bearer ' + token },
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'AUTH_S001');
+            return data;
+        },
+        async announcementsAck(token, id) {
+            var r = await fetch(joinUrl('/api/announcements/ack'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + token,
+                },
+                body: JSON.stringify({ id: id }),
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'VAL_001');
+            return data;
+        },
         async adminGetRegisterWhitelist(token) {
             return adminJson(token, '/api/admin/register-whitelist');
         },
@@ -735,7 +775,7 @@
             return adminJson(token, q);
         },
 
-        /** 首页 RSI 服务器状态（无需登录，读后端缓存） */
+
         async rsiServerStatus() {
             var r = await fetch(joinUrl('/api/rsi-server-status?_=' + Date.now()), { cache: 'no-store' });
             var data = await parseJson(r);
@@ -743,7 +783,7 @@
             return data;
         },
 
-        /** 首页舰员交流区：帖子列表（需舰队成员登录） */
+
         async communityListPosts(token, limit) {
             var q = limit != null && limit !== '' ? '?limit=' + encodeURIComponent(limit) : '';
             var sep = q ? '&' : '?';
@@ -756,7 +796,7 @@
             return data;
         },
 
-        /** 单帖详情（需舰队成员登录） */
+
         async communityGetPost(token, postId) {
             var r = await fetch(
                 joinUrl('/api/community/posts/' + encodeURIComponent(postId)) + '?_=' + Date.now(),
@@ -771,7 +811,7 @@
             return data;
         },
 
-        /** 发帖：正文 + 可选图片 data URL 数组（image/*，服务端校验大小与数量） */
+
         async communityCreatePost(token, body) {
             var r = await fetch(joinUrl('/api/community/posts'), {
                 method: 'POST',

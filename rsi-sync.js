@@ -1,9 +1,4 @@
-/**
- * 登录后同步 RSI 资料（全部由服务端 Headless Edge 抓取，浏览器不直连 RSI）：
- * ① POST /api/me/rsi-sync refreshFromWeb（Edge 无头）
- * ② 失败则 GET /api/rsi/citizen-profile 再同步
- * ③ 仍失败则保留原会话资料（不覆盖）
- */
+
 (function (global) {
     'use strict';
 

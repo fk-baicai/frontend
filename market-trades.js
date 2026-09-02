@@ -6,7 +6,7 @@
 
     var AUTH_KEY = 'ussHangzhouAuthSession';
     var API_BASE = (typeof window !== 'undefined' && window.USS_AUTH_API_BASE) || 'http://127.0.0.1:3789';
-    var MAX_PROOF_IMAGE_BYTES = 4 * 1024 * 1024;
+    var MAX_PROOF_IMAGE_BYTES = 1024 * 1024;
 
     var PURCHASE_STATUS_LABEL = {
         pending: '待卖家确认交易',
@@ -15,14 +15,13 @@
         cancelled: '已取消',
     };
 
-    var VALID_TABS = { sell: 1, buy: 1, purchases: 1, incoming: 1, chat: 1, reviews: 1 };
+    var VALID_TABS = { sell: 1, buy: 1, purchases: 1, incoming: 1, reviews: 1 };
     var TAB_STORAGE_KEY = 'ussMarketTradesTab';
 
     var state = {
         tab: 'sell',
         orders: [],
         purchases: [],
-        chatThreads: [],
         loading: false,
         userStats: null,
         completingPurchaseId: null,
@@ -179,7 +178,7 @@
     }
 
     function sellerReviewAt(p) {
-        return p.sellerReviewAt || (String(p.sellerReviewText || '').trim() ? (p.completedAt || p.updatedAt) : '');
+        return p.sellerReviewAt || (p.sellerReviewRating ? (p.completedAt || p.updatedAt) : '');
     }
 
     function showGate(msg) {
@@ -248,15 +247,6 @@
         return Array.isArray(data.purchases) ? data.purchases : [];
     }
 
-    async function fetchChatThreads() {
-        var r = await fetch(joinUrl('/api/market/chat/threads'), {
-            headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
-        });
-        var data = await r.json().catch(function () { return {}; });
-        if (!r.ok) throw new Error((data && data.message) || '加载聊天失败');
-        return Array.isArray(data.threads) ? data.threads : [];
-    }
-
     async function fetchMyStats() {
         var r = await fetch(joinUrl('/api/market/my/stats'), {
             headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
@@ -319,19 +309,12 @@
             if (state.tab === 'sell') {
                 state.orders = await fetchMyOrders('sell');
                 state.purchases = [];
-                state.chatThreads = [];
             } else if (state.tab === 'buy') {
                 state.orders = await fetchMyOrders('buy');
                 state.purchases = [];
-                state.chatThreads = [];
             } else if (state.tab === 'purchases') {
                 state.orders = [];
                 state.purchases = await fetchPurchases('buyer');
-                state.chatThreads = [];
-            } else if (state.tab === 'chat') {
-                state.orders = [];
-                state.purchases = [];
-                state.chatThreads = await fetchChatThreads();
             } else if (state.tab === 'reviews') {
                 var buyerList = await fetchPurchases('buyer');
                 var sellerList = await fetchPurchases('seller');
@@ -342,16 +325,13 @@
                     seen[p.id] = true;
                     return true;
                 });
-                state.chatThreads = [];
             } else {
                 state.orders = [];
                 state.purchases = await fetchPurchases('seller');
-                state.chatThreads = [];
             }
         } catch (e) {
             state.orders = [];
             state.purchases = [];
-            state.chatThreads = [];
             if (el.empty) {
                 el.empty.hidden = false;
                 el.empty.textContent = (e && e.message) || '加载失败';
@@ -404,26 +384,13 @@
         window.alert('无法打开商品详情');
     }
 
-    function isProofImageFile(file) {
-        if (!file) return false;
-        var t = String(file.type || '').toLowerCase();
-        if (t === 'image/jpg') t = 'image/jpeg';
-        if (/^image\/(jpeg|pjpeg|png|x-png|gif|webp|bmp|x-ms-bmp|heic|heif|avif)$/.test(t)) return true;
-        var n = String(file.name || '').toLowerCase();
-        return /\.(jpe?g|png|gif|webp|bmp|heic|heif|avif)$/.test(n);
-    }
-
     function proofUploadBtnHtml(purchaseId, proofType, done, label) {
         if (done) {
             return '<span class="market-trades-proof-done">' + escapeHtml(label) + '已上传</span>';
         }
         return (
             '<label class="market-trades-proof-upload">' +
-            '<input type="file" class="market-trades-proof-file" data-proof-type="' +
-            escapeHtml(proofType) +
-            '" data-purchase-id="' +
-            escapeHtml(purchaseId) +
-            '" accept="image/*,.heic,.heif,.bmp,.avif" hidden>' +
+            '<input type="file" class="market-trades-proof-file" data-proof-type="' + escapeHtml(proofType) + '" data-purchase-id="' + escapeHtml(purchaseId) + '" accept="image/jpeg,image/png,image/webp,image/gif" hidden>' +
             '<span class="market-btn">' + escapeHtml(label) + '</span>' +
             '</label>'
         );
@@ -442,57 +409,14 @@
         return '<button type="button" class="market-btn market-trades-btn-cancel-purchase" data-purchase-id="' + escapeHtml(purchaseId) + '">' + escapeHtml(label) + '</button>';
     }
 
-    function contactBtnHtml(p) {
-        if (!p || (p.status !== 'pending' && p.status !== 'approved')) return '';
-        return '<button type="button" class="market-btn market-detail__nudge market-trades-btn-chat" data-purchase-id="' + escapeHtml(p.id) + '">联系</button>';
-    }
-
-    function openPurchaseChat(p) {
-        if (!p || !window.UssMarketChat) return;
-        var sess = loadSession() || {};
-        var myBid = String(sess.bindingId || '').toLowerCase();
-        var myRole = String(p.sellerBindingId || '').toLowerCase() === myBid ? 'seller' : 'buyer';
-        window.UssMarketChat.open({
-            purchaseId: p.id,
-            itemName: primaryItemName(p.order || {}),
-            peerName: myRole === 'seller' ? partyName(p, 'buyer') : partyName(p, 'seller'),
-            myRole: myRole,
-            snapshot: p.status !== 'pending' && p.status !== 'approved',
-        });
-    }
-
-    function chatThreadHtml(t) {
-        var roleLabel = t.myRole === 'seller' ? '买家' : '卖家';
-        var status = PURCHASE_STATUS_LABEL[t.status] || (t.snapshot ? '已结束' : t.status || '');
-        var preview = t.lastText ? t.lastText : '尚未发言';
-        var snap = t.snapshot ? '<span class="market-chat-thread__snap">快照</span>' : '';
-        return (
-            '<article class="market-chat-thread" data-purchase-id="' + escapeHtml(t.purchaseId) + '" role="listitem">' +
-            '<div>' +
-            '<h3 class="market-chat-thread__title">' + escapeHtml(t.itemName || '未命名商品') + snap + '</h3>' +
-            '<p class="market-chat-thread__meta">' + escapeHtml(roleLabel) + ' ' + escapeHtml(t.peerBindingId || '—') +
-            ' · ' + escapeHtml(status) + '</p>' +
-            '<p class="market-chat-thread__preview">' + escapeHtml(preview) + '</p>' +
-            '</div>' +
-            '<div class="market-chat-thread__actions">' +
-            '<button type="button" class="market-btn market-detail__nudge market-trades-btn-chat" data-purchase-id="' + escapeHtml(t.purchaseId) + '">' +
-            (t.snapshot ? '查看' : '打开') + '</button>' +
-            '<button type="button" class="market-btn market-trades-btn-chat-delete" data-purchase-id="' + escapeHtml(t.purchaseId) + '">删除</button>' +
-            '</div>' +
-            '</article>'
-        );
-    }
-
     function buildPurchaseActions(p, role) {
         var actions = '';
         if (p.status === 'pending') {
             if (role === 'seller') {
                 actions = '<button type="button" class="market-btn market-btn--accent market-trades-btn-approve" data-purchase-id="' + escapeHtml(p.id) + '">确认交易</button>' +
-                    contactBtnHtml(p) +
                     '<button type="button" class="market-btn market-trades-btn-cancel-purchase" data-purchase-id="' + escapeHtml(p.id) + '">拒绝</button>';
             } else {
                 actions = '<span class="market-trades-wait-hint">等待卖家确认交易</span>' +
-                    contactBtnHtml(p) +
                     '<button type="button" class="market-btn market-trades-btn-cancel-purchase" data-purchase-id="' + escapeHtml(p.id) + '">取消购买</button>';
             }
         } else if (p.status === 'approved') {
@@ -501,7 +425,6 @@
                     ? '<span class="market-trades-proof-done">卖家交易凭证已上传</span>'
                     : '<span class="market-trades-wait-hint">等待卖家上传交易凭证…</span>';
                 actions =
-                    contactBtnHtml(p) +
                     proofUploadBtnHtml(p.id, 'transfer', p.buyerTransferProofUrl, '上传转账截图') +
                     sellerProofHint +
                     '<button type="button" class="market-btn market-btn--accent market-trades-btn-complete-open" data-purchase-id="' + escapeHtml(p.id) + '">完成交易</button>';
@@ -513,16 +436,10 @@
                     ? '等待买家确认完成（到期将自动成交）'
                     : '等待买家确认完成（3 天未操作将自动完成）';
                 actions =
-                    contactBtnHtml(p) +
                     proofUploadBtnHtml(p.id, 'seller', p.sellerProofImageUrl, '上传交易凭证') +
                     '<span class="market-trades-wait-hint">' + autoHint + '</span>';
                 if (canCancelPurchase(p, 'seller')) {
                     actions += cancelPurchaseBtnHtml(p.id, '取消订单');
-                }
-                if (p.order && (p.order.giftListing || (p.order.items && p.order.items[0] && p.order.items[0].categoryGroup === 'gift'))) {
-                    actions += p.giftLinkSentAt
-                        ? '<button type="button" class="market-btn market-trades-btn-gift-mail" data-purchase-id="' + escapeHtml(p.id) + '">重发兑换邮件</button>'
-                        : '<button type="button" class="market-btn market-btn--accent market-trades-btn-gift-mail" data-purchase-id="' + escapeHtml(p.id) + '">发送兑换邮件</button>';
                 }
             }
         } else if (p.status === 'completed') {
@@ -532,7 +449,7 @@
             if (!p.reviewRating && role === 'buyer') {
                 actions += reviewFormHtml(p.id, 'buyer');
             }
-            if (!p.sellerReviewText && !p.sellerReviewAt && role === 'seller') {
+            if (!p.sellerReviewRating && role === 'seller') {
                 actions += reviewFormHtml(p.id, 'seller');
             }
         } else if (p.status === 'cancelled') {
@@ -543,16 +460,13 @@
     }
 
     function reviewFormHtml(purchaseId, role) {
-        var isSeller = role === 'seller';
         return (
             '<form class="market-trades-review-form" data-purchase-id="' + escapeHtml(purchaseId) + '" data-review-role="' + escapeHtml(role) + '">' +
-            (isSeller
-                ? ''
-                : '<label>评分 <select name="rating">' +
-                  '<option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>' +
-                  '</select></label>') +
-            '<input type="text" name="text" maxlength="200" placeholder="' + (isSeller ? '回复买家评价' : '评价（选填）') + '">' +
-            '<button type="submit" class="market-btn market-btn--accent">' + (isSeller ? '提交回复' : '提交评价') + '</button>' +
+            '<label>评分 <select name="rating">' +
+            '<option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>' +
+            '</select></label>' +
+            '<input type="text" name="text" maxlength="200" placeholder="评价（选填）">' +
+            '<button type="submit" class="market-btn market-btn--accent">提交评价</button>' +
             '</form>'
         );
     }
@@ -611,20 +525,14 @@
         );
     }
 
-    function reviewQuoteHtml(label, name, avatarUrl, rating, text, formHtml, at, opts) {
+    function reviewQuoteHtml(label, name, avatarUrl, rating, text, formHtml, at) {
         var timeHtml = dateDayHtml(at, 'market-trades-review__time');
         var src = mediaUrl(avatarUrl) || fallbackAvatar();
-        var showStars = !(opts && opts.showStars === false);
-        var inner;
-        if (formHtml) {
-            inner = formHtml;
-        } else if (showStars && rating) {
-            inner = reviewStarsHtml(rating) + (text ? '<span class="market-trades-review__quote">' + escapeHtml(text) + '</span>' : '');
-        } else if (text) {
-            inner = '<span class="market-trades-review__quote">' + escapeHtml(text) + '</span>';
-        } else {
-            inner = '<span class="market-trades-review__empty">暂无</span>';
-        }
+        var inner = formHtml
+            ? formHtml
+            : (rating
+                ? reviewStarsHtml(rating) + (text ? '<span class="market-trades-review__quote">' + escapeHtml(text) + '</span>' : '')
+                : '<span class="market-trades-review__empty">暂无</span>');
         return (
             '<div class="market-trades-review__side">' +
             '<span class="market-trades-review__who">' +
@@ -644,7 +552,7 @@
         var order = p.order || {};
         var title = primaryItemName(order);
         var buyerForm = !p.reviewRating && role === 'buyer' ? reviewFormHtml(p.id, 'buyer') : '';
-        var sellerForm = !p.sellerReviewText && !p.sellerReviewAt && role === 'seller' ? reviewFormHtml(p.id, 'seller') : '';
+        var sellerForm = !p.sellerReviewRating && role === 'seller' ? reviewFormHtml(p.id, 'seller') : '';
         var buyerName = partyName(p, 'buyer');
         var sellerName = partyName(p, 'seller');
         return (
@@ -666,7 +574,7 @@
             '</p>' +
             '<div class="market-trades-review__quotes">' +
             reviewQuoteHtml('买家评价', buyerName, partyAvatarUrl(p, 'buyer'), p.reviewRating, p.reviewText, buyerForm, buyerReviewAt(p)) +
-            reviewQuoteHtml('回复', sellerName, partyAvatarUrl(p, 'seller'), null, p.sellerReviewText, sellerForm, sellerReviewAt(p), { showStars: false }) +
+            reviewQuoteHtml('回复', sellerName, partyAvatarUrl(p, 'seller'), p.sellerReviewRating, p.sellerReviewText, sellerForm, sellerReviewAt(p)) +
             '</div>' +
             '</div>' +
             '</article>'
@@ -676,18 +584,7 @@
     function mediaUrl(rel) {
         if (!rel) return '';
         var s = String(rel);
-        if (/^data:/i.test(s) || /^blob:/i.test(s)) return s;
-        var file = '';
-        if (/^https?:\/\//i.test(s)) {
-            try {
-                file = new URL(s).pathname.split('/').pop() || '';
-            } catch (e) {
-                file = s.split('/').pop() || '';
-            }
-        } else if (/\/(?:api\/market\/uploads|market-uploads)\//i.test(s)) {
-            file = s.split('/').pop().split('?')[0];
-        }
-        if (file) return joinUrl('/api/market/uploads/' + file);
+        if (/^https?:\/\//i.test(s) || /^data:/i.test(s)) return s;
         if (window.UssAuthApi && typeof window.UssAuthApi.resolveAssetUrl === 'function') {
             var u = window.UssAuthApi.resolveAssetUrl(s);
             if (u) return u;
@@ -839,17 +736,6 @@
                 return;
             }
             html = state.orders.map(orderCardHtml).join('');
-        } else if (state.tab === 'chat') {
-            el.panel.className = 'market-trades-panel';
-            if (!state.chatThreads.length) {
-                if (el.empty) {
-                    el.empty.hidden = false;
-                    el.empty.textContent = '暂无交易聊天';
-                }
-                el.panel.innerHTML = '';
-                return;
-            }
-            html = state.chatThreads.map(chatThreadHtml).join('');
         } else if (state.tab === 'reviews') {
             el.panel.className = 'market-trades-panel market-trades-grid';
             if (!state.purchases.length) {
@@ -1095,12 +981,12 @@
                 var file = input.files && input.files[0];
                 input.value = '';
                 if (!file || !purchaseId || !proofType) return;
-                if (!isProofImageFile(file)) {
-                    window.alert('请上传图片（JPG / PNG / WebP / GIF / BMP / HEIC 等）');
+                if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
+                    window.alert('仅支持 JPG / PNG / WebP / GIF');
                     return;
                 }
                 if (file.size > MAX_PROOF_IMAGE_BYTES) {
-                    window.alert('凭证图片不能超过 4M');
+                    window.alert('凭证图片不能超过 1M');
                     return;
                 }
                 var reader = new FileReader();
@@ -1126,16 +1012,9 @@
                 var textEl = form.querySelector('[name="text"]');
                 var rating = Number(ratingEl && ratingEl.value);
                 var text = textEl ? String(textEl.value || '').trim() : '';
-                var body;
-                if (role === 'seller') {
-                    if (!text) {
-                        window.alert('请填写回复内容');
-                        return;
-                    }
-                    body = { sellerReviewText: text };
-                } else {
-                    body = { reviewRating: rating, reviewText: text };
-                }
+                var body = role === 'seller'
+                    ? { sellerReviewRating: rating, sellerReviewText: text }
+                    : { reviewRating: rating, reviewText: text };
                 patchPurchase(pid, body).then(loadTabData).catch(function (e) {
                     window.alert((e && e.message) || '评价失败');
                 });
@@ -1156,58 +1035,6 @@
                 var editBtn = ev.target.closest('.market-trades-btn-edit');
                 if (editBtn) {
                     openOrderEditor(editBtn.getAttribute('data-order-id'));
-                    return;
-                }
-                var chatDelBtn = ev.target.closest('.market-trades-btn-chat-delete');
-                if (chatDelBtn) {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    var delId = chatDelBtn.getAttribute('data-purchase-id') || '';
-                    if (!delId) return;
-                    askConfirm({
-                        title: '删除聊天快照',
-                        message: '删除后你将不再看到这条记录，对方仍可查看。确定删除？',
-                        confirmText: '删除',
-                    }).then(function (ok) {
-                        if (!ok) return;
-                        return fetch(joinUrl('/api/market/chat/threads/' + encodeURIComponent(delId)), {
-                            method: 'DELETE',
-                            headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
-                        }).then(function (r) {
-                            return r.json().catch(function () { return {}; }).then(function (data) {
-                                if (!r.ok) throw new Error((data && data.message) || '删除失败');
-                                if (window.UssMarketChat && typeof window.UssMarketChat.close === 'function') {
-                                    window.UssMarketChat.close();
-                                }
-                                return loadTabData();
-                            });
-                        });
-                    }).catch(function (e) {
-                        window.alert((e && e.message) || '删除失败');
-                    });
-                    return;
-                }
-                var chatBtn = ev.target.closest('.market-trades-btn-chat');
-                var chatRow = ev.target.closest('.market-chat-thread');
-                if (chatBtn || chatRow) {
-                    var chatId = (chatBtn && chatBtn.getAttribute('data-purchase-id')) || (chatRow && chatRow.getAttribute('data-purchase-id')) || '';
-                    if (!chatId) return;
-                    var fromPurchase = findPurchase(chatId);
-                    if (fromPurchase) {
-                        openPurchaseChat(fromPurchase);
-                        return;
-                    }
-                    var thread = (state.chatThreads || []).find(function (t) { return t && t.purchaseId === chatId; });
-                    if (thread && window.UssMarketChat) {
-                        window.UssMarketChat.open({
-                            purchaseId: thread.purchaseId,
-                            itemName: thread.itemName,
-                            peerName: thread.peerBindingId,
-                            myRole: thread.myRole,
-                            snapshot: !!thread.snapshot,
-                            canSend: thread.canSend !== false && !thread.snapshot,
-                        });
-                    }
                     return;
                 }
                 var closeBtn = ev.target.closest('.market-trades-btn-close');
@@ -1286,22 +1113,6 @@
                         if (!ok) return;
                         patchPurchase(pidA, { status: 'approved' }).then(loadTabData).catch(function (e) {
                             window.alert((e && e.message) || '操作失败');
-                        });
-                    });
-                    return;
-                }
-                var giftMailBtn = ev.target.closest('.market-trades-btn-gift-mail');
-                if (giftMailBtn) {
-                    var pidG = giftMailBtn.getAttribute('data-purchase-id');
-                    if (!pidG) return;
-                    askConfirm({
-                        title: '发送兑换链接',
-                        message: '将把礼物兑换链接发送到买家已验证邮箱。链接不会出现在网页上。',
-                        confirmText: '确认发送',
-                    }).then(function (ok) {
-                        if (!ok) return;
-                        patchPurchase(pidG, { sendGiftLink: true }).then(loadTabData).catch(function (e) {
-                            window.alert((e && e.message) || '发送失败');
                         });
                     });
                     return;
@@ -1387,9 +1198,6 @@
             applyRouteFromUrl();
             syncTabs();
             loadTabData();
-        });
-        window.addEventListener('uss-market-chat-deleted', function () {
-            if (state.tab === 'chat') loadTabData();
         });
     }
 

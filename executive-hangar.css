@@ -1,4 +1,4 @@
-/* 行政机库计时器 — 赛博朋克 HUD */
+
 body.exec-hangar-body {
     --exec-font-ui: 'Rajdhani', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
     --exec-font-digit: 'Orbitron', 'Rajdhani', ui-monospace, 'Cascadia Mono', Consolas, monospace;
@@ -91,7 +91,7 @@ body.exec-hangar-body::before {
         inset 0 0 40px rgba(57, 255, 154, 0.06);
 }
 
-/* —— 三阶段导航 —— */
+
 .exec-phase-rail {
     position: relative;
     z-index: 1;
@@ -218,7 +218,7 @@ body.exec-hangar-body::before {
     box-shadow: 0 0 16px rgba(160, 180, 200, 0.65);
 }
 
-/* —— 插卡横幅 —— */
+
 .exec-insert-banner {
     position: relative;
     z-index: 1;
@@ -358,7 +358,7 @@ body.exec-hangar-body::before {
     filter: drop-shadow(0 0 6px currentColor);
 }
 
-/* —— 主时钟 —— */
+
 .exec-hero {
     position: relative;
     z-index: 1;
@@ -500,7 +500,7 @@ body.exec-hangar-body::before {
     word-break: break-word;
 }
 
-/* —— LED 反应堆 —— */
+
 .exec-reactor {
     position: relative;
     z-index: 1;
@@ -683,7 +683,7 @@ body.exec-hangar-body::before {
     }
 }
 
-/* —— 185 分钟时间轴 —— */
+
 .exec-cycle-track-wrap {
     position: relative;
     z-index: 1;
@@ -751,7 +751,7 @@ body.exec-hangar-body::before {
     font-variant-numeric: tabular-nums;
 }
 
-/* —— 三阶段说明 —— */
+
 .exec-phase-info {
     position: relative;
     z-index: 1;
@@ -1026,7 +1026,7 @@ body.exec-hangar-body::before {
     display: none;
 }
 
-/* —— 赛博朋克增强（圆角 + 霓虹 + 文字抖动）—— */
+
 .exec-phase-rail::before {
     background: linear-gradient(
         90deg,

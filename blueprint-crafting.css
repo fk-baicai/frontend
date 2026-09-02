@@ -1,4 +1,4 @@
-/* 蓝图制造 — SCM 式左右分栏（USSMAX 令牌） */
+
 
 html:has(body.bp-craft-body) {
     height: auto;
@@ -116,7 +116,6 @@ html:has(body.bp-craft-body) {
     display: none !important;
 }
 
-/* —— 主布局：上行固定一屏（红框）+ 下行解锁任务全部展开（绿框） —— */
 .bp-shell {
     flex: 1 0 auto;
     min-height: var(--bp-work-h);
@@ -543,7 +542,6 @@ html:has(body.bp-craft-body) {
     font-size: 0.88rem;
 }
 
-/* —— 右侧详情 —— */
 .bp-detail {
     grid-column: 2;
     grid-row: 1;
@@ -681,7 +679,6 @@ html:has(body.bp-craft-body) {
     pointer-events: none;
 }
 
-/* —— 详情顶栏（成品信息） —— */
 .bp-hero {
     --bp-hero-img-h: 120px;
     --bp-hero-img-max-w: min(48vw, 16rem);
@@ -1196,7 +1193,6 @@ html:has(body.bp-craft-body) {
     box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.35);
 }
 
-/* —— 详情：材料 + 属性（与左侧列表底部对齐） —— */
 .bp-detail-grid {
     flex: 1 1 auto;
     min-height: 0;
@@ -1209,7 +1205,6 @@ html:has(body.bp-craft-body) {
     overflow: hidden;
 }
 
-/* —— 底栏：解锁任务（绿框，高度不限，全部展示，页面滚动查看） —— */
 .bp-missions-bar {
     grid-column: 1 / -1;
     grid-row: 2;
@@ -1353,7 +1348,6 @@ html:has(body.bp-craft-body) {
     scrollbar-color: rgba(0, 240, 255, 0.42) rgba(4, 12, 22, 0.55);
 }
 
-/* —— 材料 —— */
 .bp-mat-grid {
     display: flex;
     flex-direction: column;
@@ -1670,7 +1664,6 @@ html:has(body.bp-craft-body) {
     cursor: pointer;
 }
 
-/* —— 属性 —— */
 .bp-stat-wrap {
     padding: 0.38rem;
 }
@@ -1821,7 +1814,6 @@ html:has(body.bp-craft-body) {
     letter-spacing: 0.02em;
 }
 
-/* —— 解锁任务 —— */
 .bp-mission-wrap {
     padding: 0.8rem 0.95rem 0.9rem;
 }
@@ -2133,7 +2125,6 @@ html:has(body.bp-craft-body)::-webkit-scrollbar-thumb {
     border: 1px solid rgba(8, 18, 28, 0.6);
 }
 
-/* —— 自定义滚动条（细窄、无箭头、贴合暗色主题） —— */
 .bp-list-wrap,
 .bp-card__body,
 .bp-detail-grid,
@@ -2198,7 +2189,6 @@ html:has(body.bp-craft-body)::-webkit-scrollbar-thumb {
     height: 0;
 }
 
-/* —— 响应式 —— */
 @media (max-width: 1024px) {
     .bp-shell {
         grid-template-columns: 260px minmax(0, 1fr);
@@ -2628,7 +2618,6 @@ html:has(body.bp-craft-body)::-webkit-scrollbar-thumb {
     }
 }
 
-/* —— 卡片提示 / 增益汇总 / 属性分区 —— */
 .bp-card__hint {
     font-size: 0.68rem;
     color: rgba(184, 220, 240, 0.5);
@@ -2771,7 +2760,6 @@ html:has(body.bp-craft-body)::-webkit-scrollbar-thumb {
     50% { transform: scale(1.05); opacity: 1; }
 }
 
-/* —— HUD 角标 —— */
 .bp-card::before,
 .bp-card::after {
     content: '';
@@ -2797,7 +2785,6 @@ html:has(body.bp-craft-body)::-webkit-scrollbar-thumb {
     border-right: 2px solid var(--bp-accent);
 }
 
-/* —— 配件按钮 —— */
 .bp-craft-body .sc-loadout-btn {
     border-color: rgba(95, 184, 255, 0.38);
     background: rgba(95, 184, 255, 0.1);

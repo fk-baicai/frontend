@@ -1,7 +1,4 @@
-/**
- * RSI 众筹资金统计（Funds / Star Citizens + 时间线）
- * 仅从后端缓存读取，不访问 RSI，不使用 localStorage。
- */
+
 (function () {
     'use strict';
 

@@ -107,4 +107,17 @@
         hangarNotify.setAttribute('data-uss-hangar-notify', '1');
         document.body.appendChild(hangarNotify);
     }
+    if (!document.querySelector('link[href*="site-announcement.css"]')) {
+        var annCss = document.createElement('link');
+        annCss.rel = 'stylesheet';
+        annCss.href = 'site-announcement.css?v=3';
+        document.head.appendChild(annCss);
+    }
+    if (!document.querySelector('script[src*="site-announcement.js"]')) {
+        var annScript = document.createElement('script');
+        annScript.src = 'site-announcement.js?v=3';
+        annScript.defer = true;
+        annScript.setAttribute('data-uss-site-ann', '1');
+        document.body.appendChild(annScript);
+    }
 })();

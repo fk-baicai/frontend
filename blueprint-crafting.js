@@ -1412,7 +1412,7 @@
             next.classList.add('is-active');
             next.setAttribute('aria-selected', 'true');
         }
-        // 虚拟列表窗口外不强制滚回选中项；需要可见时由 scrollActiveListItem / selectBlueprint 显式调用
+
     }
 
     function updateBlueprintListItemUsage(bp) {
@@ -2591,6 +2591,15 @@
         return Math.round(n * 100) / 100;
     }
 
+    function canonicalSimStatKey(statKey) {
+        var k = String(statKey || '').trim();
+        if (k === 'rof') return 'rpm';
+        if (k === 'drive_speed') return 'quantum_speed';
+        if (k === 'cooling_rate') return 'coolant_segment_generation';
+        if (k === 'max_shield_regen') return 'regen_rate';
+        return k;
+    }
+
     function formatCraftPct(value) {
         var n = roundCraftNumber(value);
         if (n == null) return '';
@@ -2598,7 +2607,6 @@
         return (n > 0 ? '+' : '') + n.toFixed(2) + '%';
     }
 
-    /** 与 sc-database/config/blueprint-crafting-config.json 中 modifier_* 映射一致 */
     var MODIFIER_STAT_KEYS = {
         weapon_damage: ['damage_per_shot'],
         weapon_firerate: ['rpm'],
@@ -2699,7 +2707,6 @@
         return canonicalSimStatKey(statKey) === 'gforce_resistance';
     }
 
-    /** 抗 G 系数越高越好：负值时 +10% 材料应减小惩罚幅度；不在此处四舍五入，留待百分比展示 */
     function applySimStatModifier(base, mult, add, statKey) {
         var b = Number(base);
         var m = mult != null ? mult : 1;
@@ -2720,7 +2727,6 @@
         return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    /** 系数×100，固定两位小数 + % */
     function formatGforcePctDisplay(val) {
         var w = window.ShipComponentWiki;
         if (w && w.formatGforceSignedDisplay) {
@@ -2738,38 +2744,29 @@
     }
 
     var MODIFIER_LABEL_ZH_STAT_KEYS = {
-        武器伤害: ['damage_per_shot'],
-        射速: ['rpm'],
-        射程: ['range', 'effective_range'],
-        后坐力平滑度: ['weapon_recoil_smoothness'],
-        后坐力控制: ['weapon_recoil_handling'],
-        枪口上跳: ['weapon_recoil_kick'],
-        组件耐久: ['max_health'],
-        结构完整性: ['max_health'],
-        最大护盾强度: ['max_health'],
-        冷却效率: ['coolant_segment_generation', 'cooling_rate'],
-        能量点: ['power_segment_generation'],
-        量子速度: ['quantum_speed', 'drive_speed'],
-        量子燃料消耗: ['quantum_fuel_requirement'],
+        '武器伤害': ['damage_per_shot'],
+        '射速': ['rpm'],
+        '射程': ['range', 'effective_range'],
+        '后坐力平滑度': ['weapon_recoil_smoothness'],
+        '后坐力控制': ['weapon_recoil_handling'],
+        '枪口上跳': ['weapon_recoil_kick'],
+        '组件耐久': ['max_health'],
+        '结构完整性': ['max_health'],
+        '最大护盾强度': ['max_health'],
+        '冷却效率': ['coolant_segment_generation', 'cooling_rate'],
+        '能量点': ['power_segment_generation'],
+        '量子速度': ['quantum_speed', 'drive_speed'],
+        '量子燃料消耗': ['quantum_fuel_requirement'],
         '抗 G 值': ['gforce_resistance'],
-        过载抗性: ['gforce_resistance'],
-        伤害减免: ['damage_mitigation'],
-        耐温上限: ['temp_resistance_max'],
-        耐温下限: ['temp_resistance_min'],
-        提取效率: ['efficiency'],
-        作用半径: ['radius'],
-        提取速度: ['speed'],
-        采矿功率: ['throttle'],
+        '过载抗性': ['gforce_resistance'],
+        '伤害减免': ['damage_mitigation'],
+        '耐温上限': ['temp_resistance_max'],
+        '耐温下限': ['temp_resistance_min'],
+        '提取效率': ['efficiency'],
+        '作用半径': ['radius'],
+        '提取速度': ['speed'],
+        '采矿功率': ['throttle'],
     };
-
-    function canonicalSimStatKey(statKey) {
-        var k = String(statKey || '').trim();
-        if (k === 'rof') return 'rpm';
-        if (k === 'drive_speed') return 'quantum_speed';
-        if (k === 'cooling_rate') return 'coolant_segment_generation';
-        if (k === 'max_shield_regen') return 'regen_rate';
-        return k;
-    }
 
     function craftingMetaMaps() {
         var crafting = (state.meta && state.meta.crafting) || {};
@@ -3038,7 +3035,6 @@
         return normalizeBlueprintStatLabelZh(fallback || statKey);
     }
 
-    /** 浏览器端计算产出属性（材料加成相加，不依赖 API 旧算法） */
     function simulateCraftClient(blueprint, qualities) {
         if (!blueprint) return [];
         var navType = blueprint.nav_type;

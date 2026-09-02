@@ -1,7 +1,4 @@
-/**
- * 首页 RSI 服务器状态展示（Platform / PU / AC）
- * 仅从后端缓存读取，不访问 RSI，不使用 localStorage。
- */
+
 (function () {
     'use strict';
 

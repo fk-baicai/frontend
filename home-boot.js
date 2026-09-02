@@ -1,7 +1,4 @@
-/**
- * 首页启动编排辅助：资源提示 + 分阶段 idle 调度。
- * 优先级：缓存 UI → 会话/资料 → page-ready → 聊天 → idle 次要模块/视频。
- */
+
 (function (global) {
     'use strict';
 

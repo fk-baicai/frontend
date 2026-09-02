@@ -1,8 +1,4 @@
-/**
- * 本地前端开发服务器：静态文件 + 反代 backend 资源（与 netlify.toml 一致）
- * 用法：node dev-server.js
- * 访问：http://127.0.0.1:8080 或 http://localhost:8080
- */
+
 'use strict';
 
 const http = require('http');
@@ -15,7 +11,7 @@ const PORT = Number(process.env.PORT) || 8080;
 const HOST = process.env.HOST || '0.0.0.0';
 const API_TARGET = String(process.env.USS_API_TARGET || 'http://127.0.0.1:3789').replace(/\/$/, '');
 
-/** 与生产 Netlify 反代一致：头像、社区图、验证码等由 backend 提供 */
+
 const BACKEND_PROXY_PREFIXES = ['/api/', '/avatars/', '/community-uploads/', '/captcha/', '/market-uploads/'];
 
 function shouldProxyToBackend(url) {

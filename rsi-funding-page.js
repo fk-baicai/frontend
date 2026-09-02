@@ -1,6 +1,4 @@
-/**
- * 资金统计页 — 公开可访问（与工具菜单一致）
- */
+
 (function () {
     if (typeof document === 'undefined') return;
 

@@ -80,7 +80,7 @@
             font-weight: bold;
             margin-bottom: 8px;
         }
-    </style>
+</style>
 </head>
 <body>
     <div class="payment-container">
@@ -107,7 +107,7 @@
             const userInfo = JSON.parse(localStorage.getItem('userInfo'));
             const ticketInfo = document.getElementById('ticketInfo');
             const priceInfo = document.getElementById('priceInfo');
-            
+
             if (userInfo) {
                 if (userInfo.ticketType === 'uee') {
                     ticketInfo.textContent = 'UEE海军门票';
@@ -121,8 +121,8 @@
 
         document.getElementById('finishPayBtn').onclick = function() {
             alert('购买成功！');
-            window.location.href = 'index.html'; // 跳转到主页
+            window.location.href = 'index.html';
         };
-    </script>
+</script>
 </body>
 </html> 

@@ -1,9 +1,7 @@
 (function () {
     'use strict';
 
-    /**
-     * 签到中心：先画三张分部卡片，再拉 /api/checkin/hub 更新总积分等。
-     */
+
     var AUTH_SESSION_KEY = 'ussHangzhouAuthSession';
 
     var FALLBACK_UNITS = [
@@ -13,7 +11,7 @@
         { branch: 'ussprod', branchLabel: 'USS生产队', points: 0, streak: 0, todaySigned: false },
     ];
 
-    /** 卡片底部「进入」右侧图标（viewBox 与用户提供的 SVG 一致，fill 用 currentColor 以适配深色主题与悬停） */
+
     var CHECKIN_HUB_ENTER_ICON_SVG =
         '<svg class="checkin-hub-card-enter-svg" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
         '<path fill="currentColor" d="M285.816972 1024L225.757072 963.9401l451.940099-451.9401L225.757072 60.0599 285.816972 0l512.425956 512L285.816972 1024z"/>' +
@@ -101,7 +99,6 @@
         }
     }
 
-    /** 分部页链接：#unit=，避免 ? 参数在少数环境下丢失 */
     function unitPageHref(branch) {
         var b = String(branch || '').trim();
         if (!b) return 'checkin-unit.html';

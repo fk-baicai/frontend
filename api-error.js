@@ -1,13 +1,11 @@
-/**
- * 前端 API 错误：用户看到中文说明，不展示技术错误码。
- */
+
 (function (global) {
     'use strict';
 
     var DEFAULT_CODE = 'NET_E001';
     var DEFAULT_MSG = '网络异常，请检查网络后重试。';
 
-    /** 错误码 → 用户可读中文（与 backend/lib/apiErrors.js _DOC 对应） */
+
     var USER_HINTS = {
         SRV_001: '服务器繁忙，请稍后重试。',
         RATE_001: '操作过于频繁，请稍后再试。',
@@ -24,6 +22,8 @@
         SC_IMG_SUB_005: '该投稿不存在或已处理。',
         SC_IMG_SUB_006: '审核操作无效。',
         SC_IMG_SUB_007: '该投稿已经审核过。',
+        ANN_001: '请填写公告标题和提示内容。',
+        ANN_404: '该公告不存在或已删除。',
         AUTH_S004: '用户不存在。',
         AUTH_F001: '需要舰队成员权限才能使用此功能。',
         AUTH_L001: '邮箱或密码不正确。',
@@ -132,6 +132,8 @@
         AUTH_V003: '验证码错误或过期。',
         AUTH_V004: '验证码发送失败。',
         VAL_001: '提交的信息有误，请检查后重试。',
+        ANN_001: '公告标题和正文不能为空。',
+        ANN_404: '公告不存在。',
         RES_404: '请求的内容不存在。',
         NET_E001: DEFAULT_MSG,
         NET_E502: '请求超时，请稍后重试。',
@@ -163,7 +165,7 @@
         return USER_HINTS[c] || '';
     }
 
-    /** 用户可见文案（中文说明） */
+
     function formatUserError(code) {
         var c = String(code || DEFAULT_CODE).trim() || DEFAULT_CODE;
         return userHintForCode(c) || DEFAULT_MSG;
@@ -202,7 +204,7 @@
         return /^[A-Z][A-Z0-9_]{2,}$/.test(s) || /^错误代码：/.test(s);
     }
 
-    /** 从 Error / 字符串中提取用户可读中文 */
+
     function sanitizeUserMessage(input) {
         if (input == null) return formatUserError(DEFAULT_CODE);
         if (typeof input === 'object' && input.code) {

@@ -1,4 +1,4 @@
-﻿/** 由 frontend/build-wiki-scalar-zh.js 从汉化库生成 */
+﻿
 (function (global) {
     'use strict';
     global.WIKI_SCALAR_LOC = {

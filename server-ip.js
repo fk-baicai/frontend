@@ -1,6 +1,4 @@
-/**
- * 服务器 IP / 状态页面（人人可访问；真实 IP 仅舰队成员/白名单可见，其余显示 ******）
- */
+
 (function () {
     if (typeof document === 'undefined') return;
 
@@ -29,7 +27,7 @@
         return !!(sess && sess.token);
     }
 
-    /** 与 home-app 一致：舰队成员或白名单可见真实 IP */
+
     function hasFleetPrivilege() {
         var sess = loadSession();
         if (!sess) return false;

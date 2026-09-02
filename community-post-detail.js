@@ -1,6 +1,4 @@
-/**
- * 舰队帖子详情页
- */
+
 (function () {
     'use strict';
 

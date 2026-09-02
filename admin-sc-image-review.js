@@ -26,19 +26,20 @@
         return 'ship-component-detail?id=' + encodeURIComponent(id);
     }
 
-    function bindCardOpenDetail(root, itemId) {
-        if (!root || !itemId) return;
-        var href = componentDetailHref(itemId);
-        if (!href) return;
-        root.setAttribute('data-item-id', itemId);
-        root.setAttribute('title', '打开配件详情');
-        root.style.cursor = 'pointer';
-        root.addEventListener('click', function (ev) {
-            if (ev.target && ev.target.closest && ev.target.closest('button, textarea, input, label, a, select')) {
-                return;
-            }
-            window.location.href = href;
-        });
+    function nameMarkup(row) {
+        var label = esc(row.item_name_zh || row.item_name_en || row.id_item);
+        var href = componentDetailHref(row.id_item);
+        if (!href) {
+            return '<p class="sc-user-img-review-name">' + label + '</p>';
+        }
+        return (
+            '<p class="sc-user-img-review-name">' +
+            '<a class="sc-user-img-review-name-link" href="' +
+            esc(href) +
+            '" target="_blank" rel="noopener noreferrer" title="打开配件详情">' +
+            label +
+            '</a></p>'
+        );
     }
 
     function hintFromRes(data, fallback) {
@@ -64,114 +65,19 @@
         }
     }
 
-    function demoThumbDataUrl(title, hue) {
-        var t = esc(title || '配件');
-        var svg =
-            '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">' +
-            '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
-            '<stop offset="0%" stop-color="hsl(' +
-            hue +
-            ',55%,22%)"/>' +
-            '<stop offset="100%" stop-color="hsl(' +
-            ((hue + 40) % 360) +
-            ',45%,12%)"/>' +
-            '</linearGradient></defs>' +
-            '<rect width="400" height="300" fill="url(#g)"/>' +
-            '<rect x="24" y="24" width="352" height="252" rx="16" fill="none" stroke="rgba(142,224,255,0.35)" stroke-width="2"/>' +
-            '<circle cx="200" cy="128" r="46" fill="rgba(95,184,255,0.18)" stroke="rgba(142,224,255,0.55)" stroke-width="2"/>' +
-            '<text x="200" y="232" text-anchor="middle" fill="#e8f4ff" font-size="18" font-family="Segoe UI,sans-serif">' +
-            t +
-            '</text></svg>';
-        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-    }
-
-    function demoApprovedItems() {
-        return [
-            {
-                id: 'demo-approved-winter',
-                demo: true,
-                item_name_zh: '寒冬之心 SL',
-                item_name_en: 'Winter-Star SL',
-                item_type: '散热',
-                id_item: 'demo-cool-sl',
-                submitter_label: 'fkbaicai',
-                submitter_binding: 'fkbaicai',
-                reviewed_at: '2026-08-28T10:12:00.000Z',
-                thumb: demoThumbDataUrl('寒冬之心 SL', 200),
-            },
-            {
-                id: 'demo-approved-havoc',
-                demo: true,
-                item_name_zh: '浩劫 实弹霰弹炮',
-                item_name_en: 'Havoc Ballistic Scattergun',
-                item_type: '舰船武器',
-                id_item: 'demo-havoc',
-                submitter_label: 'zhe_long',
-                submitter_binding: 'zhe_long',
-                reviewed_at: '2026-08-27T14:40:00.000Z',
-                thumb: demoThumbDataUrl('浩劫', 18),
-            },
-            {
-                id: 'demo-approved-fr66',
-                demo: true,
-                item_name_zh: 'FR-66 护盾发生器',
-                item_name_en: 'FR-66 Shield Generator',
-                item_type: '护盾',
-                id_item: 'demo-fr66',
-                submitter_label: 'papa_216_0',
-                submitter_binding: 'papa_216_0',
-                reviewed_at: '2026-08-26T09:05:00.000Z',
-                thumb: demoThumbDataUrl('FR-66', 210),
-            },
-            {
-                id: 'demo-approved-js400',
-                demo: true,
-                item_name_zh: 'JS-400 电源',
-                item_name_en: 'JS-400 Power Plant',
-                item_type: '电源',
-                id_item: 'demo-js400',
-                submitter_label: 'jehwinna',
-                submitter_binding: 'jehwinna',
-                reviewed_at: '2026-08-25T18:22:00.000Z',
-                thumb: demoThumbDataUrl('JS-400', 160),
-            },
-            {
-                id: 'demo-approved-xl1',
-                demo: true,
-                item_name_zh: 'XL-1 量子驱动器',
-                item_name_en: 'XL-1 Quantum Drive',
-                item_type: '量子驱动',
-                id_item: 'demo-xl1',
-                submitter_label: 'nock727',
-                submitter_binding: 'nock727',
-                reviewed_at: '2026-08-24T07:48:00.000Z',
-                thumb: demoThumbDataUrl('XL-1', 265),
-            },
-            {
-                id: 'demo-approved-scan',
-                demo: true,
-                item_name_zh: '扫描阵列 MK2',
-                item_name_en: 'Scanner Array MK2',
-                item_type: '雷达',
-                id_item: 'demo-scan',
-                submitter_label: 'lovebroin',
-                submitter_binding: 'lovebroin',
-                reviewed_at: '2026-08-23T12:16:00.000Z',
-                thumb: demoThumbDataUrl('扫描阵列', 185),
-            },
-        ];
-    }
-
     var previewUrlCache = Object.create(null);
     var previewInflight = 0;
     var previewWait = [];
+    var lightboxEl = null;
 
-    function loadPreview(token, id, imgEl) {
-        if (!id || !imgEl) return Promise.resolve();
-        if (previewUrlCache[id]) {
-            imgEl.src = previewUrlCache[id];
-            return Promise.resolve();
-        }
+    function previewCacheKey(id, size) {
+        return String(id || '') + '|' + String(size || 'orig');
+    }
+
+    function loadPreviewUrl(token, id, size) {
+        if (!id) return Promise.resolve('');
+        var key = previewCacheKey(id, size);
+        if (previewUrlCache[key]) return Promise.resolve(previewUrlCache[key]);
         return new Promise(function (resolve, reject) {
             function pump() {
                 if (previewInflight >= 2) {
@@ -179,24 +85,24 @@
                     return;
                 }
                 previewInflight += 1;
+                var qs = size ? '?size=' + encodeURIComponent(size) : '';
                 fetch(
                     apiBase() +
                         '/api/admin/sc/image-submissions/' +
                         encodeURIComponent(id) +
-                        '/preview?size=thumb',
+                        '/preview' +
+                        qs,
                     { headers: adminHeaders(token) }
                 )
                     .then(function (res) {
-                        if (!res.ok) throw new Error('预览失败');
+                        if (!res.ok) throw new Error('missing');
                         return res.blob();
                     })
                     .then(function (blob) {
+                        if (!blob || !blob.size) throw new Error('missing');
                         var url = URL.createObjectURL(blob);
-                        previewUrlCache[id] = url;
-                        imgEl.src = url;
-                        imgEl.loading = 'lazy';
-                        imgEl.decoding = 'async';
-                        resolve();
+                        previewUrlCache[key] = url;
+                        resolve(url);
                     })
                     .catch(reject)
                     .then(function () {
@@ -206,6 +112,103 @@
                     });
             }
             pump();
+        });
+    }
+
+    function markThumbMissing(imgEl) {
+        if (!imgEl) return;
+        var ph = document.createElement('span');
+        ph.className = 'sc-user-img-review-thumb-missing';
+        ph.textContent = '暂无图片';
+        imgEl.replaceWith(ph);
+    }
+
+    function loadPreview(token, id, imgEl) {
+        if (!id || !imgEl) return Promise.resolve();
+        return loadPreviewUrl(token, id, 'thumb')
+            .then(function (url) {
+                if (!url) {
+                    markThumbMissing(imgEl);
+                    return;
+                }
+                imgEl.src = url;
+                imgEl.loading = 'lazy';
+                imgEl.decoding = 'async';
+            })
+            .catch(function () {
+                markThumbMissing(imgEl);
+            });
+    }
+
+    function closeReviewLightbox() {
+        if (!lightboxEl) return;
+        lightboxEl.hidden = true;
+        document.body.classList.remove('sc-user-img-review-lightbox-open');
+    }
+
+    function ensureReviewLightbox() {
+        if (lightboxEl) return lightboxEl;
+        lightboxEl = document.createElement('div');
+        lightboxEl.id = 'scUserImgReviewLightbox';
+        lightboxEl.className = 'sc-user-img-review-lightbox';
+        lightboxEl.hidden = true;
+        lightboxEl.innerHTML =
+            '<button type="button" class="sc-user-img-review-lightbox-close" aria-label="关闭">×</button>' +
+            '<p class="sc-user-img-review-lightbox-loading" hidden>正在加载原图…</p>' +
+            '<img class="sc-user-img-review-lightbox-img" alt="">';
+        document.body.appendChild(lightboxEl);
+        lightboxEl.addEventListener('click', function (ev) {
+            if (ev.target === lightboxEl || (ev.target && ev.target.classList.contains('sc-user-img-review-lightbox-close'))) {
+                closeReviewLightbox();
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeReviewLightbox();
+        });
+        return lightboxEl;
+    }
+
+    function openReviewLightbox(src, alt) {
+        var box = ensureReviewLightbox();
+        var img = box.querySelector('.sc-user-img-review-lightbox-img');
+        var loading = box.querySelector('.sc-user-img-review-lightbox-loading');
+        if (img) {
+            img.alt = alt || '';
+            if (src) {
+                img.hidden = false;
+                img.src = src;
+            } else {
+                img.removeAttribute('src');
+                img.hidden = true;
+            }
+        }
+        if (loading) loading.hidden = !!src;
+        box.hidden = false;
+        document.body.classList.add('sc-user-img-review-lightbox-open');
+    }
+
+    function bindThumbZoom(img, row, token) {
+        if (!img || !row) return;
+        img.classList.add('sc-user-img-review-thumb--zoom');
+        img.setAttribute('title', '点击查看原图');
+        img.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            var alt = row.item_name_zh || row.item_name_en || '';
+            var orig = previewUrlCache[previewCacheKey(row.id, 'orig')];
+            if (orig) {
+                openReviewLightbox(orig, alt);
+                return;
+            }
+            openReviewLightbox('', alt);
+            loadPreviewUrl(token, row.id, '')
+                .then(function (url) {
+                    if (url) openReviewLightbox(url, alt);
+                    else closeReviewLightbox();
+                })
+                .catch(function () {
+                    closeReviewLightbox();
+                });
         });
     }
 
@@ -345,9 +348,6 @@
             if (approvedMetaEl) {
                 if (!approvedAll.length) {
                     approvedMetaEl.textContent = '暂无已通过记录';
-                } else if (approvedAll.some(function (r) { return r.demo; })) {
-                    approvedMetaEl.textContent =
-                        '界面样例 ' + approvedAll.length + ' 张（无真实通过记录时用于预览排版）· 本页 ' + slice.length;
                 } else if (approvedQuery()) {
                     approvedMetaEl.textContent =
                         '筛选 ' + filtered.length + ' / 共 ' + approvedAll.length + ' 张 · 本页 ' + slice.length;
@@ -382,9 +382,7 @@
                         esc(row.id) +
                         '">' +
                         '<div class="sc-user-img-review-copy">' +
-                        '<p class="sc-user-img-review-name">' +
-                        esc(row.item_name_zh || row.item_name_en || row.id_item) +
-                        '</p>' +
+                        nameMarkup(row) +
                         '<p class="hint">' +
                         esc(row.item_name_en || '') +
                         (row.item_type ? ' · ' + esc(row.item_type) : '') +
@@ -407,16 +405,10 @@
                 var row = slice.filter(function (r) {
                     return String(r.id) === String(id);
                 })[0];
-                if (row && row.demo && row.thumb) {
-                    img.src = row.thumb;
-                    return;
-                }
-                loadPreview(token, id, img).catch(function () {
-                    img.replaceWith(document.createTextNode('无法预览'));
+                if (!row) return;
+                loadPreview(token, id, img).then(function () {
+                    if (img.isConnected) bindThumbZoom(img, row, token);
                 });
-            });
-            approvedListEl.querySelectorAll('.sc-user-img-review-card').forEach(function (card) {
-                bindCardOpenDetail(card, card.getAttribute('data-item-id'));
             });
             approvedListEl.querySelectorAll('[data-del-approved]').forEach(function (btn) {
                 btn.onclick = function () {
@@ -424,10 +416,6 @@
                     var row = approvedAll.filter(function (r) {
                         return String(r.id) === String(id);
                     })[0];
-                    if (row && row.demo) {
-                        window.alert('这是界面样例，不会写入服务器。有真实通过记录后样例会自动消失。');
-                        return;
-                    }
                     if (!window.confirm('删除后前台不再展示这张用户图，确定？')) return;
                     btn.disabled = true;
                     removeApproved(id)
@@ -455,9 +443,6 @@
                 throw new Error(hintFromRes(data, '加载已通过记录失败'));
             }
             approvedAll = data.items || [];
-            if (!approvedAll.length) {
-                approvedAll = demoApprovedItems();
-            }
             renderApprovedPage();
         }
 
@@ -473,12 +458,15 @@
         function bindPendingActions() {
             if (!listEl) return;
             listEl.querySelectorAll('img[data-preview-id]').forEach(function (img) {
-                loadPreview(token, img.getAttribute('data-preview-id'), img).catch(function () {
-                    img.replaceWith(document.createTextNode('无法预览'));
+                var id = img.getAttribute('data-preview-id');
+                var card = img.closest('.sc-user-img-review-card');
+                var rowId = card && card.getAttribute('data-id');
+                var row = pendingAll.filter(function (r) {
+                    return String(r.id) === String(rowId || id);
+                })[0];
+                loadPreview(token, id, img).then(function () {
+                    if (img.isConnected && row) bindThumbZoom(img, row, token);
                 });
-            });
-            listEl.querySelectorAll('.sc-user-img-review-card').forEach(function (card) {
-                bindCardOpenDetail(card, card.getAttribute('data-item-id'));
             });
             listEl.querySelectorAll('[data-approve]').forEach(function (btn) {
                 btn.onclick = function () {
@@ -547,9 +535,7 @@
                         esc(row.id) +
                         '" loading="lazy" decoding="async">' +
                         '<div class="sc-user-img-review-copy">' +
-                        '<p class="sc-user-img-review-name">' +
-                        esc(row.item_name_zh || row.item_name_en || row.id_item) +
-                        '</p>' +
+                        nameMarkup(row) +
                         '<p class="hint">' +
                         esc(row.item_name_en || '') +
                         (row.item_type ? ' · ' + esc(row.item_type) : '') +

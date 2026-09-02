@@ -764,7 +764,7 @@ button.sc-lead-item.is-active {
 
 .sc-name-en {
     display: block;
-    font-size: clamp(0.64rem, 0.35vw + 0.55rem, 0.76rem);   
+    font-size: clamp(0.64rem, 0.35vw + 0.55rem, 0.76rem);
     color: rgba(160, 195, 220, 0.6);
     margin-top: 0.12rem;
     overflow-wrap: break-word;
@@ -1430,7 +1430,6 @@ button.sc-lead-item.is-active {
     border-top: 1px solid rgba(95, 184, 255, 0.08);
 }
 
-/* 区块正文与标题左侧分割竖线左缘对齐 */
 .sc-blueprint-mission-section > :not(.sc-blueprint-mission-section-title) {
     margin-left: 0;
     padding-left: 0;
@@ -2681,7 +2680,7 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
     position: fixed;
     top: calc(var(--navbar-height, 6.3rem) + 0.55rem);
     right: max(0.85rem, env(safe-area-inset-right, 0px));
-    z-index: 6000;
+    z-index: 21000;
     min-width: 16.5rem;
     max-width: min(22rem, calc(100% - 1rem));
     padding: 0.72rem 0.9rem 0.78rem;
@@ -3142,7 +3141,6 @@ body.sc-img-desk-open {
     min-width: 0;
 }
 
-/* 购买地点 + 蓝图任务：桌面左右各 50% */
 .sc-detail-locations-blueprint-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -3992,7 +3990,6 @@ body.sc-type-jump th.sc-col-quantum-only {
     overflow: hidden;
 }
 
-/* 折叠隐藏列，避免 display:none 导致列宽错位、文字竖排 */
 body.sc-type-quantum:not(.sc-mode-search) #scTable col.sc-col-type,
 body.sc-type-quantum:not(.sc-mode-search) #scTable th.sc-col-type,
 body.sc-type-quantum:not(.sc-mode-search) #scTable td.sc-col-type-cell,
@@ -4372,7 +4369,6 @@ body.sc-mode-search #scTable th.sc-col-volume {
     }
 }
 
-/* —— 武器配件装配 —— */
 .sc-row-actions {
     display: inline-flex;
     align-items: center;
@@ -4492,7 +4488,6 @@ td.sc-stat-loadout-mod:hover {
     background: rgba(95, 184, 255, 0.12);
     color: #b8ecff;
 }
-
 
 .sc-loadout-overlay {
     position: fixed;

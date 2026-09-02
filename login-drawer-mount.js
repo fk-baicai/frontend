@@ -1,6 +1,4 @@
-/**
- * 同步挂载登录抽屉 DOM（供 market 等非首页使用，须在 home-app.js 之前加载）。
- */
+
 (function () {
     'use strict';
     if (document.getElementById('loginDrawer')) return;

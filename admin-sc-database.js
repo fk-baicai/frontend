@@ -1274,7 +1274,7 @@
                 return;
             }
             if (!me.isSuperAdmin) {
-                gate.textContent = '仅超级管理员可访问 SC 数据库管理。';
+                gate.textContent = '超管身份校验未通过。';
                 return;
             }
         } catch (e) {

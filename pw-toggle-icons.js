@@ -1,4 +1,4 @@
-/** 密码显示/隐藏：自定义眼睛 SVG 双图标切换（内联 SVG，不依赖外网字体） */
+
 (function () {
     var EYE_VIEWBOX = '0 0 1707 1024';
     var EYE =

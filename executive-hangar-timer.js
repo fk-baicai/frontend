@@ -1,6 +1,4 @@
-/**
- * 行政机库计时器 — 仅从后端 API 读取锚点，访客本机时间每秒推算
- */
+
 (function () {
     if (typeof document === 'undefined') return;
 
@@ -278,7 +276,7 @@
         var state = computeLocal(data.elapsedMs != null ? Number(data.elapsedMs) : localElapsedMs());
         if (data.phase) state.phase = data.phase;
         if (data.phaseLabel) state.phaseLabel = data.phaseLabel;
-        // 灯态与插卡状态仅由本地 computeLocal 推导
+
         if (data.indicatorRemainingText) {
             state.indicatorRemainingText = data.indicatorRemainingText;
             if (data.phase === 'charging' || data.phase === 'discharge') {

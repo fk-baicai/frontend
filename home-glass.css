@@ -1,5 +1,4 @@
-/* USSMAX 首页 — 简洁 / 科技感 / 毛玻璃 redesign
-   保留原有色系，覆盖视觉层，不改动功能逻辑 */
+
 
 @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -28,7 +27,7 @@ body.home-page-body {
     overflow-x: hidden;
 }
 
-/* ── 背景装饰层 ── */
+
 .home-bg-decor {
     position: fixed;
     inset: 0;
@@ -86,7 +85,7 @@ body.home-page-body {
     100% { transform: translate(30px, -20px) scale(1.08); }
 }
 
-/* ── 顶栏毛玻璃 ── */
+
 body.home-page-body .site-header {
     position: sticky;
     top: 0;
@@ -127,7 +126,7 @@ body.home-page-body .nav-dropdown-toggle {
     letter-spacing: 0.04em;
 }
 
-/* ── Hero 区域 ── */
+
 body.home-page-body .hero {
     height: min(100vh, 900px);
     min-height: 520px;
@@ -188,7 +187,7 @@ body.home-page-body .next-video:hover {
     color: #fff;
 }
 
-/* Hero 信息卡片 */
+
 body.home-page-body .ship-info {
     bottom: 88px;
     z-index: 10;
@@ -235,7 +234,7 @@ body.home-page-body .ship-hero-tagline-text {
     letter-spacing: 0.24em;
 }
 
-/* ── 快捷入口条 ── */
+
 .home-quick-nav {
     position: relative;
     z-index: 2;
@@ -296,13 +295,13 @@ body.home-page-body .ship-hero-tagline-text {
     line-height: 1.35;
 }
 
-/* ── 主内容区 ── */
+
 .home-main {
     position: relative;
     z-index: 2;
 }
 
-/* 统一区块标题 */
+
 body.home-page-body .home-section-eyebrow {
     display: block;
     font-family: 'JetBrains Mono', monospace;
@@ -320,7 +319,7 @@ body.home-page-body .rsi-status-updated {
     color: var(--text-muted);
 }
 
-/* ── 服务器状态卡片 ── */
+
 body.home-page-body .rsi-status-section {
     position: relative;
     z-index: 3;
@@ -365,7 +364,7 @@ body.home-page-body .rsi-status-card-title {
     font-size: 1rem;
 }
 
-/* ── 节日倒计时 ── */
+
 body.home-page-body .sc-festival-wrap {
     background: var(--glass-bg);
     backdrop-filter: var(--glass-blur);
@@ -400,7 +399,7 @@ body.home-page-body .sc-festival-days {
     font-weight: 500;
 }
 
-/* ── OOPZ 语音 ── */
+
 body.home-page-body .oopz-bridge-wrap {
     background: var(--glass-bg);
     backdrop-filter: var(--glass-blur);
@@ -479,7 +478,7 @@ body.home-page-body .oopz-bind-panel {
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
 }
 
-/* ── 社区区 ── */
+
 body.home-page-body .community-section {
     padding-bottom: clamp(48px, 6vw, 80px);
 }
@@ -596,7 +595,7 @@ body.home-page-body .community-confirm-dialog {
     border-radius: var(--glass-radius-lg);
 }
 
-/* ── 响应式 ── */
+
 @media (max-width: 900px) {
     .home-quick-nav__inner {
         grid-template-columns: repeat(2, 1fr);

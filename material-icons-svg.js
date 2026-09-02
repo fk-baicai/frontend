@@ -1,6 +1,4 @@
-/**
- * 将 .material-icons-outlined 替换为内联 SVG，避免 Google 字体无法加载时显示 ligature 名称。
- */
+
 (function () {
     var VB24 = '0 0 24 24';
     var VB1024 = '0 0 1024 1024';

@@ -1985,7 +1985,7 @@
             }
         }
 
-        // 优先级：详情页 URL 参数 → 进入详情前 session 记录 → 配件类型推断
+
         var group = fromUrl.group || stored.group || '';
         var type = fromUrl.type || stored.type || '';
         var q = fromUrl.q || stored.q || '';

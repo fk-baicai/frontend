@@ -1,9 +1,4 @@
-/**
- * 认证 API 根地址（先于 auth-api.js 执行）。
- * - localhost / 127.0.0.1 / file://：连本机 backend（127.0.0.1:3789）
- * - 生产站点（ussxc.org / Netlify）：默认同源 /api（Netlify 反代 → 阿里云）
- * - 可选直连：window.USS_API_DIRECT_BASE = 'https://api.ussxc.org'（须 DNS + HTTPS 就绪）
- */
+
 (function () {
     if (typeof window === 'undefined') return;
     if (window.USS_AUTH_API_BASE) return;
@@ -38,7 +33,7 @@
     if (isLocal) {
         var origin = window.location && window.location.origin;
         var port = window.location && window.location.port;
-        // 本地 dev-server(8080) 或 backend 静态(3789)：走同源 /api，避免 localhost↔127.0.0.1 跨主机被浏览器拦截
+
         if (origin && /^https?:\/\//i.test(origin) && (port === '8080' || port === '3789')) {
             window.USS_AUTH_API_BASE = String(origin).replace(/\/$/, '');
             return;
@@ -52,7 +47,6 @@
         return;
     }
 
-    /** 仅当显式设置 USS_API_DIRECT_BASE 时才直连 api 子域名（须 Cloudflare 有 api 记录 + 服务器 HTTPS） */
     var directBase = window.USS_API_DIRECT_BASE;
     if (directBase && /^https:\/\//i.test(String(directBase))) {
         window.USS_AUTH_API_BASE = String(directBase).replace(/\/$/, '');
@@ -60,17 +54,12 @@
     }
 
     if (isProductionSite) {
-        /** 登录、配件、蓝图等均走同源 /api（Netlify 反代 → 阿里云 3789） */
+
         window.USS_AUTH_API_BASE = String(window.location.origin || '').replace(/\/$/, '');
-        /**
-         * api.ussxc.org 须 DNS + HTTPS 就绪后才可启用（否则浏览器 Failed to fetch）：
-         *   window.USS_API_DIRECT_BASE = 'https://api.ussxc.org'
-         * 或仅配件/蓝图：window.USS_SC_COMPONENTS_API_BASE = 'https://api.ussxc.org'
-         */
+
         return;
     }
 
-    /** HTTPS 页面（自定义域 / staging）默认同源 /api，避免 Mixed Content */
     if (window.location && window.location.protocol === 'https:') {
         window.USS_AUTH_API_BASE = String(window.location.origin || '').replace(/\/$/, '');
         return;
@@ -79,7 +68,6 @@
     window.USS_AUTH_API_BASE = 'http://8.138.237.183:3789';
 })();
 
-/** 与后端 RSI_REQUIRED_ORG_HREF 一致，供浏览器端解析公民页组织块 */
 (function () {
     if (typeof window === 'undefined') return;
     if (!window.USS_RSI_ORIGIN) {
@@ -107,7 +95,6 @@
     }
 })();
 
-/** 尽早建立 API / RSI 连接，缩短首屏后的 /api/me 等请求 */
 (function () {
     if (typeof document === 'undefined' || !document.head) return;
     var origins = [];

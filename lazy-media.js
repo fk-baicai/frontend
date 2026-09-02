@@ -1,9 +1,4 @@
-/**
- * 首页资源加载优先级：个人信息 > 可见区图片 > 视频/次要接口。
- * - observe(img): 进入视口再加载 data-src
- * - loadNow(img): 立即加载 data-src
- * - runWhenIdle(fn): requestIdleCallback / setTimeout 降级
- */
+
 (function (global) {
     'use strict';
 

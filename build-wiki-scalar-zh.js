@@ -109,7 +109,7 @@ set('collectionbeam', '采集光束'); set('CollectionBeam', '采集光束');
 set('SingleAxis', '单轴'); set('DualAxis', '双轴'); set('Full', '全向');
 set('P D C Turret', '点防炮塔'); set('Manned Turret', '有人炮塔'); set('Gun Turret', '炮塔');
 set('Utility', '功能');
-// —— 个人装备（FPS）——
+
 set('Pistol', v('item_displayType_Pistol') || '手枪');
 set('SMG', v('item_displayType_SMG') || '冲锋枪');
 set('Assault Rifle', '突击步枪');
@@ -125,7 +125,7 @@ set('Crossbow', '弩');
 set('Fire Extinguisher', '灭火器');
 set('Tractor Beam', v('item_displayType_TractorBeam') || '牵引光束');
 set('Magazine', v('item_displayType_Magazine') || '弹匣');
-// 护甲类目：优先 ui_inventory_filter_category_name_*，与游戏背包筛选一致
+
 function uiArmorFilter(suffix, fallback) {
     return v('ui_inventory_filter_category_name_' + suffix) || fallback;
 }
@@ -231,5 +231,5 @@ function compose(en) {
 ['Ballistic Gatling','Ballistic Repeater','Ballistic Cannon','Ballistic Scattergun','Laser Gatling','Laser Repeater','Laser Cannon','Laser Scattergun','Laser Beam','Distortion Cannon','Distortion Repeater','Distortion Scattergun','Plasma Cannon','Plasma Scattergun','Neutron Cannon','Neutron Repeater','Mass Driver Cannon','Tachyon Cannon','Mining Laser','Rocket Pod','Ballistic Gatling Turret','Ballistic Cannon Turret','Ballistic Gatling Gun','Laser Turret','Plasma Canon'].forEach(t => { const z = compose(t); if (z) set(t, z); });
 const keys = Object.keys(map).sort((a,b)=>a.localeCompare(b,'en'));
 const body = keys.map(k => '        ' + JSON.stringify(k) + ': ' + JSON.stringify(map[k]) + ',').join('\n');
-fs.writeFileSync(OUT, ['/** 由 frontend/build-wiki-scalar-zh.js 从汉化库生成 */','(function (global) {',"    'use strict';",'    global.WIKI_SCALAR_LOC = {', body, '    };','})(typeof window !== \'undefined\' ? window : global);',''].join('\n'), 'utf8');
+fs.writeFileSync(OUT, ['(function (global) {',"    'use strict';",'    global.WIKI_SCALAR_LOC = {', body, '    };','})(typeof window !== \'undefined\' ? window : global);',''].join('\n'), 'utf8');
 console.log('Wrote', OUT, keys.length, 'entries');

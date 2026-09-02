@@ -1,6 +1,4 @@
-/**
- * 星巢贸易 — 临时买卖双方聊天（右下角浮窗）
- */
+
 (function (global) {
     'use strict';
 

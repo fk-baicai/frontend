@@ -1,6 +1,4 @@
-/**
- * 顶栏「工具」菜单：始终可见
- */
+
 (function () {
     if (typeof document === 'undefined') return;
 

@@ -1,9 +1,7 @@
 (function () {
     'use strict';
 
-    /**
-     * 分部页：?unit= 或 #unit= 指定分部；数据为当前分部维度。
-     */
+
     var AUTH_SESSION_KEY = 'ussHangzhouAuthSession';
     var VALID_UNITS = { hq: true, squad1: true, uss: true, ussprod: true };
     var UNIT_TITLES = {
@@ -39,7 +37,7 @@
         return '';
     }
 
-    /** 每次进入页由 init 赋值；支持 ?unit= 与 #unit= */
+
     var UNIT = '';
 
     /** @type {{ date: string, pointsAwarded: number|null }[]} */
@@ -437,7 +435,7 @@
         if (valEl) valEl.textContent = '0';
     }
 
-    /** 积分排行标题旁：单按钮「我积分 N」 */
+
     function renderMyRankSummary(list, fallbackPoints) {
         var btn = document.getElementById('checkinMyPointsBtn');
         var valEl = document.getElementById('checkinMyPointsVal');
@@ -878,10 +876,7 @@
             .join('');
     }
 
-    /**
-     * @param {Array<{date?:string,pointsAwarded?:number}|string>|undefined} entries
-     *        优先传 myHistory；也可传旧版 myHistoryDates 字符串数组
-     */
+
     function renderMyHistory(entries, emptyMsg) {
         var list = [];
         if (Array.isArray(entries)) {
@@ -1222,7 +1217,7 @@
             if (s && s.token && window.UssAuthApi) {
                 parallel.push(
                     window.UssAuthApi.me(s.token).catch(function () {
-                        /* 与原先一致：会话探测失败不阻断分部数据 */
+
                     })
                 );
             }

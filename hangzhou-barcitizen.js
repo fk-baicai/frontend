@@ -1,6 +1,4 @@
-/**
- * 杭州 BARCITIZEN 活动页：购票提示 / 退票验证
- */
+
 (function () {
     'use strict';
 
