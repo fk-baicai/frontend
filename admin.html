@@ -412,6 +412,24 @@
             text-transform: none;
             letter-spacing: 0;
         }
+        #secVisitStats .vs-recent-wrap {
+            max-height: 16.5rem;
+            overflow: auto;
+            margin: 0 -0.15rem;
+        }
+        #secVisitStats .vs-recent-pager {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.45rem;
+            margin-top: 0.55rem;
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+        #secVisitStats .vs-recent-pager button {
+            min-width: 4.2rem;
+            padding: 0.22rem 0.5rem;
+        }
         #secVisitStats .vs-dist {
             display: flex;
             flex-direction: column;
@@ -2089,7 +2107,14 @@
                     </div>
                     <div class="vs-panel">
                         <h3>最近访问</h3>
-                        <table class="vs-table"><thead><tr><th>时间</th><th>页面</th><th>访客</th></tr></thead><tbody id="visitRecent"></tbody></table>
+                        <div class="vs-recent-wrap">
+                            <table class="vs-table"><thead><tr><th>时间</th><th>页面</th><th>访客</th></tr></thead><tbody id="visitRecent"></tbody></table>
+                        </div>
+                        <div class="vs-recent-pager">
+                            <button type="button" class="btn-secondary" id="visitRecentPrev">上一页</button>
+                            <span id="visitRecentPageLbl">1 / 1</span>
+                            <button type="button" class="btn-secondary" id="visitRecentNext">下一页</button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -2832,6 +2857,12 @@
                     loadAnnouncements();
                     document.getElementById('btnReloadVisitStats').onclick = loadVisitStats;
                     document.getElementById('visitRange').onchange = loadVisitStats;
+                    document.getElementById('visitRecentPrev').onclick = function () {
+                        showVisitRecentPage(visitRecentState.page - 1);
+                    };
+                    document.getElementById('visitRecentNext').onclick = function () {
+                        showVisitRecentPage(visitRecentState.page + 1);
+                    };
                     document.getElementById('visitFrom').onchange = onVisitCustomDates;
                     document.getElementById('visitTo').onchange = onVisitCustomDates;
                     loadVisitStats();
@@ -3567,6 +3598,48 @@
                 el.innerHTML = html || '<p class="hint">暂无数据</p>';
             }
 
+            var visitRecentState = { items: [], page: 1, size: 8 };
+
+            function visitRecentPageCount() {
+                var n = visitRecentState.items.length;
+                if (!n) return 1;
+                return Math.max(1, Math.ceil(n / visitRecentState.size));
+            }
+
+            function showVisitRecentPage(page) {
+                var total = visitRecentPageCount();
+                var p = Math.max(1, Math.min(total, Number(page) || 1));
+                visitRecentState.page = p;
+                var start = (p - 1) * visitRecentState.size;
+                var slice = visitRecentState.items.slice(start, start + visitRecentState.size);
+                var tb = document.getElementById('visitRecent');
+                var lbl = document.getElementById('visitRecentPageLbl');
+                var prev = document.getElementById('visitRecentPrev');
+                var next = document.getElementById('visitRecentNext');
+                if (tb) {
+                    tb.innerHTML = slice.length
+                        ? slice
+                              .map(function (r) {
+                                  return (
+                                      '<tr><td>' +
+                                      vsFmtTime(r.t) +
+                                      '</td><td>' +
+                                      (r.title || r.path || '') +
+                                      '</td><td>' +
+                                      (r.loggedIn ? r.bindingId || '已登录' : '游客') +
+                                      ' · ' +
+                                      (r.device || '') +
+                                      '</td></tr>'
+                                  );
+                              })
+                              .join('')
+                        : '<tr><td colspan="3">暂无</td></tr>';
+                }
+                if (lbl) lbl.textContent = p + ' / ' + total + '（' + visitRecentState.items.length + ' 条）';
+                if (prev) prev.disabled = p <= 1;
+                if (next) next.disabled = p >= total;
+            }
+
             function onVisitCustomDates() {
                 var sel = document.getElementById('visitRange');
                 if (sel) sel.value = 'custom';
@@ -3664,21 +3737,8 @@
                         { title: '浏览器', items: data.browsers || [] },
                         { title: '外部域名', items: data.topHosts || [] },
                     ]);
-                    document.getElementById('visitRecent').innerHTML = (data.recent || [])
-                        .map(function (r) {
-                            return (
-                                '<tr><td>' +
-                                vsFmtTime(r.t) +
-                                '</td><td>' +
-                                (r.title || r.path || '') +
-                                '</td><td>' +
-                                (r.loggedIn ? r.bindingId || '已登录' : '游客') +
-                                ' · ' +
-                                (r.device || '') +
-                                '</td></tr>'
-                            );
-                        })
-                        .join('') || '<tr><td colspan="3">暂无</td></tr>';
+                    visitRecentState.items = data.recent || [];
+                    showVisitRecentPage(1);
                 } catch (e) {
                     showErr('visitStatsErr', (e && e.message) || '加载访问统计失败');
                 }
