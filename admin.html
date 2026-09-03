@@ -415,16 +415,47 @@
         #secVisitStats .vs-recent-wrap {
             flex: 1 1 auto;
             min-height: 0;
-            overflow: auto;
+            overflow: hidden;
             margin: 0 -0.15rem;
+            display: flex;
+            flex-direction: column;
         }
         #secVisitStats .vs-panel--recent {
             display: flex;
             flex-direction: column;
             min-height: 100%;
+            height: 100%;
+            align-self: stretch;
         }
         #secVisitStats .vs-panel--recent h3 {
             flex-shrink: 0;
+        }
+        #secVisitStats .vs-panel--recent table.vs-table {
+            flex: 1 1 auto;
+            width: 100%;
+            height: 100%;
+            table-layout: fixed;
+        }
+        #secVisitStats .vs-panel--recent table.vs-table th,
+        #secVisitStats .vs-panel--recent table.vs-table td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+        }
+        #secVisitStats .vs-panel--recent table.vs-table th:nth-child(1),
+        #secVisitStats .vs-panel--recent table.vs-table td:nth-child(1) {
+            width: 5.6rem;
+        }
+        #secVisitStats .vs-panel--recent table.vs-table th:nth-child(3),
+        #secVisitStats .vs-panel--recent table.vs-table td:nth-child(3) {
+            width: 36%;
+        }
+        #secVisitStats .vs-panel--recent table.vs-table thead {
+            height: 2rem;
+        }
+        #secVisitStats .vs-panel--recent table.vs-table tbody tr {
+            height: calc((100% - 2rem) / var(--vs-recent-rows, 8));
         }
         #secVisitStats .vs-recent-pager {
             display: flex;
@@ -3626,6 +3657,10 @@
                 var lbl = document.getElementById('visitRecentPageLbl');
                 var prev = document.getElementById('visitRecentPrev');
                 var next = document.getElementById('visitRecentNext');
+                var wrap = document.querySelector('#secVisitStats .vs-recent-wrap');
+                if (wrap) {
+                    wrap.style.setProperty('--vs-recent-rows', String(Math.max(slice.length || 1, 1)));
+                }
                 if (tb) {
                     tb.innerHTML = slice.length
                         ? slice
