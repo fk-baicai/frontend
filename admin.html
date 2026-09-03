@@ -413,16 +413,27 @@
             letter-spacing: 0;
         }
         #secVisitStats .vs-recent-wrap {
-            max-height: 16.5rem;
+            flex: 1 1 auto;
+            min-height: 0;
             overflow: auto;
             margin: 0 -0.15rem;
+        }
+        #secVisitStats .vs-panel--recent {
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+        }
+        #secVisitStats .vs-panel--recent h3 {
+            flex-shrink: 0;
         }
         #secVisitStats .vs-recent-pager {
             display: flex;
             align-items: center;
             justify-content: flex-end;
             gap: 0.45rem;
-            margin-top: 0.55rem;
+            margin-top: auto;
+            padding-top: 0.55rem;
+            flex-shrink: 0;
             font-size: 0.75rem;
             color: var(--muted);
         }
@@ -2105,8 +2116,7 @@
                         <h3>来源 / 设备 / 浏览器</h3>
                         <div class="vs-dist" id="visitDist"></div>
                     </div>
-                    <div class="vs-panel">
-                        <h3>最近访问</h3>
+                    <div class="vs-panel vs-panel--recent">
                         <div class="vs-recent-wrap">
                             <table class="vs-table"><thead><tr><th>时间</th><th>页面</th><th>访客</th></tr></thead><tbody id="visitRecent"></tbody></table>
                         </div>
