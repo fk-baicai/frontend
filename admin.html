@@ -404,6 +404,28 @@
             transform: scale(0.92);
             white-space: nowrap;
         }
+        #secVisitStats .vs-table-clip {
+            height: 16.5rem;
+            max-height: 16.5rem;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0;
+            margin: 0 -0.15rem;
+            -webkit-overflow-scrolling: touch;
+        }
+        #secVisitStats .vs-table-clip table {
+            overflow: visible;
+            border-radius: 0;
+        }
+        #secVisitStats .vs-grid--tables {
+            align-items: start;
+        }
+        #secVisitStats .vs-table-clip thead th {
+            position: sticky;
+            top: 0;
+            background: #0a1424;
+            z-index: 1;
+        }
         #secVisitStats table.vs-table {
             width: 100%;
             font-size: 0.8rem;
@@ -2132,14 +2154,18 @@
                         <div class="vs-bars" id="visitHours"></div>
                     </div>
                 </div>
-                <div class="vs-grid">
+                <div class="vs-grid vs-grid--tables">
                     <div class="vs-panel">
                         <h3>热门页面</h3>
-                        <table class="vs-table"><thead><tr><th>页面</th><th>PV</th><th>UV</th></tr></thead><tbody id="visitTopPages"></tbody></table>
+                        <div class="vs-table-clip">
+                            <table class="vs-table"><thead><tr><th>页面</th><th>PV</th><th>UV</th></tr></thead><tbody id="visitTopPages"></tbody></table>
+                        </div>
                     </div>
                     <div class="vs-panel">
                         <h3>用户访问（登录成员）</h3>
-                        <table class="vs-table"><thead><tr><th>绑定 ID</th><th>PV</th><th>最近页面</th></tr></thead><tbody id="visitTopUsers"></tbody></table>
+                        <div class="vs-table-clip">
+                            <table class="vs-table"><thead><tr><th>绑定 ID</th><th>PV</th><th>最近页面</th></tr></thead><tbody id="visitTopUsers"></tbody></table>
+                        </div>
                     </div>
                 </div>
                 <div class="vs-grid">
@@ -2148,6 +2174,7 @@
                         <div class="vs-dist" id="visitDist"></div>
                     </div>
                     <div class="vs-panel vs-panel--recent">
+                        <h3>最近访问</h3>
                         <div class="vs-recent-wrap">
                             <table class="vs-table"><thead><tr><th>时间</th><th>页面</th><th>访客</th></tr></thead><tbody id="visitRecent"></tbody></table>
                         </div>
