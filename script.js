@@ -8,20 +8,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.addEventListener('scroll', () => {
-        if (isMainPageScrollLocked()) {
-            if (navbar) navbar.style.transform = 'translateY(0)';
+        if (!navbar) return;
+        if (isMainPageScrollLocked() || window.matchMedia('(max-width: 900px)').matches) {
+            navbar.style.transform = '';
             return;
         }
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-
-        if (scrollTop > lastScrollTop) {
+        if (scrollTop <= 12) {
+            navbar.style.transform = '';
+        } else if (scrollTop > lastScrollTop + 4) {
             navbar.style.transform = 'translateY(-100%)';
-        } else {
-            navbar.style.transform = 'translateY(0)';
+        } else if (scrollTop < lastScrollTop - 4) {
+            navbar.style.transform = '';
         }
-
         lastScrollTop = scrollTop;
-    });
+    }, { passive: true });
 
     // Smooth scroll for navigation links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {

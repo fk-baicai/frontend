@@ -14,6 +14,7 @@
         lastY: 0,
         wired: false,
         keyHandler: null,
+        resizeHandler: null,
         pointers: {},
         pinchDist: 0,
         pinchScale: 1,
@@ -64,6 +65,17 @@
         const el = frame || img;
         if (!el) return;
         el.style.transform = 'translate(' + state.tx + 'px, ' + state.ty + 'px) scale(' + state.scale + ')';
+    }
+
+    function fitImageToViewport(img) {
+        if (!img || !img.naturalWidth || !img.naturalHeight) return;
+        const maxW = Math.max(160, window.innerWidth - 32);
+        const maxH = Math.max(160, window.innerHeight - 96);
+        const fit = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
+        img.style.width = Math.round(img.naturalWidth * fit) + 'px';
+        img.style.height = Math.round(img.naturalHeight * fit) + 'px';
+        img.style.maxWidth = 'none';
+        img.style.maxHeight = 'none';
     }
 
     function resetTransform(img) {
@@ -265,13 +277,22 @@
         const img = getImg(overlay);
         if (!img) return;
         resetTransform(img);
+        img.onload = function () {
+            fitImageToViewport(img);
+        };
         img.src = src;
         img.alt = '放大预览';
+        if (img.complete && img.naturalWidth) fitImageToViewport(img);
         const by = typeof opts === 'string' ? opts : opts && opts.by;
         setCredit(overlay, by);
         overlay.classList.add('is-open');
         overlay.setAttribute('aria-hidden', 'false');
         notifyChange();
+        if (state.resizeHandler) window.removeEventListener('resize', state.resizeHandler);
+        state.resizeHandler = function () {
+            if (overlay.classList.contains('is-open')) fitImageToViewport(img);
+        };
+        window.addEventListener('resize', state.resizeHandler);
         if (state.keyHandler) document.removeEventListener('keydown', state.keyHandler);
         state.keyHandler = function (ev) {
             if (ev.key === 'Escape') close();
@@ -285,13 +306,22 @@
         const img = getImg(overlay);
         resetTransform(img);
         if (img) {
+            img.onload = null;
             img.removeAttribute('src');
             img.alt = '';
+            img.style.width = '';
+            img.style.height = '';
+            img.style.maxWidth = '';
+            img.style.maxHeight = '';
         }
         setCredit(overlay, '');
         overlay.classList.remove('is-open');
         overlay.setAttribute('aria-hidden', 'true');
         notifyChange();
+        if (state.resizeHandler) {
+            window.removeEventListener('resize', state.resizeHandler);
+            state.resizeHandler = null;
+        }
         if (state.keyHandler) {
             document.removeEventListener('keydown', state.keyHandler);
             state.keyHandler = null;

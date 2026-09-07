@@ -405,13 +405,33 @@
             white-space: nowrap;
         }
         #secVisitStats .vs-table-clip {
-            height: 16.5rem;
-            max-height: 16.5rem;
+            height: 26rem;
+            max-height: 26rem;
             overflow-y: auto;
             overflow-x: hidden;
             min-height: 0;
             margin: 0 -0.15rem;
             -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(95, 184, 255, 0.35) transparent;
+        }
+        #secVisitStats .vs-table-clip::-webkit-scrollbar {
+            width: 6px;
+        }
+        #secVisitStats .vs-table-clip::-webkit-scrollbar-button {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+        #secVisitStats .vs-table-clip::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #secVisitStats .vs-table-clip::-webkit-scrollbar-thumb {
+            background: rgba(95, 184, 255, 0.32);
+            border-radius: 999px;
+        }
+        #secVisitStats .vs-table-clip::-webkit-scrollbar-thumb:hover {
+            background: rgba(95, 184, 255, 0.5);
         }
         #secVisitStats .vs-table-clip table {
             overflow: visible;

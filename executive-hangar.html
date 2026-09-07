@@ -8,7 +8,7 @@
     <meta name="keywords" content="星际公民,行政机库,Pyro,插卡窗口,倒计时,USS星巢">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap">
-    <link rel="stylesheet" href="executive-hangar.css">
+    <link rel="stylesheet" href="executive-hangar.css?v=20260908h">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -215,6 +215,164 @@
                 </button>
             </div>
         </section>
+
+        <section class="exec-prereq" id="execCardPrereq" aria-labelledby="execCardPrereqTitle">
+            <header class="exec-prereq-head">
+                <h2 class="exec-prereq-title" id="execCardPrereqTitle">1–7 号卡获取前置</h2>
+            </header>
+
+            <div class="exec-prereq-keys" aria-label="红卡与蓝卡">
+                <article class="exec-prereq-key">
+                    <button type="button" class="exec-prereq-thumb-btn" data-exec-zoom="/api/sc/components/image/7de8c10f-ec20-4044-9e01-2229ab9bce99?layer=wiki" aria-label="放大焰火联合主管密钥卡">
+                        <img class="exec-prereq-thumb" src="/api/sc/components/image/7de8c10f-ec20-4044-9e01-2229ab9bce99?layer=wiki&size=thumb" alt="" width="88" height="88">
+                    </button>
+                    <div class="exec-prereq-key-body">
+                        <span class="exec-prereq-key-tag exec-prereq-key-tag--red">红卡</span>
+                        <h3 class="exec-prereq-key-title">焰火联合主管密钥卡</h3>
+                        <p class="exec-prereq-key-desc">焰联-监控站-3-4、焰联-监控站-3-5</p>
+                        <p class="exec-prereq-key-desc">主管人员通道门</p>
+                    </div>
+                </article>
+                <article class="exec-prereq-key">
+                    <button type="button" class="exec-prereq-thumb-btn" data-exec-zoom="/api/sc/components/image/2b0722ef-fa33-4448-b7f8-87ff3bc10346?layer=wiki" aria-label="放大焰火联合安全密钥卡">
+                        <img class="exec-prereq-thumb" src="/api/sc/components/image/2b0722ef-fa33-4448-b7f8-87ff3bc10346?layer=wiki&size=thumb" alt="" width="88" height="88">
+                    </button>
+                    <div class="exec-prereq-key-body">
+                        <span class="exec-prereq-key-tag exec-prereq-key-tag--blue">蓝卡</span>
+                        <h3 class="exec-prereq-key-title">焰火联合安全密钥卡</h3>
+                        <p class="exec-prereq-key-desc">死局空间站、轨道讣闻站</p>
+                        <p class="exec-prereq-key-desc">安全通道门</p>
+                    </div>
+                </article>
+            </div>
+
+            <ol class="exec-prereq-list">
+                <li class="exec-prereq-card">
+                    <button type="button" class="exec-prereq-thumb-btn" data-exec-zoom="/api/sc/components/image/393f44c1-b00e-400b-b1ee-765071735760?layer=wiki" aria-label="放大行政人员访问协议计算板">
+                        <img class="exec-prereq-thumb" src="/api/sc/components/image/393f44c1-b00e-400b-b1ee-765071735760?layer=wiki&size=thumb" alt="" width="88" height="88">
+                    </button>
+                    <div class="exec-prereq-card-body">
+                        <div class="exec-prereq-card-head">
+                            <p class="exec-prereq-num">01</p>
+                            <h3 class="exec-prereq-card-title">行政人员访问协议计算板</h3>
+                        </div>
+                        <p class="exec-prereq-station"><span class="exec-prereq-station-label">空间站</span>死局空间站</p>
+                        <p class="exec-prereq-cond">保险丝 → <span class="exec-item-preview"><button type="button" class="exec-item-preview-name" aria-describedby="e01red">焰火联合主管密钥卡</button><span class="exec-item-preview-pop" id="e01red" role="tooltip"><img src="/api/sc/components/image/7de8c10f-ec20-4044-9e01-2229ab9bce99?layer=wiki&size=thumb" alt="焰火联合主管密钥卡" width="180" height="240"></span></span> → 主管人员通道门</p>
+                    </div>
+                </li>
+                <li class="exec-prereq-card">
+                    <button type="button" class="exec-prereq-thumb-btn" data-exec-zoom="/api/sc/components/image/f0ea72bf-2da6-4d70-8ddf-3e369c29c83c?layer=wiki" aria-label="放大安全加密计算板">
+                        <img class="exec-prereq-thumb" src="/api/sc/components/image/f0ea72bf-2da6-4d70-8ddf-3e369c29c83c?layer=wiki&size=thumb" alt="" width="88" height="88">
+                    </button>
+                    <div class="exec-prereq-card-body">
+                        <div class="exec-prereq-card-head">
+                            <p class="exec-prereq-num">02</p>
+                            <h3 class="exec-prereq-card-title">安全加密计算板</h3>
+                        </div>
+                        <p class="exec-prereq-station"><span class="exec-prereq-station-label">空间站</span>死局空间站 · 机库</p>
+                        <p class="exec-prereq-cond">保险丝 → <span class="exec-item-preview"><button type="button" class="exec-item-preview-name" aria-describedby="e02red">焰火联合主管密钥卡</button><span class="exec-item-preview-pop" id="e02red" role="tooltip"><img src="/api/sc/components/image/7de8c10f-ec20-4044-9e01-2229ab9bce99?layer=wiki&size=thumb" alt="焰火联合主管密钥卡" width="180" height="240"></span></span> → 主管人员通道门 → <span class="exec-item-preview"><button type="button" class="exec-item-preview-name" aria-describedby="e02blue">焰火联合安全密钥卡</button><span class="exec-item-preview-pop" id="e02blue" role="tooltip"><img src="/api/sc/components/image/2b0722ef-fa33-4448-b7f8-87ff3bc10346?layer=wiki&size=thumb" alt="焰火联合安全密钥卡" width="180" height="240"></span></span> → 安全通道门</p>
+                    </div>
+                </li>
+                <li class="exec-prereq-card">
+                    <button type="button" class="exec-prereq-thumb-btn" data-exec-zoom="/api/sc/components/image/ac632bd1-78c9-4cac-b4e1-21fb197a09a6?layer=wiki" aria-label="放大载具管理计算板">
+                        <img class="exec-prereq-thumb" src="/api/sc/components/image/ac632bd1-78c9-4cac-b4e1-21fb197a09a6?layer=wiki&size=thumb" alt="" width="88" height="88">
+                    </button>
+                    <div class="exec-prereq-card-body">
+                        <div class="exec-prereq-card-head">
+                            <p class="exec-prereq-num">03</p>
+                            <h3 class="exec-prereq-card-title">载具管理计算板</h3>
+                        </div>
+                        <p class="exec-prereq-station"><span class="exec-prereq-station-label">空间站</span>死局空间站 · 机库</p>
+                        <p class="exec-prereq-cond">保险丝 → <span class="exec-item-preview"><button type="button" class="exec-item-preview-name" aria-describedby="execRed03">焰火联合主管密钥卡</button><span class="exec-item-preview-pop" id="execRed03" role="tooltip"><img src="/api/sc/components/image/7de8c10f-ec20-4044-9e01-2229ab9bce99?layer=wiki&size=thumb" alt="焰火联合主管密钥卡" width="180" height="240"></span></span> → 主管人员通道门 → <span class="exec-item-preview"><button type="button" class="exec-item-preview-name" aria-describedby="execBlue03">焰火联合安全密钥卡</button><span class="exec-item-preview-pop" id="execBlue03" role="tooltip"><img src="/api/sc/components/image/2b0722ef-fa33-4448-b7f8-87ff3bc10346?layer=wiki&size=thumb" alt="焰火联合安全密钥卡" width="180" height="240"></span></span> → 安全通道门</p>
+                    </div>
+                </li>
+                <li class="exec-prereq-card">
+                    <button type="button" class="exec-prereq-thumb-btn" data-exec-zoom="/api/sc/components/image/49b5e97b-6699-469e-8803-388a7553d7e4?layer=wiki" aria-label="放大能源管理计算板">
+                        <img class="exec-prereq-thumb" src="/api/sc/components/image/49b5e97b-6699-469e-8803-388a7553d7e4?layer=wiki&size=thumb" alt="" width="88" height="88">
+                    </button>
+                    <div class="exec-prereq-card-body">
+                        <div class="exec-prereq-card-head">
+                            <p class="exec-prereq-num">04</p>
+                            <h3 class="exec-prereq-card-title">能源管理计算板</h3>
+                        </div>
+                        <p class="exec-prereq-station"><span class="exec-prereq-station-label">空间站</span>轨道讣闻站</p>
+                        <p class="exec-prereq-cond">保险丝 → <span class="exec-item-preview"><button type="button" class="exec-item-preview-name" aria-describedby="execRed04">焰火联合主管密钥卡</button><span class="exec-item-preview-pop" id="execRed04" role="tooltip"><img src="/api/sc/components/image/7de8c10f-ec20-4044-9e01-2229ab9bce99?layer=wiki&size=thumb" alt="焰火联合主管密钥卡" width="180" height="240"></span></span> → 主管人员通道门 → 保险丝</p>
+                    </div>
+                </li>
+                <li class="exec-prereq-card">
+                    <button type="button" class="exec-prereq-thumb-btn" data-exec-zoom="/api/sc/components/image/7f2786bf-bf9a-4115-a14c-9fc0506be204?layer=wiki" aria-label="放大轨道定位计算板">
+                        <img class="exec-prereq-thumb" src="/api/sc/components/image/7f2786bf-bf9a-4115-a14c-9fc0506be204?layer=wiki&size=thumb" alt="" width="88" height="88">
+                    </button>
+                    <div class="exec-prereq-card-body">
+                        <div class="exec-prereq-card-head">
+                            <p class="exec-prereq-num">05</p>
+                            <h3 class="exec-prereq-card-title">轨道定位计算板</h3>
+                        </div>
+                        <p class="exec-prereq-station"><span class="exec-prereq-station-label">空间站</span>废墟空间站 · 幽灵竞技场</p>
+                        <p class="exec-prereq-cond">保险库定时门 → <span class="exec-item-preview"><button type="button" class="exec-item-preview-name" aria-describedby="execCryptCardTip">墓室 钥匙卡</button><span class="exec-item-preview-pop" id="execCryptCardTip" role="tooltip"><img src="/api/sc/components/image/e3c2c886-3fea-4480-954b-3c1d4a10596f?layer=wiki&size=thumb" alt="墓室 钥匙卡" width="180" height="240"></span></span></p>
+                    </div>
+                </li>
+                <li class="exec-prereq-card">
+                    <button type="button" class="exec-prereq-thumb-btn" data-exec-zoom="/api/sc/components/image/8f1cf8c5-705c-4326-acc5-c3cfd9211c07?layer=wiki" aria-label="放大通讯组件计算板">
+                        <img class="exec-prereq-thumb" src="/api/sc/components/image/8f1cf8c5-705c-4326-acc5-c3cfd9211c07?layer=wiki&size=thumb" alt="" width="88" height="88">
+                    </button>
+                    <div class="exec-prereq-card-body">
+                        <div class="exec-prereq-card-head">
+                            <p class="exec-prereq-num">06</p>
+                            <h3 class="exec-prereq-card-title">通讯组件计算板</h3>
+                        </div>
+                        <p class="exec-prereq-station"><span class="exec-prereq-station-label">空间站</span>废墟空间站 · 幽灵竞技场</p>
+                        <p class="exec-prereq-cond">保险库定时门</p>
+                    </div>
+                </li>
+                <li class="exec-prereq-card">
+                    <button type="button" class="exec-prereq-thumb-btn" data-exec-zoom="/api/sc/components/image/e8bc26f1-fa5e-43cf-bb62-373b64ff756d?layer=wiki" aria-label="放大工程维护计算板">
+                        <img class="exec-prereq-thumb" src="/api/sc/components/image/e8bc26f1-fa5e-43cf-bb62-373b64ff756d?layer=wiki&size=thumb" alt="" width="88" height="88">
+                    </button>
+                    <div class="exec-prereq-card-body">
+                        <div class="exec-prereq-card-head">
+                            <p class="exec-prereq-num">07</p>
+                            <h3 class="exec-prereq-card-title">工程维护计算板</h3>
+                        </div>
+                        <p class="exec-prereq-station"><span class="exec-prereq-station-label">空间站</span>轨道讣闻站 · 机库</p>
+                        <p class="exec-prereq-cond">保险丝 → <span class="exec-item-preview"><button type="button" class="exec-item-preview-name" aria-describedby="execRed07">焰火联合主管密钥卡</button><span class="exec-item-preview-pop" id="execRed07" role="tooltip"><img src="/api/sc/components/image/7de8c10f-ec20-4044-9e01-2229ab9bce99?layer=wiki&size=thumb" alt="焰火联合主管密钥卡" width="180" height="240"></span></span> → 主管人员通道门 → 保险丝 → <span class="exec-item-preview"><button type="button" class="exec-item-preview-name" aria-describedby="execBlue07">焰火联合安全密钥卡</button><span class="exec-item-preview-pop" id="execBlue07" role="tooltip"><img src="/api/sc/components/image/2b0722ef-fa33-4448-b7f8-87ff3bc10346?layer=wiki&size=thumb" alt="焰火联合安全密钥卡" width="180" height="240"></span></span> → 安全通道门</p>
+                    </div>
+                </li>
+            </ol>
+
+            <div class="exec-prereq-keys exec-prereq-keys--gold" aria-label="幽灵竞技场钥匙卡">
+                <article class="exec-prereq-key exec-prereq-key--gold">
+                    <button type="button" class="exec-prereq-thumb-btn" data-exec-zoom="/api/sc/components/image/e3c2c886-3fea-4480-954b-3c1d4a10596f?layer=wiki" aria-label="放大墓室 钥匙卡">
+                        <img class="exec-prereq-thumb" src="/api/sc/components/image/e3c2c886-3fea-4480-954b-3c1d4a10596f?layer=wiki&size=thumb" alt="" width="88" height="88">
+                    </button>
+                    <div class="exec-prereq-key-body">
+                        <span class="exec-prereq-key-tag exec-prereq-key-tag--crypt">墓室</span>
+                        <h3 class="exec-prereq-key-title">墓室 钥匙卡</h3>
+                        <p class="exec-prereq-key-desc">废墟空间站 · 幽灵竞技场</p>
+                    </div>
+                </article>
+                <article class="exec-prereq-key exec-prereq-key--gold">
+                    <button type="button" class="exec-prereq-thumb-btn" data-exec-zoom="/api/sc/components/image/3dba9382-8f30-42f6-882b-0a3067a9d2b0?layer=wiki" aria-label="放大绝招 钥匙卡">
+                        <img class="exec-prereq-thumb" src="/api/sc/components/image/3dba9382-8f30-42f6-882b-0a3067a9d2b0?layer=wiki&size=thumb" alt="" width="88" height="88">
+                    </button>
+                    <div class="exec-prereq-key-body">
+                        <span class="exec-prereq-key-tag exec-prereq-key-tag--last">绝招</span>
+                        <h3 class="exec-prereq-key-title">绝招 钥匙卡</h3>
+                        <p class="exec-prereq-key-desc">废墟空间站 · 幽灵竞技场</p>
+                    </div>
+                </article>
+                <article class="exec-prereq-key exec-prereq-key--gold">
+                    <button type="button" class="exec-prereq-thumb-btn" data-exec-zoom="/api/sc/components/image/a9d70cb4-a444-4221-bf36-119219432d6f?layer=wiki&v=20260908d" aria-label="放大荒地 钥匙卡">
+                        <img class="exec-prereq-thumb" src="/api/sc/components/image/a9d70cb4-a444-4221-bf36-119219432d6f?layer=wiki&size=thumb&v=20260908d" alt="" width="88" height="88">
+                    </button>
+                    <div class="exec-prereq-key-body">
+                        <span class="exec-prereq-key-tag exec-prereq-key-tag--waste">荒地</span>
+                        <h3 class="exec-prereq-key-title">荒地 钥匙卡</h3>
+                        <p class="exec-prereq-key-desc">废墟空间站 · 幽灵竞技场</p>
+                    </div>
+                </article>
+            </div>
+        </section>
     </main>
 
     <script src="auth-config.js"></script>
@@ -222,6 +380,8 @@
     <script src="auth-api.js"></script>
     <script src="nav-dropdown.js"></script>
     <script src="nav-auth-tools.js"></script>
+    <script src="community-image-lightbox.js"></script>
+    <script src="exec-prereq-zoom.js?v=20260908i"></script>
     <script src="executive-hangar-timer.js?v=20260825a"></script>
     <script src="site-footer.js"></script>
 </body>
