@@ -59,7 +59,7 @@
         }
 </style>
     <link rel="canonical" href="https://ussxc.org/">
-    <link rel="stylesheet" href="styles.css?v=20260908c">
+    <link rel="stylesheet" href="styles.css?v=20260909b">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
@@ -243,7 +243,10 @@
                         <a class='nav-mega-link' href='/executive-hangar'><span class="nav-mega-link-title">行政机库</span><span class="nav-mega-link-desc">Pyro 行政机库周期与插卡窗口</span></a>
                         <a class='nav-mega-link' href='/server-ip'><span class="nav-mega-link-title">服务器 IP</span><span class="nav-mega-link-desc">服务器运行状态/IP地址</span></a>
                     </li>
-                    <li><a class='nav-mega-link' href='/rsi-funding'><span class="nav-mega-link-title">资金统计</span><span class="nav-mega-link-desc">RSI 众筹资金与玩家数量</span></a></li>
+                    <li class="nav-mega-tools-row">
+                        <a class='nav-mega-link' href='/rsi-funding'><span class="nav-mega-link-title">资金统计</span><span class="nav-mega-link-desc">RSI 众筹资金与玩家数量</span></a>
+                        <a class='nav-mega-link' href='/wardogs-artillery'><span class="nav-mega-link-title">WARDOGS炮兵计算</span><span class="nav-mega-link-desc">迫击炮 · PzH 2000 / SPH-2</span></a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -378,6 +381,27 @@
         </div>
     </div>
 
+    <section class="home-exec-hangar-section" id="home-exec-hangar-section" aria-label="行政机库">
+        <div class="home-exec-hangar-wrap">
+            <header class="home-exec-hangar-head">
+                <div class="home-exec-hangar-head-text">
+                    <h2 class="home-exec-hangar-title rsi-status-title">行政机库</h2>
+                    <div class="home-exec-hangar-lead-row">
+                        <p class="home-exec-hangar-lead">Pyro 行政机库 · 185 分钟周期 · <a href='/executive-hangar'>打开完整版</a></p>
+                        <span class="rsi-status-updated" id="homeExecHangarUpdated" hidden></span>
+                    </div>
+                </div>
+                <div id="homeExecHangarNotifyMount" class="exec-notify-mount home-exec-hangar-notify"></div>
+            </header>
+
+            <div id="homeExecHangarError" class="home-exec-hangar-error rsi-status-error is-hidden" role="alert"></div>
+
+            <div class="home-exec-hangar-grid rsi-status-grid" id="homeExecHangarGrid" aria-live="polite">
+                <div class="rsi-status-loading" role="status">正在同步行政机库…</div>
+            </div>
+        </div>
+    </section>
+
     <section class="rsi-status-section" id="rsi-status-section" aria-label="RSI 服务器状态">
         <div class="rsi-status-wrap">
             <header class="rsi-status-head">
@@ -409,27 +433,6 @@
                 <div class="sc-festival-loading" role="status">正在加载节日倒计时…</div>
             </div>
             <p class="sc-festival-disclaimer" id="scFestivalDisclaimer" hidden></p>
-        </div>
-    </section>
-
-    <section class="home-exec-hangar-section" id="home-exec-hangar-section" aria-label="行政机库">
-        <div class="home-exec-hangar-wrap">
-            <header class="home-exec-hangar-head">
-                <div class="home-exec-hangar-head-text">
-                    <h2 class="home-exec-hangar-title rsi-status-title">行政机库</h2>
-                    <div class="home-exec-hangar-lead-row">
-                        <p class="home-exec-hangar-lead">Pyro 行政机库 · 185 分钟周期 · <a href='/executive-hangar'>打开完整版</a></p>
-                        <span class="rsi-status-updated" id="homeExecHangarUpdated" hidden></span>
-                    </div>
-                </div>
-                <div id="homeExecHangarNotifyMount" class="exec-notify-mount home-exec-hangar-notify"></div>
-            </header>
-
-            <div id="homeExecHangarError" class="home-exec-hangar-error rsi-status-error is-hidden" role="alert"></div>
-
-            <div class="home-exec-hangar-grid rsi-status-grid" id="homeExecHangarGrid" aria-live="polite">
-                <div class="rsi-status-loading" role="status">正在同步行政机库…</div>
-            </div>
         </div>
     </section>
 

@@ -273,7 +273,6 @@
         var codeInput = gateEl.querySelector('#adminStepUpCode');
         var sendStatus = gateEl.querySelector('#adminStepUpSendStatus');
         var errEl = gateEl.querySelector('#adminStepUpErr');
-        var validHint = gateEl.querySelector('#adminStepUpValidHint');
 
         function showErr(msg) {
             if (!errEl) return;
@@ -325,9 +324,6 @@
                 verifyBtn.disabled = true;
                 try {
                     var vres = await verify(authToken, code, durationDays);
-                    if (validHint && vres && vres.expiresAt) {
-                        validHint.textContent = formatValidHint(vres.expiresAt, vres.durationDays);
-                    }
                     gateEl.hidden = true;
                     document.body.classList.remove('admin-step-up-active');
                     if (typeof opts.onVerified === 'function') opts.onVerified(vres);
@@ -356,9 +352,6 @@
         try {
             var status = await fetchStatus(authToken);
             if (status && status.valid) {
-                if (opts.validHintEl && status.expiresAt) {
-                    opts.validHintEl.textContent = formatValidHint(status.expiresAt, status.durationDays);
-                }
                 return true;
             }
         } catch (e) {

@@ -294,18 +294,20 @@ body.home-page-body .nav-mega-panel {
  grid-template-columns: minmax(0, max-content);
 }
 
+#navMegaTools .nav-mega-list {
+ display: grid;
+ grid-template-columns: repeat(2, minmax(12.5rem, max-content));
+ column-gap: 5rem;
+ row-gap: 1.15rem;
+ align-items: start;
+}
+
 .nav-mega-tools-row {
- display: flex;
- flex-direction: row;
- flex-wrap: wrap;
- align-items: flex-start;
- gap: 1.15rem 5rem;
+ display: contents;
  margin: 0;
 }
 
 .nav-mega-tools-row > .nav-mega-link {
- flex: 0 0 auto;
- width: auto;
  max-width: 20rem;
 }
 
@@ -314,9 +316,8 @@ body.home-page-body .nav-mega-panel {
  #navMegaEquipment .nav-mega-list {
   grid-template-columns: 1fr;
  }
- .nav-mega-tools-row {
-  flex-direction: column;
-  gap: 1.15rem;
+ #navMegaTools .nav-mega-list {
+  grid-template-columns: 1fr;
  }
 }
 
@@ -3006,7 +3007,8 @@ body.home-page-body .home-exec-hangar-section {
 .rsi-status-section {
  position: relative;
  z-index: 3;
- padding: var(--home-section-block-gap) var(--home-content-pad-x) 0;
+ margin-top: var(--home-section-block-gap);
+ padding: 0 var(--home-content-pad-x);
  background: transparent;
  overflow: visible;
 }
@@ -3827,14 +3829,9 @@ body.home-page-body .home-exec-hangar-section {
 .home-exec-hangar-section {
  position: relative;
  z-index: 2;
- margin-top: var(--home-section-block-gap);
- padding: 0 var(--home-content-pad-x) var(--home-section-block-gap);
- background: transparent;
-}
-
-.home-exec-hangar-section + .oopz-bridge-section,
-.home-exec-hangar-section + .community-section {
  margin-top: 0;
+ padding: var(--home-section-block-gap) var(--home-content-pad-x) 0;
+ background: transparent;
 }
 
 .home-exec-hangar-wrap {
