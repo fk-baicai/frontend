@@ -525,6 +525,62 @@
             return data;
         },
 
+        async setOopzArtilleryBroadcast(token, enabled) {
+            var r = await fetch(joinUrl('/api/me/oopz/artillery-broadcast'), {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + token,
+                },
+                body: JSON.stringify({ enabled: !!enabled }),
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'OOPZ_006');
+            return data;
+        },
+
+        async setOopzArtillerySpeakPrefs(token, body) {
+            var r = await fetch(joinUrl('/api/me/oopz/artillery-speak-prefs'), {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + token,
+                },
+                body: JSON.stringify(body || {}),
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'OOPZ_006');
+            return data;
+        },
+
+        async setOopzArtillerySolution(token, body) {
+            var r = await fetch(joinUrl('/api/me/oopz/artillery-solution'), {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + token,
+                },
+                body: JSON.stringify(body || {}),
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'OOPZ_008');
+            return data;
+        },
+
+        async fireOopzArtillery(token, body) {
+            var r = await fetch(joinUrl('/api/me/oopz/artillery-fire'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + token,
+                },
+                body: JSON.stringify(body || {}),
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'OOPZ_008');
+            return data;
+        },
+
         async sendPasswordResetCode(email) {
             var r = await fetch(joinUrl('/api/password-reset/send-code'), {
                 method: 'POST',

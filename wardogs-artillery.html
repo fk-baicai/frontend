@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WARDOGS炮兵计算 · USSXC</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="wardogs-artillery.css?v=23">
+    <link rel="stylesheet" href="wardogs-artillery.css?v=41">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -119,7 +119,8 @@
             <p class="wd-arty-cursor" id="wdCursor">X — / Y —</p>
         </section>
 
-        <aside class="wd-arty-toolbox" aria-label="工具箱">
+        <aside class="wd-arty-sidebar" aria-label="工具箱">
+            <div class="wd-arty-toolbox">
             <h1 class="wd-arty-toolbox-title">WARDOGS炮兵计算</h1>
 
             <section class="wd-arty-block">
@@ -143,7 +144,7 @@
                         </span>
                         <span>
                             <strong>L81 迫击炮</strong>
-                            <em>Buildable 81mm</em>
+                            <em>81mm</em>
                         </span>
                     </button>
                     <button type="button" class="wd-arty-wcard" data-wd-weapon="spg">
@@ -154,7 +155,7 @@
                         </span>
                         <span>
                             <strong>SPH-2 自行火炮</strong>
-                            <em>Self propelled 155mm · PzH 2000</em>
+                            <em>155mm</em>
                         </span>
                     </button>
                 </div>
@@ -211,6 +212,44 @@
                     <span>距离 <strong id="wdDist">—</strong></span>
                     <span>ΔX/ΔY <strong id="wdDelta">—</strong></span>
                 </p>
+                <div class="wd-arty-broadcast" id="wdBroadcastBox" hidden>
+                    <div class="wd-arty-broadcast-head">
+                        <label class="wd-arty-broadcast-toggle">
+                            <input type="checkbox" id="wdBroadcastToggle" />
+                            <span>射击播报</span>
+                        </label>
+                        <button type="button" id="wdBroadcastSettingsBtn" class="wd-arty-broadcast-gear" title="播报设置" aria-label="播报设置" aria-expanded="false" aria-controls="wdBroadcastSettings">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.94l-.36-2.54A.48.48 0 0 0 14 2h-4a.48.48 0 0 0-.48.41l-.36 2.54c-.59.22-1.14.53-1.63.94l-2.39-.96a.49.49 0 0 0-.59.22L2.63 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.75 14.52a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.3.59.22l2.39-.96c.49.4 1.04.72 1.63.94l.36 2.54c.05.24.24.41.48.41h4c.24 0 .44-.17.48-.41l.36-2.54c.59-.22 1.14-.53 1.63-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
+                        </button>
+                        <button type="button" id="wdBroadcastNow" class="wd-arty-broadcast-now" disabled>立即播报</button>
+                    </div>
+                    <div class="wd-arty-broadcast-settings" id="wdBroadcastSettings" hidden>
+                        <label class="wd-arty-broadcast-field">
+                            <span>称呼</span>
+                            <input type="text" id="wdBroadcastAddress" maxlength="24" placeholder="可选，如：炮长" autocomplete="off" />
+                        </label>
+                        <label class="wd-arty-broadcast-field">
+                            <span>音色</span>
+                            <select id="wdBroadcastVoice"></select>
+                        </label>
+                        <label class="wd-arty-broadcast-field">
+                            <span>语速</span>
+                            <select id="wdBroadcastRate"></select>
+                        </label>
+                        <label class="wd-arty-broadcast-field">
+                            <span>音量</span>
+                            <select id="wdBroadcastVolume"></select>
+                        </label>
+                        <div class="wd-arty-broadcast-settings-actions">
+                            <button type="button" id="wdBroadcastSettingsSave" class="wd-arty-broadcast-now">保存</button>
+                            <span class="wd-arty-broadcast-settings-msg" id="wdBroadcastSettingsMsg"></span>
+                        </div>
+                    </div>
+                    <div class="wd-arty-broadcast-tools" id="wdBroadcastTools" hidden>
+                        <button type="button" id="wdBroadcastHelperExe" class="wd-arty-broadcast-hotkey wd-arty-broadcast-hotkey--wide">下载 F2 助手</button>
+                    </div>
+                    <p class="wd-arty-broadcast-hint" id="wdBroadcastHint">登录并开启 OOPZ 语音提示后可用。</p>
+                </div>
             </section>
 
             <section class="wd-arty-block wd-arty-missions-block">
@@ -225,7 +264,8 @@
                 <button type="button" id="wdAddMission" class="wd-arty-add-mission">添加诸元</button>
             </section>
 
-            <p class="wd-arty-license"><a href="https://github.com/apollyon-sys/wardogs-calculator" rel="noopener noreferrer" target="_blank">https://github.com/apollyon-sys/wardogs-calculator</a></p>
+            <p class="wd-arty-license">https://github.com/apollyon-sys/wardogs-calculator</p>
+            </div>
         </aside>
     </main>
 
@@ -234,7 +274,7 @@
     <script src="auth-api.js"></script>
     <script src="nav-dropdown.js"></script>
     <script src="nav-auth-tools.js"></script>
-    <script src="wardogs-artillery.js?v=30"></script>
+    <script src="wardogs-artillery.js?v=49"></script>
     <script src="site-footer.js"></script>
 </body>
 </html>
