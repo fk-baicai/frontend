@@ -1,3 +1,5 @@
+# Keep README + downloadable helper in deploy
 *
 !.gitignore
 !README.md
+!uss-voice-helper.exe

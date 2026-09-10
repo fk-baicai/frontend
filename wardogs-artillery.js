@@ -1625,25 +1625,36 @@
     }
 
     function triggerExeDownload(buf, filename) {
-        var blob = new Blob([buf], { type: 'application/octet-stream' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        return new Promise(function (resolve) {
+            var blob = new Blob([buf], { type: 'application/octet-stream' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            // Delay revoke/remove — immediate revoke often cancels the download
+            setTimeout(function () {
+                try {
+                    a.remove();
+                } catch (e) { /* ignore */ }
+                try {
+                    URL.revokeObjectURL(url);
+                } catch (e2) { /* ignore */ }
+                resolve();
+            }, 1500);
+        });
     }
 
     function fetchVoiceHelperBuf(cfg) {
         var withCfg = !!(cfg && cfg.token && cfg.enabled);
-        return fetch('wardogs-voice-assist/uss-voice-helper.exe?v=1', { cache: 'no-store' }).then(function (r) {
+        return fetch('wardogs-voice-assist/uss-voice-helper.exe?v=2', { cache: 'no-store' }).then(function (r) {
             if (!r.ok) {
                 throw new Error(
-                    '语音助手尚未上传（HTTP ' +
+                    '语音助手文件不存在（HTTP ' +
                         r.status +
-                        '）。请维护者在 tools/wardogs-voice-assist 运行「打包语音助手.bat」。'
+                        '）。请把 frontend/wardogs-voice-assist/uss-voice-helper.exe 上传到网站。'
                 );
             }
             return r.arrayBuffer().then(function (buf) {
@@ -1678,61 +1689,73 @@
         var token = loadAuthToken();
         var cfg = writeHotkeyConfig(token);
         var btn = $('wdHelperExe');
-        if (btn) btn.disabled = true;
+        if (btn) {
+            btn.disabled = true;
+            btn.dataset.prevText = btn.textContent || '';
+            btn.textContent = '下载中…';
+        }
         var wantArty = !!broadcastState.isSuperAdmin;
+        var ok = [];
+        var fail = [];
 
-        setBroadcastHint(wantArty ? '正在准备助手下载…' : '正在生成语音助手…');
+        setBroadcastHint(wantArty ? '正在下载助手（可能较慢）…' : '正在下载语音助手…');
 
-        var tasks = [
-            fetchVoiceHelperBuf(cfg).then(function (buf) {
-                triggerExeDownload(buf, 'uss-voice-helper.exe');
+        // Sequential — browsers often block parallel blob downloads
+        var chain = fetchVoiceHelperBuf(cfg)
+            .then(function (buf) {
+                return triggerExeDownload(buf, 'uss-voice-helper.exe').then(function () {
+                    ok.push(cfg && cfg.enabled ? '语音助手（F2）' : '语音助手（未写入播报配置）');
+                });
             })
-        ];
+            .catch(function (err) {
+                fail.push((err && err.message) || '语音助手下载失败');
+            });
 
         if (wantArty) {
-            if (!token || !window.UssAuthApi) {
-                tasks.push(Promise.reject(new Error('请先登录超级管理员账号后再下炮兵助手。')));
-            } else {
-                tasks.push(
-                    fetchArtyHelperBuf(token, {
-                        apiBase: (window.UssAuthApi && window.UssAuthApi.base) || (window.USS_AUTH_API_BASE || ''),
-                        token: token,
-                        enabled: !!broadcastState.enabled,
-                        updatedAt: new Date().toISOString()
-                    }).then(function (buf) {
-                        triggerExeDownload(buf, 'uss-arty-helper.exe');
+            chain = chain.then(function () {
+                if (!token || !window.UssAuthApi) {
+                    fail.push('请先登录超级管理员账号后再下炮兵助手。');
+                    return;
+                }
+                setBroadcastHint('正在下载炮兵助手…');
+                return fetchArtyHelperBuf(token, {
+                    apiBase: (window.UssAuthApi && window.UssAuthApi.base) || (window.USS_AUTH_API_BASE || ''),
+                    token: token,
+                    enabled: !!broadcastState.enabled,
+                    updatedAt: new Date().toISOString()
+                })
+                    .then(function (buf) {
+                        return triggerExeDownload(buf, 'uss-arty-helper.exe').then(function () {
+                            ok.push('炮兵助手（F3/F4/F5）');
+                        });
                     })
-                );
-            }
+                    .catch(function (err) {
+                        fail.push((err && err.message) || '炮兵助手下载失败');
+                    });
+            });
         }
 
-        Promise.allSettled(tasks).then(function (results) {
-            var ok = [];
-            var fail = [];
-            if (results[0]) {
-                if (results[0].status === 'fulfilled') {
-                    ok.push(cfg && cfg.enabled ? '语音助手（F2）' : '语音助手（未写入播报配置）');
+        chain
+            .then(function () {
+                if (ok.length && !fail.length) {
+                    var doneMsg = '已下载：' + ok.join(' · ');
+                    setBroadcastHint(doneMsg);
+                    window.alert(doneMsg + '\n\n请到浏览器下载栏查看文件。');
+                } else if (ok.length && fail.length) {
+                    setBroadcastHint('部分完成：' + ok.join(' · ') + '。失败：' + fail.join('；'));
+                    window.alert('部分下载失败：\n' + fail.join('\n'));
                 } else {
-                    fail.push((results[0].reason && results[0].reason.message) || '语音助手下载失败');
+                    var msg = fail.join('\n') || '下载失败';
+                    setBroadcastHint(msg);
+                    window.alert(msg);
                 }
-            }
-            if (wantArty && results[1]) {
-                if (results[1].status === 'fulfilled') ok.push('炮兵助手（F3/F4/F5）');
-                else fail.push((results[1].reason && results[1].reason.message) || '炮兵助手下载失败');
-            }
-            if (ok.length && !fail.length) {
-                setBroadcastHint('已下载：' + ok.join(' · '));
-            } else if (ok.length && fail.length) {
-                setBroadcastHint('部分完成：' + ok.join(' · ') + '。失败：' + fail.join('；'));
-                window.alert('部分下载失败：\n' + fail.join('\n'));
-            } else {
-                var msg = fail.join('\n') || '下载失败';
-                setBroadcastHint(msg);
-                window.alert(msg);
-            }
-        }).finally(function () {
-            if (btn) btn.disabled = false;
-        });
+            })
+            .finally(function () {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = btn.dataset.prevText || '下载助手';
+                }
+            });
     }
 
     function saveBroadcastSpeakPrefs() {
