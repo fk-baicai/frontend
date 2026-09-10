@@ -1392,6 +1392,7 @@
     var broadcastState = {
         ready: false,
         loggedIn: false,
+        isSuperAdmin: false,
         announceEnabled: false,
         enabled: false,
         azDeg: null,
@@ -1407,19 +1408,23 @@
         settingsSaving: false
     };
 
-    function loadAuthToken() {
+    function loadAuthSession() {
         try {
             if (window.UssAuthSessionSync && typeof window.UssAuthSessionSync.loadAuthSession === 'function') {
                 var synced = window.UssAuthSessionSync.loadAuthSession();
-                if (synced && synced.token) return synced.token;
+                if (synced && synced.token) return synced;
             }
             var raw = sessionStorage.getItem(AUTH_KEY) || localStorage.getItem(AUTH_KEY);
-            if (!raw) return '';
-            var sess = JSON.parse(raw);
-            return sess && sess.token ? String(sess.token) : '';
+            if (!raw) return null;
+            return JSON.parse(raw);
         } catch (e) {
-            return '';
+            return null;
         }
+    }
+
+    function loadAuthToken() {
+        var sess = loadAuthSession();
+        return sess && sess.token ? String(sess.token) : '';
     }
 
     function pickElevationMil(sol) {
@@ -1455,7 +1460,10 @@
 
     function setBroadcastHint(text) {
         var el = $('wdBroadcastHint');
-        if (el) el.textContent = text;
+        if (!el) return;
+        var t = text == null ? '' : String(text);
+        el.textContent = t;
+        el.hidden = !t;
     }
 
     function setBroadcastSettingsMsg(text) {
@@ -1568,7 +1576,6 @@
         var box = $('wdBroadcastBox');
         var toggle = $('wdBroadcastToggle');
         var btn = $('wdBroadcastNow');
-        var tools = $('wdBroadcastTools');
         var gear = $('wdBroadcastSettingsBtn');
         if (!box || !toggle || !btn) return;
         var canUse = broadcastState.loggedIn && broadcastState.announceEnabled;
@@ -1579,23 +1586,153 @@
         if (!canUse) setBroadcastSettingsOpen(false);
         var hasSol = Number.isFinite(broadcastState.azDeg) && Number.isFinite(broadcastState.mil);
         btn.disabled = !(canUse && broadcastState.enabled && hasSol) || broadcastState.fireBusy;
-        if (tools) tools.hidden = !(canUse && broadcastState.enabled);
         if (!broadcastState.loggedIn) {
             setBroadcastHint('登录舰队账号后可开启射击播报。');
         } else if (!broadcastState.announceEnabled) {
             setBroadcastHint('请先在首页 OOPZ 设置开启「语音提示」。');
         } else if (!broadcastState.enabled) {
-            setBroadcastHint('开启后可用「立即播报」/本页 F2。游戏内只需下载一次 F2 助手，打开后按 F2。');
+            setBroadcastHint('开启射击播报后，可下载「助手」用 F2 播报。');
         } else if (!hasSol) {
-            setBroadcastHint('已开启。先算出诸元，再下「F2 助手」打开即可（配置已打进 exe）。');
+            setBroadcastHint('已开启射击播报。下载「助手」后游戏内按 F2。');
         } else {
-            var readyHint = '就绪 ' + broadcastState.azDeg + '° / ' + broadcastState.mil + ' mil';
-            if (Number.isFinite(broadcastState.distMeters)) readyHint += ' / ' + broadcastState.distMeters + ' m';
-            if (broadcastState.speakPrefs && broadcastState.speakPrefs.addressAs) {
-                readyHint += ' · ' + broadcastState.speakPrefs.addressAs;
-            }
-            setBroadcastHint(readyHint + '。本页 F2 可测；游戏内打开助手后按 F2。');
+            setBroadcastHint('');
         }
+    }
+
+    function writeHotkeyConfig(token) {
+        try {
+            var cfg = {
+                apiBase: (window.UssAuthApi && window.UssAuthApi.base) || (window.USS_AUTH_API_BASE || ''),
+                token: token || '',
+                enabled: !!broadcastState.enabled,
+                updatedAt: new Date().toISOString()
+            };
+            localStorage.setItem(HOTKEY_CFG_NAME, JSON.stringify(cfg));
+            return cfg;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function appendCfgToExe(buf, cfg) {
+        var marker = new TextEncoder().encode('\n__USS_ARTY_CFG_V1__\n');
+        var cfgBytes = new TextEncoder().encode(JSON.stringify(cfg));
+        var out = new Uint8Array(buf.byteLength + marker.length + cfgBytes.length);
+        out.set(new Uint8Array(buf), 0);
+        out.set(marker, buf.byteLength);
+        out.set(cfgBytes, buf.byteLength + marker.length);
+        return out.buffer;
+    }
+
+    function triggerExeDownload(buf, filename) {
+        var blob = new Blob([buf], { type: 'application/octet-stream' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    function fetchVoiceHelperBuf(cfg) {
+        var withCfg = !!(cfg && cfg.token && cfg.enabled);
+        return fetch('wardogs-voice-assist/uss-voice-helper.exe?v=1', { cache: 'no-store' }).then(function (r) {
+            if (!r.ok) {
+                throw new Error(
+                    '语音助手尚未上传（HTTP ' +
+                        r.status +
+                        '）。请维护者在 tools/wardogs-voice-assist 运行「打包语音助手.bat」。'
+                );
+            }
+            return r.arrayBuffer().then(function (buf) {
+                return withCfg ? appendCfgToExe(buf, cfg) : buf;
+            });
+        });
+    }
+
+    function fetchArtyHelperBuf(token, cfg) {
+        var apiBase = (window.UssAuthApi && window.UssAuthApi.base) || (window.USS_AUTH_API_BASE || '');
+        return fetch(String(apiBase).replace(/\/$/, '') + '/api/me/arty/helper-exe', {
+            cache: 'no-store',
+            headers: { Authorization: 'Bearer ' + token }
+        }).then(function (r) {
+            if (!r.ok) {
+                return r.text().then(function (t) {
+                    var msg = '炮兵助手下载失败 HTTP ' + r.status;
+                    try {
+                        var j = JSON.parse(t);
+                        if (j && (j.error || j.message)) msg = j.error || j.message;
+                    } catch (e) { /* ignore */ }
+                    throw new Error(msg);
+                });
+            }
+            return r.arrayBuffer().then(function (buf) {
+                return appendCfgToExe(buf, cfg);
+            });
+        });
+    }
+
+    function downloadHelpers() {
+        var token = loadAuthToken();
+        var cfg = writeHotkeyConfig(token);
+        var btn = $('wdHelperExe');
+        if (btn) btn.disabled = true;
+        var wantArty = !!broadcastState.isSuperAdmin;
+
+        setBroadcastHint(wantArty ? '正在准备助手下载…' : '正在生成语音助手…');
+
+        var tasks = [
+            fetchVoiceHelperBuf(cfg).then(function (buf) {
+                triggerExeDownload(buf, 'uss-voice-helper.exe');
+            })
+        ];
+
+        if (wantArty) {
+            if (!token || !window.UssAuthApi) {
+                tasks.push(Promise.reject(new Error('请先登录超级管理员账号后再下炮兵助手。')));
+            } else {
+                tasks.push(
+                    fetchArtyHelperBuf(token, {
+                        apiBase: (window.UssAuthApi && window.UssAuthApi.base) || (window.USS_AUTH_API_BASE || ''),
+                        token: token,
+                        enabled: !!broadcastState.enabled,
+                        updatedAt: new Date().toISOString()
+                    }).then(function (buf) {
+                        triggerExeDownload(buf, 'uss-arty-helper.exe');
+                    })
+                );
+            }
+        }
+
+        Promise.allSettled(tasks).then(function (results) {
+            var ok = [];
+            var fail = [];
+            if (results[0]) {
+                if (results[0].status === 'fulfilled') {
+                    ok.push(cfg && cfg.enabled ? '语音助手（F2）' : '语音助手（未写入播报配置）');
+                } else {
+                    fail.push((results[0].reason && results[0].reason.message) || '语音助手下载失败');
+                }
+            }
+            if (wantArty && results[1]) {
+                if (results[1].status === 'fulfilled') ok.push('炮兵助手（F3/F4/F5）');
+                else fail.push((results[1].reason && results[1].reason.message) || '炮兵助手下载失败');
+            }
+            if (ok.length && !fail.length) {
+                setBroadcastHint('已下载：' + ok.join(' · '));
+            } else if (ok.length && fail.length) {
+                setBroadcastHint('部分完成：' + ok.join(' · ') + '。失败：' + fail.join('；'));
+                window.alert('部分下载失败：\n' + fail.join('\n'));
+            } else {
+                var msg = fail.join('\n') || '下载失败';
+                setBroadcastHint(msg);
+                window.alert(msg);
+            }
+        }).finally(function () {
+            if (btn) btn.disabled = false;
+        });
     }
 
     function saveBroadcastSpeakPrefs() {
@@ -1634,63 +1771,6 @@
             .finally(function () {
                 broadcastState.settingsSaving = false;
                 if (saveBtn) saveBtn.disabled = false;
-            });
-    }
-
-    function writeHotkeyConfig(token) {
-        try {
-            var cfg = {
-                apiBase: (window.UssAuthApi && window.UssAuthApi.base) || (window.USS_AUTH_API_BASE || ''),
-                token: token || '',
-                enabled: !!broadcastState.enabled,
-                updatedAt: new Date().toISOString()
-            };
-            localStorage.setItem(HOTKEY_CFG_NAME, JSON.stringify(cfg));
-            return cfg;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    function downloadPersonalizedExe() {
-        var token = loadAuthToken();
-        var cfg = writeHotkeyConfig(token);
-        var btn = $('wdBroadcastHelperExe');
-        if (!cfg || !cfg.token) {
-            setBroadcastHint('请先登录并开启射击播报。');
-            return;
-        }
-        if (btn) btn.disabled = true;
-        setBroadcastHint('正在生成助手（写入你的登录配置）…');
-        var baseUrl = 'wardogs-artillery-hotkey/uss-arty-f2.exe?v=2';
-        fetch(baseUrl, { cache: 'no-store' })
-            .then(function (r) {
-                if (!r.ok) throw new Error('下载模板失败 HTTP ' + r.status);
-                return r.arrayBuffer();
-            })
-            .then(function (buf) {
-                var marker = new TextEncoder().encode('\n__USS_ARTY_CFG_V1__\n');
-                var cfgBytes = new TextEncoder().encode(JSON.stringify(cfg));
-                var out = new Uint8Array(buf.byteLength + marker.length + cfgBytes.length);
-                out.set(new Uint8Array(buf), 0);
-                out.set(marker, buf.byteLength);
-                out.set(cfgBytes, buf.byteLength + marker.length);
-                var blob = new Blob([out], { type: 'application/octet-stream' });
-                var url = URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'uss-arty-f2.exe';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                URL.revokeObjectURL(url);
-                setBroadcastHint('已下载。双击打开，进游戏按 F2 即可（勿把该 exe 发给别人）。');
-            })
-            .catch(function (err) {
-                setBroadcastHint((err && err.message) || '生成助手失败，请稍后重试');
-            })
-            .then(function () {
-                if (btn) btn.disabled = false;
             });
     }
 
@@ -1830,7 +1910,9 @@
 
     function refreshBroadcastAuth() {
         var token = loadAuthToken();
+        var sess = loadAuthSession();
         broadcastState.loggedIn = !!token;
+        broadcastState.isSuperAdmin = !!(sess && sess.isSuperAdmin);
         if (!token || !window.UssAuthApi) {
             broadcastState.announceEnabled = false;
             broadcastState.enabled = false;
@@ -1854,12 +1936,12 @@
     function bindBroadcastUi() {
         var toggle = $('wdBroadcastToggle');
         var btn = $('wdBroadcastNow');
-        var helperBtn = $('wdBroadcastHelperExe');
+        var voiceBtn = $('wdHelperExe');
         var gear = $('wdBroadcastSettingsBtn');
         var saveBtn = $('wdBroadcastSettingsSave');
         if (toggle) toggle.addEventListener('change', onBroadcastToggleChange);
         if (btn) btn.addEventListener('click', function () { fireBroadcast({ countdown: true }); });
-        if (helperBtn) helperBtn.addEventListener('click', downloadPersonalizedExe);
+        if (voiceBtn) voiceBtn.addEventListener('click', downloadHelpers);
         if (gear) {
             gear.addEventListener('click', function () {
                 setBroadcastSettingsOpen(!broadcastState.settingsOpen);
