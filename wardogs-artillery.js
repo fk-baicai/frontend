@@ -1833,7 +1833,7 @@
             .then(function (buf) {
                 setHelperDownloadUi(btn, '保存炮兵助手…');
                 return triggerExeDownload(buf, 'uss-arty-helper.exe').then(function () {
-                    setBroadcastHint('已下载炮兵助手（F3/F4/F5）');
+                    setBroadcastHint('已下载炮兵助手（F1/F3/F4/F5）');
                 });
             })
             .catch(function (err) {
