@@ -3673,6 +3673,12 @@ body.home-page-body .home-exec-hangar-section {
  background: transparent;
 }
 
+/* 游客 / 非舰队成员：下方 OOPZ·社区隐藏，节日倒计时与底部标签留白 */
+html:not(.auth-session-cached) .sc-festival-section,
+html.auth-session-cached:not(.auth-fleet-member) .sc-festival-section {
+ margin-bottom: var(--home-section-block-gap);
+}
+
 .sc-festival-wrap {
  max-width: var(--home-content-max);
  width: 100%;
