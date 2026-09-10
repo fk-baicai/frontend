@@ -123,6 +123,30 @@
                 { label: 'LONESTAR', color: '#5fa8d3', points: [[81.52, 34.03], [86.33, 34.03], [86.33, 29.21], [81.53, 29.22]] },
                 { label: 'VALKYRA', color: '#d86666', points: [[133.98, 68.51], [138.58, 69.92], [139.99, 65.32], [135.39, 63.91]] }
             ]
+        },
+        zestafona: {
+            cdn: 'https://wardogs.t0ki.cn/maps/tiles/zestafona',
+            tileMin: { x: 0, y: 0 },
+            tileMax: { x: 163.84, y: 163.84 },
+            markers: [
+                { icon: 'tower', x: 68.60, y: 104.15, label: 'T1' },
+                { icon: 'tower', x: 72.89, y: 105.07, label: 'T2' },
+                { icon: 'tower', x: 70.17, y: 100.17, label: 'T3' },
+                { icon: 'valkyra', x: 39.44, y: 124.94, label: 'Valkyra' },
+                { icon: 'garage_vendor', x: 39.40, y: 124.80, label: '车库' },
+                { icon: 'spawn_board', x: 38.90, y: 124.86, label: '出生板' },
+                { icon: 'manticore', x: 104.66, y: 115.08, label: 'Manticore' },
+                { icon: 'garage_vendor', x: 104.66, y: 114.54, label: '车库' },
+                { icon: 'spawn_board', x: 105.05, y: 115.29, label: '出生板' },
+                { icon: 'lonestar', x: 68.01, y: 66.60, label: 'Lonestar' },
+                { icon: 'garage_vendor', x: 67.83, y: 66.50, label: '车库' },
+                { icon: 'spawn_board', x: 68.24, y: 66.32, label: '出生板' }
+            ],
+            zones: [
+                { label: 'MANTICORE', color: '#82c596', points: [[103.30, 111.71], [101.91, 116.31], [106.51, 117.69], [107.89, 113.10]] },
+                { label: 'VALKYRA', color: '#d86666', points: [[40.27, 121.88], [35.70, 123.36], [37.18, 127.93], [41.75, 126.45]] },
+                { label: 'LONESTAR', color: '#5fa8d3', points: [[65.13, 64.82], [66.31, 69.47], [70.96, 68.27], [69.78, 63.62]] }
+            ]
         }
     };
 
@@ -130,6 +154,32 @@
     var ICONS = {};
     var MIN_SCALE = 1.2;
     var MAX_SCALE = 400;
+    var _drawRaf = 0;
+    var _tileInflight = 0;
+    var TILE_MAX_INFLIGHT = 8;
+    var _tileQueue = [];
+
+    function scheduleDraw() {
+        if (_drawRaf) return;
+        _drawRaf = requestAnimationFrame(function () {
+            _drawRaf = 0;
+            draw();
+        });
+    }
+
+    function pumpTileQueue() {
+        while (_tileInflight < TILE_MAX_INFLIGHT && _tileQueue.length) {
+            var job = _tileQueue.shift();
+            if (!job || !job.img || job.img.src) continue;
+            _tileInflight += 1;
+            job.img.src = job.url;
+        }
+    }
+
+    function enqueueTile(img, url) {
+        _tileQueue.push({ img: img, url: url });
+        pumpTileQueue();
+    }
 
     var state = {
         weapon: 'mortar',
@@ -660,17 +710,26 @@
         if (TILE_CACHE[key]) return TILE_CACHE[key];
         var urls = tileCandidates(mapId, z, tx, ty);
         var img = new Image();
-        var entry = { img: img, try: 0, urls: urls };
+        var entry = { img: img, try: 0, urls: urls, done: false };
         img.decoding = 'async';
         img.onload = function () {
-            draw();
+            entry.done = true;
+            _tileInflight = Math.max(0, _tileInflight - 1);
+            pumpTileQueue();
+            scheduleDraw();
         };
         img.onerror = function () {
             entry.try += 1;
-            if (entry.try < urls.length) img.src = urls[entry.try];
+            _tileInflight = Math.max(0, _tileInflight - 1);
+            if (entry.try < urls.length) {
+                enqueueTile(img, urls[entry.try]);
+            } else {
+                entry.done = true;
+                pumpTileQueue();
+            }
         };
-        img.src = urls[0];
         TILE_CACHE[key] = img;
+        enqueueTile(img, urls[0]);
         return img;
     }
 
@@ -680,7 +739,7 @@
             img.decoding = 'async';
             img.onload = function () {
                 ICONS[name] = img;
-                draw();
+                scheduleDraw();
             };
             img.src = MARKER_SRC + name + '.webp';
         });
@@ -935,8 +994,8 @@
         ctx.fillRect(0, 0, w, h);
 
         var map = currentMap();
-        // 圈外底图稍暗，突出射程内
-        ctx.filter = 'brightness(0.92) contrast(1.06) saturate(0.92)';
+        // 中性灰白：降饱和，避免暖黄偏色
+        ctx.filter = 'brightness(0.9) contrast(1.08) saturate(0.42)';
         ctx.imageSmoothingQuality = 'high';
         ctx.imageSmoothingEnabled = true;
         drawTiles(ctx, w, h, map, 0);
@@ -944,7 +1003,7 @@
         if (hiZ > 0) drawTiles(ctx, w, h, map, hiZ);
         ctx.filter = 'none';
 
-        // 主动诸元：最大射程圈内（扣除过近死区）提亮 + 提高对比，看起来更清晰
+        // 主动诸元：最大射程圈内提亮对比，仍保持低饱和（不偏黄）
         var active = activeMission();
         if (active && active.gun) {
             var boostWeapon = WEAPONS[active.weapon] || WEAPONS.mortar;
@@ -958,14 +1017,13 @@
                 ctx.arc(boostGun.px, boostGun.py, boostMax, 0, Math.PI * 2);
                 if (boostMin > 1) ctx.arc(boostGun.px, boostGun.py, boostMin, 0, Math.PI * 2, true);
                 ctx.clip('evenodd');
-                ctx.filter = 'brightness(1.22) contrast(1.28) saturate(1.06)';
+                ctx.filter = 'brightness(1.2) contrast(1.26) saturate(0.48)';
                 ctx.imageSmoothingQuality = 'high';
                 ctx.imageSmoothingEnabled = true;
                 drawTiles(ctx, w, h, map, 0);
                 if (hiZ > 0) drawTiles(ctx, w, h, map, hiZ);
                 ctx.filter = 'none';
-                // 轻量白色提亮罩，避免瓦片边界发灰
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.048)';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
                 ctx.fillRect(0, 0, w, h);
                 ctx.restore();
             }
@@ -1216,6 +1274,7 @@
         });
         canvas.addEventListener('mousedown', function (ev) {
             var p = localPoint(ev, canvas);
+            // 右键 / 中键：平移地图
             if (ev.button === 2 || ev.button === 1) {
                 pan = { x: p.x, y: p.y, ox: state.view.ox, oy: state.view.oy };
                 pendingDrag = null;
@@ -1225,19 +1284,20 @@
                 return;
             }
             if (ev.button !== 0) return;
+            // 左键：只有按在炮位/目标标记上才能拖动；空白不拖
             var hit = findHitAtScreen(p.x, p.y);
             if (hit) {
                 activateHitMission(hit);
                 if (!pointLocked(hit.kind)) queuePointDrag(hit.kind, p);
                 return;
             }
+            pendingDrag = null;
             var kind = state.place === 'tgt' ? 'tgt' : 'gun';
             if (pointLocked(kind)) return;
+            // 尚无该点时，空白单击放置（不进入拖动）
             if ((kind === 'gun' && !state.gun) || (kind === 'tgt' && !state.tgt)) {
-                queuePointDrag(kind, p);
-                return;
+                movePoint(kind, pxToWorld(p.x, p.y));
             }
-            pendingDrag = { kind: kind, x: p.x, y: p.y };
         });
         window.addEventListener('mousemove', function (ev) {
             var rect = canvas.getBoundingClientRect();
@@ -1248,7 +1308,7 @@
                 if (cursor) {
                     cursor.textContent = 'X ' + clampCoord(world.x).toFixed(2) + ' / Y ' + clampCoord(world.y).toFixed(2);
                 }
-                if (!pan && !pointDrag && !pendingDrag) {
+                if (!pan && !pointDrag) {
                     var hover = findHitAtScreen(p.x, p.y);
                     var hoverLocked = false;
                     if (hover) {
@@ -1272,12 +1332,6 @@
             if (pan && !(ev.buttons & 2) && !(ev.buttons & 4)) {
                 pan = null;
                 setCursor('');
-            }
-            if (pendingDrag && (ev.buttons & 1)) {
-                if (!pointLocked(pendingDrag.kind) && Math.hypot(p.x - pendingDrag.x, p.y - pendingDrag.y) > 4) {
-                    queuePointDrag(pendingDrag.kind, p);
-                }
-                return;
             }
             if (pointDrag && (ev.buttons & 1)) {
                 pendingWorld = pxToWorld(p.x, p.y);
@@ -1322,18 +1376,12 @@
                     if (!pointLocked(hit.kind)) queuePointDrag(hit.kind, p);
                     return;
                 }
+                // 空白：不平移；若尚无当前模式点则单击放置
                 var kind = state.place === 'tgt' ? 'tgt' : 'gun';
-                if (pointLocked(kind)) {
-                    pan = { x: p.x, y: p.y, ox: state.view.ox, oy: state.view.oy };
-                    setCursor('pan');
-                    return;
-                }
+                if (pointLocked(kind)) return;
                 if ((kind === 'gun' && !state.gun) || (kind === 'tgt' && !state.tgt)) {
-                    queuePointDrag(kind, p);
-                    return;
+                    movePoint(kind, pxToWorld(p.x, p.y));
                 }
-                pan = { x: p.x, y: p.y, ox: state.view.ox, oy: state.view.oy };
-                setCursor('pan');
             } else if (ev.touches.length === 2) {
                 var pa = localPoint({ clientX: ev.touches[0].clientX, clientY: ev.touches[0].clientY }, canvas);
                 var pb = localPoint({ clientX: ev.touches[1].clientX, clientY: ev.touches[1].clientY }, canvas);
@@ -1358,14 +1406,7 @@
                 if (!dragRaf) dragRaf = requestAnimationFrame(flushPointDrag);
                 return;
             }
-            if (ev.touches.length === 1 && pan) {
-                var p = localPoint(ev, canvas);
-                var dx = p.x - pan.x;
-                var dy = p.y - pan.y;
-                state.view.ox = pan.ox + dx;
-                state.view.oy = pan.oy + dy;
-                draw();
-            } else if (ev.touches.length === 2 && pinch) {
+            if (ev.touches.length === 2 && pinch) {
                 var pa = localPoint({ clientX: ev.touches[0].clientX, clientY: ev.touches[0].clientY }, canvas);
                 var pb = localPoint({ clientX: ev.touches[1].clientX, clientY: ev.touches[1].clientY }, canvas);
                 var nd = Math.hypot(pa.x - pb.x, pa.y - pb.y);
@@ -2151,7 +2192,22 @@
             btn.classList.toggle('is-active', btn.getAttribute('data-wd-map') === id);
         });
         save();
+        preloadMapTiles(id);
         resetView();
+    }
+
+    /** 只预载当前图可见相关瓦片，避免三张图同时抢带宽。 */
+    function preloadMapTiles(mapId) {
+        if (!MAPS[mapId]) return;
+        getTile(mapId, 0, 0, 0);
+        var x;
+        var y;
+        for (x = 0; x < 2; x++) {
+            for (y = 0; y < 2; y++) getTile(mapId, 1, x, y);
+        }
+        for (x = 0; x < 4; x++) {
+            for (y = 0; y < 4; y++) getTile(mapId, 2, x, y);
+        }
     }
 
     function resetView() {
@@ -2214,14 +2270,7 @@
         bindHints();
         bindBroadcastUi();
         loadIcons();
-        ['bakurani', 'ozeti'].forEach(function (id) {
-            getTile(id, 0, 0, 0);
-            var x;
-            var y;
-            for (x = 0; x < 4; x++) {
-                for (y = 0; y < 4; y++) getTile(id, 2, x, y);
-            }
-        });
+        preloadMapTiles(state.map || 'bakurani');
         ['wdGunX', 'wdGunY', 'wdTgtX', 'wdTgtY'].forEach(function (id) {
             $(id).addEventListener('input', update);
         });
