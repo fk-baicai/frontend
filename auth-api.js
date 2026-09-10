@@ -833,6 +833,25 @@
                 body: JSON.stringify(body || {}),
             });
         },
+        async adminGetArtyAssistAcl(token) {
+            return adminJson(token, '/api/admin/arty-assist-acl');
+        },
+        async adminPutArtyAssistAcl(token, body) {
+            return adminJson(token, '/api/admin/arty-assist-acl', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body || {}),
+            });
+        },
+        async getArtyAssistAccess(token) {
+            var r = await fetch(joinUrl('/api/me/arty/access'), {
+                cache: 'no-store',
+                headers: { Authorization: 'Bearer ' + token },
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'ARTY_004');
+            return data;
+        },
         async adminAuditLog(token, limit, offset) {
             var q = '/api/admin/audit-log?limit=' + encodeURIComponent(limit != null ? limit : 80);
             if (offset != null && offset !== '') {

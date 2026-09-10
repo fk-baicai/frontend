@@ -277,6 +277,10 @@
                     : prev.rsiAssetsPending,
             isAdmin: user.isAdmin !== undefined ? !!user.isAdmin : !!prev.isAdmin,
             isSuperAdmin: !!user.isSuperAdmin,
+            artyAssistAllowed:
+                user.artyAssistAllowed !== undefined
+                    ? !!user.artyAssistAllowed
+                    : !!prev.artyAssistAllowed,
             memberKind:
                 user.memberKind !== undefined && user.memberKind !== null
                     ? user.memberKind

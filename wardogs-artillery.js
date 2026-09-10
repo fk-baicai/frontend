@@ -1393,6 +1393,7 @@
         ready: false,
         loggedIn: false,
         isSuperAdmin: false,
+        artyAssistAllowed: false,
         announceEnabled: false,
         enabled: false,
         azDeg: null,
@@ -1584,7 +1585,7 @@
         toggle.disabled = !canUse;
         toggle.checked = !!(canUse && broadcastState.enabled);
         if (gear) gear.disabled = !canUse;
-        if (artyMenuItem) artyMenuItem.hidden = !broadcastState.isSuperAdmin;
+        if (artyMenuItem) artyMenuItem.hidden = !broadcastState.artyAssistAllowed;
         if (!canUse) setBroadcastSettingsOpen(false);
         var hasSol = Number.isFinite(broadcastState.azDeg) && Number.isFinite(broadcastState.mil);
         btn.disabled = !(canUse && broadcastState.enabled && hasSol) || broadcastState.fireBusy;
@@ -1808,13 +1809,13 @@
     }
 
     function downloadArtyHelper() {
-        if (!broadcastState.isSuperAdmin) {
-            window.alert('仅超级管理员可下载炮兵助手。');
+        if (!broadcastState.artyAssistAllowed) {
+            window.alert('无炮兵助手权限。请使用本人已授权账号登录，或联系超管加入权限名单。');
             return;
         }
         var token = loadAuthToken();
         if (!token || !window.UssAuthApi) {
-            window.alert('请先登录超级管理员账号后再下炮兵助手。');
+            window.alert('请先用本人账号登录后再下载炮兵助手。');
             return;
         }
         var btn = beginHelperDownload($('wdHelperExe'), '下载助手');
@@ -2029,24 +2030,45 @@
         var sess = loadAuthSession();
         broadcastState.loggedIn = !!token;
         broadcastState.isSuperAdmin = !!(sess && sess.isSuperAdmin);
+        broadcastState.artyAssistAllowed = !!(
+            (sess && sess.artyAssistAllowed) ||
+            (sess && sess.isSuperAdmin)
+        );
         if (!token || !window.UssAuthApi) {
             broadcastState.announceEnabled = false;
             broadcastState.enabled = false;
+            broadcastState.artyAssistAllowed = false;
             refreshBroadcastUi();
             return Promise.resolve();
         }
-        return window.UssAuthApi.getOopzBinding(token).then(function (data) {
-            broadcastState.announceEnabled = !!(data && data.oopzAnnounceEnabled && data.oopzId);
-            broadcastState.enabled = !!(data && data.artilleryBroadcastEnabled);
-            syncSpeakPrefsFromData(data || {});
-            writeHotkeyConfig(token);
-            refreshBroadcastUi();
-            if (broadcastState.enabled) scheduleSolutionUpload();
-        }).catch(function () {
-            broadcastState.announceEnabled = false;
-            broadcastState.enabled = false;
-            refreshBroadcastUi();
-        });
+        var accessP =
+            typeof window.UssAuthApi.getArtyAssistAccess === 'function'
+                ? window.UssAuthApi.getArtyAssistAccess(token)
+                      .then(function (data) {
+                          broadcastState.artyAssistAllowed = !!(data && data.allowed);
+                      })
+                      .catch(function () {
+                          /* 保留会话里的预估值 */
+                      })
+                : Promise.resolve();
+        return Promise.all([
+            accessP,
+            window.UssAuthApi.getOopzBinding(token).then(function (data) {
+                broadcastState.announceEnabled = !!(data && data.oopzAnnounceEnabled && data.oopzId);
+                broadcastState.enabled = !!(data && data.artilleryBroadcastEnabled);
+                syncSpeakPrefsFromData(data || {});
+                writeHotkeyConfig(token);
+                if (broadcastState.enabled) scheduleSolutionUpload();
+            }),
+        ])
+            .then(function () {
+                refreshBroadcastUi();
+            })
+            .catch(function () {
+                broadcastState.announceEnabled = false;
+                broadcastState.enabled = false;
+                refreshBroadcastUi();
+            });
     }
 
     function bindBroadcastUi() {

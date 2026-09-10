@@ -317,6 +317,9 @@
             #secAnnouncements .ann-field-row {
                 grid-template-columns: 1fr;
             }
+            .whitelist-arty-grid {
+                grid-template-columns: 1fr !important;
+            }
         }
         #secVisitStats .vs-toolbar {
             display: flex;
@@ -2539,23 +2542,47 @@
             </section>
 
             <section id="secWhitelist" style="display: none;">
-                <h2>注册白名单</h2>
-                <p class="hint">
-                    列表中的<strong>绑定 ID</strong>（小写 RSI Handle）在注册时<strong>不校验主舰队</strong>，只要 RSI 公民页可访问且能解析头像即可注册。未列入名单的账号仍须满足主组织链接要求（环境变量 <code>RSI_REQUIRED_ORG_HREF</code>，默认 <code>/orgs/5000</code>）。
-                </p>
-                <textarea
-                    id="whitelistTa"
-                    rows="10"
-                    style="width: 100%; max-width: 520px; font-family: inherit; font-size: 0.82rem"
-                    placeholder="每行一个 Handle，例如：&#10;guest_handle&#10;another_id"
-                    spellcheck="false"
-                ></textarea>
-                <div class="row" style="margin-top: 0.5rem">
-                    <button type="button" id="btnSaveWhitelist">保存白名单</button>
-                    <button type="button" class="btn-secondary" id="btnReloadWhitelist">重新加载</button>
+                <h2>注册白名单 / 炮兵助手权限</h2>
+                <div class="whitelist-arty-grid" style="display:grid; grid-template-columns:repeat(2, minmax(220px, 1fr)); gap:1rem; align-items:stretch;">
+                    <div style="display:flex; flex-direction:column; min-width:0;">
+                        <h3 style="margin:0 0 0.4rem; font-size:0.95rem; color:var(--accent, #8ec8e8);">注册白名单</h3>
+                        <p class="hint" style="margin:0 0 0.5rem; min-height:2.6em;">
+                            名单内绑定 ID（小写 Handle）注册时<strong>不校验主舰队</strong>，公民页可访问且能解析头像即可；未列入者仍须满足主组织要求（默认 <code>/orgs/5000</code>）。
+                        </p>
+                        <textarea
+                            id="whitelistTa"
+                            rows="10"
+                            style="width: 100%; flex:1 1 auto; min-height:12rem; font-family: inherit; font-size: 0.82rem; box-sizing:border-box;"
+                            placeholder="每行一个 Handle，例如：&#10;guest_handle&#10;another_id"
+                            spellcheck="false"
+                        ></textarea>
+                        <div class="row" style="margin-top: 0.5rem">
+                            <button type="button" id="btnSaveWhitelist">保存白名单</button>
+                            <button type="button" class="btn-secondary" id="btnReloadWhitelist">重新加载</button>
+                        </div>
+                        <div id="whitelistErr" class="err" hidden></div>
+                        <div id="whitelistOk" class="ok" hidden></div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; min-width:0;">
+                        <h3 style="margin:0 0 0.4rem; font-size:0.95rem; color:var(--accent, #8ec8e8);">炮兵助手权限名单</h3>
+                        <p class="hint" style="margin:0 0 0.5rem; min-height:2.6em;">
+                            仅名单内<strong>已注册成员</strong>可用炮兵助手（下载 / F3·F4 OCR）。须<strong>本人登录</strong>，无法冒用他人额度；超级管理员默认可用。
+                        </p>
+                        <textarea
+                            id="artyAclTa"
+                            rows="10"
+                            style="width: 100%; flex:1 1 auto; min-height:12rem; font-family: inherit; font-size: 0.82rem; box-sizing:border-box;"
+                            placeholder="每行一个已注册 Handle，例如：&#10;member_handle"
+                            spellcheck="false"
+                        ></textarea>
+                        <div class="row" style="margin-top: 0.5rem">
+                            <button type="button" id="btnSaveArtyAcl">保存权限名单</button>
+                            <button type="button" class="btn-secondary" id="btnReloadArtyAcl">重新加载</button>
+                        </div>
+                        <div id="artyAclErr" class="err" hidden></div>
+                        <div id="artyAclOk" class="ok" hidden></div>
+                    </div>
                 </div>
-                <div id="whitelistErr" class="err" hidden></div>
-                <div id="whitelistOk" class="ok" hidden></div>
             </section>
 
             <section id="secAdmins" style="display: none;">
@@ -2712,7 +2739,7 @@
     </div>
 
     <script src="api-error.js"></script>
-    <script src="auth-api.js?v=17"></script>
+    <script src="auth-api.js?v=18"></script>
     <script src="admin-step-up.js?v=4"></script>
     <script src="admin-sc-image-review.js?v=12"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -2938,6 +2965,9 @@
                     document.getElementById('btnSaveWhitelist').onclick = saveWhitelist;
                     document.getElementById('btnReloadWhitelist').onclick = loadWhitelist;
                     loadWhitelist();
+                    document.getElementById('btnSaveArtyAcl').onclick = saveArtyAcl;
+                    document.getElementById('btnReloadArtyAcl').onclick = loadArtyAcl;
+                    loadArtyAcl();
                     document.getElementById('btnSaveAnnouncement').onclick = saveAnnouncement;
                     document.getElementById('btnResetAnnouncement').onclick = resetAnnouncementForm;
                     document.getElementById('btnReloadAnnouncements').onclick = loadAnnouncements;
@@ -3430,6 +3460,46 @@
                     await loadWhitelist();
                 } catch (e) {
                     showErr('whitelistErr', (e && e.message) || '保存失败');
+                }
+            }
+
+            async function loadArtyAcl() {
+                var s = loadSess();
+                showErr('artyAclErr', '');
+                var okEl = document.getElementById('artyAclOk');
+                if (okEl) okEl.hidden = true;
+                try {
+                    var data = await window.UssAuthApi.adminGetArtyAssistAcl(s.token);
+                    var ta = document.getElementById('artyAclTa');
+                    if (ta) ta.value = (data.bindingIds || []).join('\n');
+                } catch (e) {
+                    showErr('artyAclErr', (e && e.message) || '加载炮兵助手权限名单失败');
+                }
+            }
+
+            async function saveArtyAcl() {
+                var s = loadSess();
+                showErr('artyAclErr', '');
+                var ta = document.getElementById('artyAclTa');
+                var raw = (ta && ta.value ? ta.value : '').split('\n');
+                var ids = [];
+                raw.forEach(function (line) {
+                    var t = String(line || '').trim();
+                    if (t) ids.push(t);
+                });
+                try {
+                    await window.UssAuthApi.adminPutArtyAssistAcl(s.token, { bindingIds: ids });
+                    var okEl = document.getElementById('artyAclOk');
+                    if (okEl) {
+                        okEl.textContent = '已保存';
+                        okEl.hidden = false;
+                        setTimeout(function () {
+                            okEl.hidden = true;
+                        }, 2000);
+                    }
+                    await loadArtyAcl();
+                } catch (e) {
+                    showErr('artyAclErr', (e && e.message) || '保存失败');
                 }
             }
 

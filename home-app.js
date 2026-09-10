@@ -1363,6 +1363,8 @@
                     u.rsiAssetsPending !== undefined ? !!u.rsiAssetsPending : p.rsiAssetsPending,
                 isAdmin: u.isAdmin !== undefined ? !!u.isAdmin : !!p.isAdmin,
                 isSuperAdmin: !!u.isSuperAdmin,
+                artyAssistAllowed:
+                    u.artyAssistAllowed !== undefined ? !!u.artyAssistAllowed : !!p.artyAssistAllowed,
                 memberKind: u.memberKind !== undefined && u.memberKind !== null ? u.memberKind : p.memberKind,
                 hasFleetPrivilege:
                     u.hasFleetPrivilege !== undefined ? !!u.hasFleetPrivilege : p.hasFleetPrivilege,
