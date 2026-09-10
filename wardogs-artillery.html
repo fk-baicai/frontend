@@ -251,7 +251,13 @@
 
             <section class="wd-arty-block">
                 <h2 class="wd-arty-block-title">助手下载</h2>
-                <button type="button" id="wdHelperExe" class="wd-arty-broadcast-hotkey wd-arty-broadcast-hotkey--wide">下载助手</button>
+                <div class="wd-arty-helper-wrap">
+                    <button type="button" id="wdHelperExe" class="wd-arty-broadcast-hotkey wd-arty-broadcast-hotkey--wide" aria-haspopup="true" aria-expanded="false">下载助手</button>
+                    <div id="wdHelperMenu" class="wd-arty-helper-menu" hidden>
+                        <button type="button" class="wd-arty-helper-menu-item" data-helper="voice">语音助手（F2 播报）</button>
+                        <button type="button" class="wd-arty-helper-menu-item" data-helper="arty" id="wdHelperMenuArty" hidden>炮兵助手（F3/F4 取点）</button>
+                    </div>
+                </div>
             </section>
 
             <section class="wd-arty-block wd-arty-missions-block">
@@ -276,7 +282,7 @@
     <script src="auth-api.js"></script>
     <script src="nav-dropdown.js"></script>
     <script src="nav-auth-tools.js"></script>
-    <script src="wardogs-artillery.js?v=58"></script>
+    <script src="wardogs-artillery.js?v=62"></script>
     <script src="site-footer.js"></script>
 </body>
 </html>

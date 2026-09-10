@@ -1577,12 +1577,14 @@
         var toggle = $('wdBroadcastToggle');
         var btn = $('wdBroadcastNow');
         var gear = $('wdBroadcastSettingsBtn');
+        var artyMenuItem = $('wdHelperMenuArty');
         if (!box || !toggle || !btn) return;
         var canUse = broadcastState.loggedIn && broadcastState.announceEnabled;
         box.hidden = !canUse;
         toggle.disabled = !canUse;
         toggle.checked = !!(canUse && broadcastState.enabled);
         if (gear) gear.disabled = !canUse;
+        if (artyMenuItem) artyMenuItem.hidden = !broadcastState.isSuperAdmin;
         if (!canUse) setBroadcastSettingsOpen(false);
         var hasSol = Number.isFinite(broadcastState.azDeg) && Number.isFinite(broadcastState.mil);
         btn.disabled = !(canUse && broadcastState.enabled && hasSol) || broadcastState.fireBusy;
@@ -1591,9 +1593,9 @@
         } else if (!broadcastState.announceEnabled) {
             setBroadcastHint('请先在首页 OOPZ 设置开启「语音提示」。');
         } else if (!broadcastState.enabled) {
-            setBroadcastHint('开启射击播报后，可下载「助手」用 F2 播报。');
+            setBroadcastHint('开启射击播报后，可下载「语音助手」用 F2 播报。');
         } else if (!hasSol) {
-            setBroadcastHint('已开启射击播报。下载「助手」后游戏内按 F2。');
+            setBroadcastHint('已开启射击播报。下载「语音助手」后游戏内按 F2。');
         } else {
             setBroadcastHint('');
         }
@@ -1647,115 +1649,206 @@
         });
     }
 
-    function fetchVoiceHelperBuf(cfg) {
-        var withCfg = !!(cfg && cfg.token && cfg.enabled);
-        return fetch('wardogs-voice-assist/uss-voice-helper.exe?v=2', { cache: 'no-store' }).then(function (r) {
+    function formatDownloadProgress(loaded, total, label) {
+        var mb = (loaded / (1024 * 1024)).toFixed(1);
+        if (total > 0) {
+            var pct = Math.min(99, Math.round((loaded / total) * 100));
+            var totalMb = (total / (1024 * 1024)).toFixed(1);
+            return label + ' ' + pct + '%（' + mb + '/' + totalMb + ' MB）';
+        }
+        return label + '… ' + mb + ' MB';
+    }
+
+    function setHelperDownloadUi(btn, text) {
+        if (btn) btn.textContent = text;
+        setBroadcastHint(text);
+    }
+
+    function fetchArrayBufferWithProgress(url, options, onProgress) {
+        options = options || {};
+        return fetch(url, options).then(function (r) {
             if (!r.ok) {
+                return r.text().then(function (t) {
+                    var err = new Error('HTTP ' + r.status);
+                    err.status = r.status;
+                    err.body = t;
+                    throw err;
+                });
+            }
+            var total = Number(r.headers.get('Content-Length') || 0);
+            if (!r.body || typeof r.body.getReader !== 'function') {
+                return r.arrayBuffer().then(function (buf) {
+                    if (onProgress) onProgress(buf.byteLength, buf.byteLength || total);
+                    return buf;
+                });
+            }
+            var reader = r.body.getReader();
+            var chunks = [];
+            var loaded = 0;
+            function pump() {
+                return reader.read().then(function (result) {
+                    if (result.done) {
+                        var out = new Uint8Array(loaded);
+                        var offset = 0;
+                        for (var i = 0; i < chunks.length; i++) {
+                            out.set(chunks[i], offset);
+                            offset += chunks[i].length;
+                        }
+                        if (onProgress) onProgress(loaded, total || loaded);
+                        return out.buffer;
+                    }
+                    var value = result.value;
+                    chunks.push(value);
+                    loaded += value.length;
+                    if (onProgress) onProgress(loaded, total);
+                    return pump();
+                });
+            }
+            return pump();
+        });
+    }
+
+    function fetchVoiceHelperBuf(cfg, onProgress) {
+        var withCfg = !!(cfg && cfg.token && cfg.enabled);
+        return fetchArrayBufferWithProgress(
+            'wardogs-voice-assist/uss-voice-helper.exe?v=2',
+            { cache: 'no-store' },
+            onProgress
+        ).then(function (buf) {
+            return withCfg ? appendCfgToExe(buf, cfg) : buf;
+        }, function (err) {
+            if (err && err.status) {
                 throw new Error(
                     '语音助手文件不存在（HTTP ' +
-                        r.status +
+                        err.status +
                         '）。请把 frontend/wardogs-voice-assist/uss-voice-helper.exe 上传到网站。'
                 );
             }
-            return r.arrayBuffer().then(function (buf) {
-                return withCfg ? appendCfgToExe(buf, cfg) : buf;
-            });
+            throw err;
         });
     }
 
-    function fetchArtyHelperBuf(token, cfg) {
+    function fetchArtyHelperBuf(token, cfg, onProgress) {
         var apiBase = (window.UssAuthApi && window.UssAuthApi.base) || (window.USS_AUTH_API_BASE || '');
-        return fetch(String(apiBase).replace(/\/$/, '') + '/api/me/arty/helper-exe', {
-            cache: 'no-store',
-            headers: { Authorization: 'Bearer ' + token }
-        }).then(function (r) {
-            if (!r.ok) {
-                return r.text().then(function (t) {
-                    var msg = '炮兵助手下载失败 HTTP ' + r.status;
-                    try {
-                        var j = JSON.parse(t);
-                        if (j && (j.error || j.message)) msg = j.error || j.message;
-                    } catch (e) { /* ignore */ }
-                    throw new Error(msg);
-                });
+        if (!apiBase) {
+            return Promise.reject(new Error('接口地址未配置，无法下载炮兵助手。'));
+        }
+        return fetchArrayBufferWithProgress(
+            String(apiBase).replace(/\/$/, '') + '/api/me/arty/helper-exe',
+            {
+                cache: 'no-store',
+                headers: { Authorization: 'Bearer ' + token }
+            },
+            onProgress
+        ).then(function (buf) {
+            return appendCfgToExe(buf, cfg);
+        }, function (err) {
+            var msg = '炮兵助手下载失败' + (err && err.status ? ' HTTP ' + err.status : '');
+            if (err && err.body) {
+                try {
+                    var j = JSON.parse(err.body);
+                    if (j && (j.error || j.message)) msg = j.error || j.message;
+                } catch (e) { /* ignore */ }
+            } else if (err && err.message && !err.status) {
+                msg = err.message;
             }
-            return r.arrayBuffer().then(function (buf) {
-                return appendCfgToExe(buf, cfg);
-            });
+            throw new Error(msg);
         });
     }
 
-    function downloadHelpers() {
+    function beginHelperDownload(btn, defaultLabel) {
+        if (!btn || btn.disabled) return null;
+        btn.disabled = true;
+        btn.dataset.prevText = btn.textContent || defaultLabel;
+        return btn;
+    }
+
+    function endHelperDownload(btn, defaultLabel) {
+        if (!btn) return;
+        btn.disabled = false;
+        btn.textContent = btn.dataset.prevText || defaultLabel;
+    }
+
+    function setHelperMenuOpen(open) {
+        var menu = $('wdHelperMenu');
+        var btn = $('wdHelperExe');
+        if (!menu) return;
+        menu.hidden = !open;
+        if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function downloadVoiceHelper() {
         var token = loadAuthToken();
         var cfg = writeHotkeyConfig(token);
-        var btn = $('wdHelperExe');
-        if (btn) {
-            btn.disabled = true;
-            btn.dataset.prevText = btn.textContent || '';
-            btn.textContent = '下载中…';
-        }
-        var wantArty = !!broadcastState.isSuperAdmin;
-        var ok = [];
-        var fail = [];
-
-        setBroadcastHint(wantArty ? '正在下载助手（可能较慢）…' : '正在下载语音助手…');
-
-        // Sequential — browsers often block parallel blob downloads
-        var chain = fetchVoiceHelperBuf(cfg)
+        var btn = beginHelperDownload($('wdHelperExe'), '下载助手');
+        if (!btn) return;
+        setHelperMenuOpen(false);
+        setHelperDownloadUi(btn, '下载语音助手…');
+        fetchVoiceHelperBuf(cfg, function (loaded, total) {
+            setHelperDownloadUi(btn, formatDownloadProgress(loaded, total, '语音助手'));
+        })
             .then(function (buf) {
+                setHelperDownloadUi(btn, '保存语音助手…');
                 return triggerExeDownload(buf, 'uss-voice-helper.exe').then(function () {
-                    ok.push(cfg && cfg.enabled ? '语音助手（F2）' : '语音助手（未写入播报配置）');
+                    setBroadcastHint(
+                        cfg && cfg.enabled
+                            ? '已下载语音助手（F2）'
+                            : '已下载语音助手（未写入播报配置）'
+                    );
                 });
             })
             .catch(function (err) {
-                fail.push((err && err.message) || '语音助手下载失败');
-            });
-
-        if (wantArty) {
-            chain = chain.then(function () {
-                if (!token || !window.UssAuthApi) {
-                    fail.push('请先登录超级管理员账号后再下炮兵助手。');
-                    return;
-                }
-                setBroadcastHint('正在下载炮兵助手…');
-                return fetchArtyHelperBuf(token, {
-                    apiBase: (window.UssAuthApi && window.UssAuthApi.base) || (window.USS_AUTH_API_BASE || ''),
-                    token: token,
-                    enabled: !!broadcastState.enabled,
-                    updatedAt: new Date().toISOString()
-                })
-                    .then(function (buf) {
-                        return triggerExeDownload(buf, 'uss-arty-helper.exe').then(function () {
-                            ok.push('炮兵助手（F3/F4/F5）');
-                        });
-                    })
-                    .catch(function (err) {
-                        fail.push((err && err.message) || '炮兵助手下载失败');
-                    });
-            });
-        }
-
-        chain
-            .then(function () {
-                if (ok.length && !fail.length) {
-                    var doneMsg = '已下载：' + ok.join(' · ');
-                    setBroadcastHint(doneMsg);
-                    window.alert(doneMsg + '\n\n请到浏览器下载栏查看文件。');
-                } else if (ok.length && fail.length) {
-                    setBroadcastHint('部分完成：' + ok.join(' · ') + '。失败：' + fail.join('；'));
-                    window.alert('部分下载失败：\n' + fail.join('\n'));
-                } else {
-                    var msg = fail.join('\n') || '下载失败';
-                    setBroadcastHint(msg);
-                    window.alert(msg);
-                }
+                var msg = (err && err.message) || '语音助手下载失败';
+                setBroadcastHint(msg);
+                window.alert(msg);
             })
             .finally(function () {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.textContent = btn.dataset.prevText || '下载助手';
-                }
+                endHelperDownload(btn, '下载助手');
             });
+    }
+
+    function downloadArtyHelper() {
+        if (!broadcastState.isSuperAdmin) {
+            window.alert('仅超级管理员可下载炮兵助手。');
+            return;
+        }
+        var token = loadAuthToken();
+        if (!token || !window.UssAuthApi) {
+            window.alert('请先登录超级管理员账号后再下炮兵助手。');
+            return;
+        }
+        var btn = beginHelperDownload($('wdHelperExe'), '下载助手');
+        if (!btn) return;
+        setHelperMenuOpen(false);
+        var cfg = {
+            apiBase: (window.UssAuthApi && window.UssAuthApi.base) || (window.USS_AUTH_API_BASE || ''),
+            token: token,
+            enabled: !!broadcastState.enabled,
+            updatedAt: new Date().toISOString()
+        };
+        setHelperDownloadUi(btn, '下载炮兵助手…');
+        fetchArtyHelperBuf(token, cfg, function (loaded, total) {
+            setHelperDownloadUi(btn, formatDownloadProgress(loaded, total, '炮兵助手'));
+        })
+            .then(function (buf) {
+                setHelperDownloadUi(btn, '保存炮兵助手…');
+                return triggerExeDownload(buf, 'uss-arty-helper.exe').then(function () {
+                    setBroadcastHint('已下载炮兵助手（F3/F4/F5）');
+                });
+            })
+            .catch(function (err) {
+                var msg = (err && err.message) || '炮兵助手下载失败';
+                setBroadcastHint(msg);
+                window.alert(msg);
+            })
+            .finally(function () {
+                endHelperDownload(btn, '下载助手');
+            });
+    }
+
+    function onHelperMenuPick(kind) {
+        if (kind === 'arty') downloadArtyHelper();
+        else downloadVoiceHelper();
     }
 
     function saveBroadcastSpeakPrefs() {
@@ -1959,12 +2052,31 @@
     function bindBroadcastUi() {
         var toggle = $('wdBroadcastToggle');
         var btn = $('wdBroadcastNow');
-        var voiceBtn = $('wdHelperExe');
+        var helperBtn = $('wdHelperExe');
+        var helperMenu = $('wdHelperMenu');
         var gear = $('wdBroadcastSettingsBtn');
         var saveBtn = $('wdBroadcastSettingsSave');
         if (toggle) toggle.addEventListener('change', onBroadcastToggleChange);
         if (btn) btn.addEventListener('click', function () { fireBroadcast({ countdown: true }); });
-        if (voiceBtn) voiceBtn.addEventListener('click', downloadHelpers);
+        if (helperBtn) {
+            helperBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                if (helperBtn.disabled) return;
+                var menu = $('wdHelperMenu');
+                setHelperMenuOpen(!(menu && !menu.hidden));
+            });
+        }
+        if (helperMenu) {
+            helperMenu.addEventListener('click', function (ev) {
+                var item = ev.target && ev.target.closest ? ev.target.closest('[data-helper]') : null;
+                if (!item) return;
+                ev.stopPropagation();
+                onHelperMenuPick(item.getAttribute('data-helper'));
+            });
+        }
+        document.addEventListener('click', function () {
+            setHelperMenuOpen(false);
+        });
         if (gear) {
             gear.addEventListener('click', function () {
                 setBroadcastSettingsOpen(!broadcastState.settingsOpen);
