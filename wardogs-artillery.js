@@ -176,8 +176,10 @@
         }
     }
 
-    function enqueueTile(img, url) {
-        _tileQueue.push({ img: img, url: url });
+    function enqueueTile(img, url, priority) {
+        var job = { img: img, url: url };
+        if (priority) _tileQueue.unshift(job);
+        else _tileQueue.push(job);
         pumpTileQueue();
     }
 
@@ -191,7 +193,8 @@
         activeId: 'm1',
         lockGun: false,
         lockTgt: false,
-        view: { scale: 0, ox: 0, oy: 0 }
+        view: { scale: 0, ox: 0, oy: 0 },
+        terrain3d: false
     };
 
     function $(id) {
@@ -590,10 +593,96 @@
         setMetric('wdAz', '—');
         setMetric('wdAzMil', '—');
         setMetric('wdDelta', '—');
+        setMetric('wdDeltaZ', '—');
         setMetric('wdMil', '—');
     }
 
+    var _updateSeq = 0;
+
+    function solForTerrain(sol) {
+        function arc(a) {
+            if (!a) return null;
+            var m = a.mil != null ? Math.round(a.mil) : Math.round((a.minMil + a.maxMil) / 2);
+            return { mils: m, mil: m };
+        }
+        return { inRange: !!sol.inRange, single: null, low: arc(sol.low), high: arc(sol.high) };
+    }
+
+    function applyTerrainSol(sol, tcSol) {
+        if (!tcSol) return sol;
+        var next = { inRange: sol.inRange, single: sol.single, low: sol.low, high: sol.high };
+        if (tcSol.low && tcSol.low.mils != null) {
+            next.low = { mil: tcSol.low.mils, minMil: tcSol.low.mils, maxMil: tcSol.low.mils };
+        }
+        if (tcSol.high && tcSol.high.mils != null) {
+            next.high = { mil: tcSol.high.mils, minMil: tcSol.high.mils, maxMil: tcSol.high.mils };
+        }
+        return next;
+    }
+
+    function renderMilLine(sol) {
+        if (!sol || !sol.inRange) {
+            setMetric('wdMil', '—');
+            return;
+        }
+        if (sol.single) {
+            setMetric('wdMil', formatMil(sol.single) + ' mil');
+            return;
+        }
+        var parts = [];
+        if (sol.low) parts.push('低 ' + formatMil(sol.low));
+        if (sol.high) parts.push('高 ' + formatMil(sol.high));
+        setMetric('wdMil', parts.length ? parts.join(' / ') + ' mil' : '射表无解');
+    }
+
+    function syncTerrainUi() {
+        var btn = $('wdTerrain3d');
+        var hint = $('wdSphLevelHint');
+        var isSpg = state.weapon === 'spg';
+        if (!isSpg) {
+            state.terrain3d = false;
+            if (window.TerrainCorrection) window.TerrainCorrection.setEnabled(false);
+        }
+        if (btn) {
+            btn.disabled = !isSpg;
+            btn.classList.toggle('is-active', !!(isSpg && state.terrain3d));
+            btn.setAttribute('aria-pressed', isSpg && state.terrain3d ? 'true' : 'false');
+            btn.textContent = isSpg && state.terrain3d ? '地形高差修正：开' : '开启地形高差修正';
+        }
+        if (hint) hint.hidden = !isSpg;
+    }
+
+    function maybeApplyTerrain(geo, sol, seq) {
+        var tc = window.TerrainCorrection;
+        setMetric('wdDeltaZ', '—');
+        if (!tc || !state.terrain3d || state.weapon !== 'spg' || !sol || !sol.inRange) return;
+        if (!state.gun || !state.tgt) return;
+        var origin = { x: state.gun.x * METERS_PER_COORD, y: state.gun.y * METERS_PER_COORD };
+        var target = { x: state.tgt.x * METERS_PER_COORD, y: state.tgt.y * METERS_PER_COORD };
+        Promise.resolve(tc.correct(state.map, 'spg', origin, target, geo.dist, solForTerrain(sol)))
+            .then(function (r) {
+                if (seq !== _updateSeq) return;
+                if (r && r.deltaZ != null && Number.isFinite(r.deltaZ)) {
+                    setMetric(
+                        'wdDeltaZ',
+                        (r.deltaZ >= 0 ? '+' : '') + Number(r.deltaZ).toFixed(1) + ' m'
+                    );
+                }
+                if (r && r.applied && r.solutions) {
+                    var fixed = applyTerrainSol(sol, r.solutions);
+                    renderMilLine(fixed);
+                    setStatus('射程内 · 高差修正', 'is-ok');
+                    syncBroadcastSolution(geo, fixed);
+                    renderMissionList();
+                } else if (r && r.deltaZ != null && Number.isFinite(r.deltaZ)) {
+                    setStatus('射程内 · ΔZ已采样未改射角', 'is-ok');
+                }
+            })
+            .catch(function () { /* ignore */ });
+    }
+
     function update() {
+        var seq = ++_updateSeq;
         if (!readInputs()) {
             setStatus('坐标无效', 'is-bad');
             clearMetrics();
@@ -627,26 +716,21 @@
             'wdDelta',
             (geo.dx >= 0 ? '+' : '') + geo.dx.toFixed(1) + ' / ' + (geo.dy >= 0 ? '+' : '') + geo.dy.toFixed(1) + ' m'
         );
+        setMetric('wdDeltaZ', '—');
 
-        var milLine = '—';
         if (sol.inRange) {
-            if (sol.single) milLine = formatMil(sol.single) + ' mil';
-            else {
-                var parts = [];
-                if (sol.low) parts.push('低 ' + formatMil(sol.low));
-                if (sol.high) parts.push('高 ' + formatMil(sol.high));
-                milLine = parts.length ? parts.join(' / ') + ' mil' : '射表无解';
-            }
+            renderMilLine(sol);
             setStatus('射程内', 'is-ok');
         } else {
             var tooShort = geo.dist < weapon.minRange * 1000;
             setStatus(tooShort ? '过近' : '超程', 'is-bad');
+            setMetric('wdMil', '—');
         }
-        setMetric('wdMil', milLine);
         commitActive();
         save();
         renderMissionList();
         syncBroadcastSolution(geo, sol);
+        maybeApplyTerrain(geo, sol, seq);
         draw();
     }
 
@@ -703,7 +787,7 @@
         return [MAPS[mapId].cdn + '/zoom_' + z + '/' + tx + '_' + ty + '.webp'];
     }
 
-    function getTile(mapId, z, tx, ty) {
+    function getTile(mapId, z, tx, ty, priority) {
         var n = 1 << z;
         if (tx < 0 || ty < 0 || tx >= n || ty >= n) return null;
         var key = mapId + ':' + z + ':' + tx + ':' + ty;
@@ -722,14 +806,14 @@
             entry.try += 1;
             _tileInflight = Math.max(0, _tileInflight - 1);
             if (entry.try < urls.length) {
-                enqueueTile(img, urls[entry.try]);
+                enqueueTile(img, urls[entry.try], true);
             } else {
                 entry.done = true;
                 pumpTileQueue();
             }
         };
         TILE_CACHE[key] = img;
-        enqueueTile(img, urls[0]);
+        enqueueTile(img, urls[0], !!priority);
         return img;
     }
 
@@ -781,22 +865,40 @@
         var tx1 = Math.floor((right - minX) / worldW * n);
         var ty0 = Math.floor((maxY - top) / worldH * n);
         var ty1 = Math.floor((maxY - bottom) / worldH * n);
+        var mid = pxToWorld(cssW / 2, cssH / 2);
+        var cx = ((mid.x - minX) / worldW) * n;
+        var cy = ((maxY - mid.y) / worldH) * n;
+        var tiles = [];
         var tx;
         var ty;
         for (tx = tx0; tx <= tx1; tx++) {
             for (ty = ty0; ty <= ty1; ty++) {
-                var img = getTile(state.map, z, tx, ty);
-                if (!img || !img.complete || !img.naturalWidth) continue;
-                var tileLeft = minX + (tx / n) * worldW;
-                var tileRight = minX + ((tx + 1) / n) * worldW;
-                var tileNorth = maxY - (ty / n) * worldH;
-                var tileSouth = maxY - ((ty + 1) / n) * worldH;
-                var nw = worldToPx({ x: tileLeft, y: tileNorth });
-                var se = worldToPx({ x: tileRight, y: tileSouth });
-                var dw = se.px - nw.px;
-                ctx.imageSmoothingEnabled = dw < img.naturalWidth - 0.5;
-                ctx.drawImage(img, nw.px, nw.py, dw, se.py - nw.py);
+                var dx = tx + 0.5 - cx;
+                var dy = ty + 0.5 - cy;
+                tiles.push({ tx: tx, ty: ty, d2: dx * dx + dy * dy });
             }
+        }
+        tiles.sort(function (u, v) {
+            return u.d2 - v.d2;
+        });
+        // priority=true 时 enqueue 用 unshift：必须从远到近入队，队头才是中心
+        for (var i = tiles.length - 1; i >= 0; i--) {
+            getTile(state.map, z, tiles[i].tx, tiles[i].ty, true);
+        }
+        for (i = 0; i < tiles.length; i++) {
+            tx = tiles[i].tx;
+            ty = tiles[i].ty;
+            var img = getTile(state.map, z, tx, ty, false);
+            if (!img || !img.complete || !img.naturalWidth) continue;
+            var tileLeft = minX + (tx / n) * worldW;
+            var tileRight = minX + ((tx + 1) / n) * worldW;
+            var tileNorth = maxY - (ty / n) * worldH;
+            var tileSouth = maxY - ((ty + 1) / n) * worldH;
+            var nw = worldToPx({ x: tileLeft, y: tileNorth });
+            var se = worldToPx({ x: tileRight, y: tileSouth });
+            var dw = se.px - nw.px;
+            ctx.imageSmoothingEnabled = dw < img.naturalWidth - 0.5;
+            ctx.drawImage(img, nw.px, nw.py, dw, se.py - nw.py);
         }
     }
 
@@ -1002,32 +1104,6 @@
         var hiZ = chooseTileZoom();
         if (hiZ > 0) drawTiles(ctx, w, h, map, hiZ);
         ctx.filter = 'none';
-
-        // 主动诸元：最大射程圈内提亮对比，仍保持低饱和（不偏黄）
-        var active = activeMission();
-        if (active && active.gun) {
-            var boostWeapon = WEAPONS[active.weapon] || WEAPONS.mortar;
-            var boostGun = worldToPx(active.gun);
-            var metersToPxBoost = state.view.scale / METERS_PER_COORD;
-            var boostMin = Math.max(0, boostWeapon.minRange * 1000 * metersToPxBoost);
-            var boostMax = Math.max(boostMin, boostWeapon.maxRange * 1000 * metersToPxBoost);
-            if (boostMax > 2) {
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(boostGun.px, boostGun.py, boostMax, 0, Math.PI * 2);
-                if (boostMin > 1) ctx.arc(boostGun.px, boostGun.py, boostMin, 0, Math.PI * 2, true);
-                ctx.clip('evenodd');
-                ctx.filter = 'brightness(1.2) contrast(1.26) saturate(0.48)';
-                ctx.imageSmoothingQuality = 'high';
-                ctx.imageSmoothingEnabled = true;
-                drawTiles(ctx, w, h, map, 0);
-                if (hiZ > 0) drawTiles(ctx, w, h, map, hiZ);
-                ctx.filter = 'none';
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-                ctx.fillRect(0, 0, w, h);
-                ctx.restore();
-            }
-        }
 
         drawGrid(ctx, w, h);
         drawZones(ctx, map);
@@ -1376,12 +1452,18 @@
                     if (!pointLocked(hit.kind)) queuePointDrag(hit.kind, p);
                     return;
                 }
-                // 空白：不平移；若尚无当前模式点则单击放置
+                // 移动端空白：允许拖动画布；单击未移动时再放置点
                 var kind = state.place === 'tgt' ? 'tgt' : 'gun';
-                if (pointLocked(kind)) return;
-                if ((kind === 'gun' && !state.gun) || (kind === 'tgt' && !state.tgt)) {
-                    movePoint(kind, pxToWorld(p.x, p.y));
-                }
+                pan = { x: p.x, y: p.y, ox: state.view.ox, oy: state.view.oy, moved: false };
+                pendingDrag = {
+                    kind: kind,
+                    x: p.x,
+                    y: p.y,
+                    canPlace:
+                        !pointLocked(kind) &&
+                        ((kind === 'gun' && !state.gun) || (kind === 'tgt' && !state.tgt))
+                };
+                setCursor('pan');
             } else if (ev.touches.length === 2) {
                 var pa = localPoint({ clientX: ev.touches[0].clientX, clientY: ev.touches[0].clientY }, canvas);
                 var pb = localPoint({ clientX: ev.touches[1].clientX, clientY: ev.touches[1].clientY }, canvas);
@@ -1406,6 +1488,19 @@
                 if (!dragRaf) dragRaf = requestAnimationFrame(flushPointDrag);
                 return;
             }
+            if (ev.touches.length === 1 && pan) {
+                p = localPoint(ev, canvas);
+                var dx = p.x - pan.x;
+                var dy = p.y - pan.y;
+                if (Math.hypot(dx, dy) > 6) {
+                    pan.moved = true;
+                    pendingDrag = null;
+                }
+                state.view.ox = pan.ox + dx;
+                state.view.oy = pan.oy + dy;
+                draw();
+                return;
+            }
             if (ev.touches.length === 2 && pinch) {
                 var pa = localPoint({ clientX: ev.touches[0].clientX, clientY: ev.touches[0].clientY }, canvas);
                 var pb = localPoint({ clientX: ev.touches[1].clientX, clientY: ev.touches[1].clientY }, canvas);
@@ -1422,6 +1517,9 @@
         canvas.addEventListener('touchend', function () {
             if (pointDrag === 'gun' && !state.tgt) setPlace('tgt');
             else if (pointDrag) setPlace(pointDrag);
+            else if (pendingDrag && pendingDrag.canPlace && pan && !pan.moved) {
+                movePoint(pendingDrag.kind, pxToWorld(pendingDrag.x, pendingDrag.y));
+            }
             endAllDrags();
             update();
         });
@@ -1866,6 +1964,8 @@
             apiBase: (window.UssAuthApi && window.UssAuthApi.base) || (window.USS_AUTH_API_BASE || ''),
             token: token,
             enabled: !!broadcastState.enabled,
+            mapId: state.map || 'bakurani',
+            terrain3d: !!state.terrain3d,
             updatedAt: new Date().toISOString()
         };
         setHelperDownloadUi(btn, '下载炮兵助手…');
@@ -1875,7 +1975,7 @@
             .then(function (buf) {
                 setHelperDownloadUi(btn, '保存炮兵助手…');
                 return triggerExeDownload(buf, 'uss-arty-helper.exe').then(function () {
-                    setBroadcastHint('已下载炮兵助手（F1/F3/F4/F5）');
+                    setBroadcastHint('已下载炮兵助手（F1/F3/F4/F5/F8）');
                 });
             })
             .catch(function (err) {
@@ -2147,6 +2247,18 @@
         }
         if (saveBtn) saveBtn.addEventListener('click', saveBroadcastSpeakPrefs);
         window.addEventListener('keydown', function (ev) {
+            if (ev.key === 'F8' || ev.code === 'F8') {
+                if (ev.repeat) return;
+                if (state.weapon !== 'spg') return;
+                ev.preventDefault();
+                state.terrain3d = !state.terrain3d;
+                if (window.TerrainCorrection) {
+                    window.TerrainCorrection.setEnabled(state.terrain3d);
+                }
+                syncTerrainUi();
+                update();
+                return;
+            }
             if (ev.key !== 'F2' && ev.code !== 'F2') return;
             if (ev.repeat) return;
             if (!broadcastState.enabled) return;
@@ -2164,6 +2276,7 @@
         document.querySelectorAll('[data-wd-weapon]').forEach(function (btn) {
             btn.classList.toggle('is-active', btn.getAttribute('data-wd-weapon') === id);
         });
+        syncTerrainUi();
         update();
     }
 
@@ -2188,26 +2301,17 @@
     function setMap(id) {
         if (!MAPS[id]) return;
         state.map = id;
-        document.querySelectorAll('[data-wd-map]').forEach(function (btn) {
-            btn.classList.toggle('is-active', btn.getAttribute('data-wd-map') === id);
-        });
+        var sel = $('wdMapSelect');
+        if (sel && sel.value !== id) sel.value = id;
         save();
         preloadMapTiles(id);
         resetView();
     }
 
-    /** 只预载当前图可见相关瓦片，避免三张图同时抢带宽。 */
+    /** 只预载 z0 概览，避免抢占当前视口中心瓦片带宽。 */
     function preloadMapTiles(mapId) {
         if (!MAPS[mapId]) return;
-        getTile(mapId, 0, 0, 0);
-        var x;
-        var y;
-        for (x = 0; x < 2; x++) {
-            for (y = 0; y < 2; y++) getTile(mapId, 1, x, y);
-        }
-        for (x = 0; x < 4; x++) {
-            for (y = 0; y < 4; y++) getTile(mapId, 2, x, y);
-        }
+        getTile(mapId, 0, 0, 0, false);
     }
 
     function resetView() {
@@ -2271,6 +2375,24 @@
         bindBroadcastUi();
         loadIcons();
         preloadMapTiles(state.map || 'bakurani');
+        syncTerrainUi();
+        if (window.TerrainCorrection && typeof window.TerrainCorrection.init === 'function') {
+            window.TerrainCorrection.init().then(function () {
+                syncTerrainUi();
+            }).catch(function () { /* ignore */ });
+        }
+        var terrainBtn = $('wdTerrain3d');
+        if (terrainBtn) {
+            terrainBtn.addEventListener('click', function () {
+                if (state.weapon !== 'spg') return;
+                state.terrain3d = !state.terrain3d;
+                if (window.TerrainCorrection) {
+                    window.TerrainCorrection.setEnabled(state.terrain3d);
+                }
+                syncTerrainUi();
+                update();
+            });
+        }
         ['wdGunX', 'wdGunY', 'wdTgtX', 'wdTgtY'].forEach(function (id) {
             $(id).addEventListener('input', update);
         });
@@ -2284,11 +2406,12 @@
                 setPlace(btn.getAttribute('data-wd-place'));
             });
         });
-        document.querySelectorAll('[data-wd-map]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                setMap(btn.getAttribute('data-wd-map'));
+        var mapSelect = $('wdMapSelect');
+        if (mapSelect) {
+            mapSelect.addEventListener('change', function () {
+                setMap(mapSelect.value);
             });
-        });
+        }
         ['wdGunX', 'wdGunY'].forEach(function (id) {
             $(id).addEventListener('focus', function () { setPlace('gun'); });
         });

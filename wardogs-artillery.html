@@ -7,7 +7,7 @@
     <link rel="dns-prefetch" href="https://wardogs.t0ki.cn">
     <link rel="preconnect" href="https://wardogs.t0ki.cn" crossorigin>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="wardogs-artillery.css?v=43">
+    <link rel="stylesheet" href="wardogs-artillery.css?v=44">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -127,11 +127,11 @@
 
             <section class="wd-arty-block">
                 <h2 class="wd-arty-block-title">地图</h2>
-                <div class="wd-arty-map-tabs" role="group" aria-label="地图">
-                    <button type="button" data-wd-map="bakurani" class="is-active">Bakurani</button>
-                    <button type="button" data-wd-map="ozeti">Ozeti</button>
-                    <button type="button" data-wd-map="zestafona">Zestafona</button>
-                </div>
+                <select id="wdMapSelect" class="wd-arty-map-select" aria-label="地图">
+                    <option value="bakurani" selected>Bakurani</option>
+                    <option value="ozeti">Ozeti</option>
+                    <option value="zestafona">Zestafona</option>
+                </select>
             </section>
 
             <section class="wd-arty-block">
@@ -164,12 +164,24 @@
                 </div>
             </section>
 
+            <section class="wd-arty-block" id="wdTerrainBlock">
+                <h2 class="wd-arty-block-title">
+                    地形高差修正
+                    <button type="button" class="wd-arty-hint" aria-label="地形高差说明">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                        <span class="wd-arty-hint-pop">仅 SPH-2。开启后显示地形 ΔZ；仅当原站认证算法返回 SAFE 时才改 mil（低弧 ΔZ±40m / 高弧±80m）。域外仍用平坦射表——atan 高低角与游戏射表不一致，不用。F8 开关。</span>
+                    </button>
+                </h2>
+                <button type="button" class="wd-arty-terrain-btn" id="wdTerrain3d" aria-pressed="false" disabled>开启地形高差修正</button>
+                <p class="wd-arty-terrain-note" id="wdSphLevelHint" hidden>射击前请将 SPH-2 调平 · F8 开关高差修正</p>
+            </section>
+
             <section class="wd-arty-block">
                 <h2 class="wd-arty-block-title">
                     坐标
                     <button type="button" class="wd-arty-hint" aria-label="坐标操作说明">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
-                        <span class="wd-arty-hint-pop">选 A/B 后在空白处单击放置；已放置的点需把鼠标移到 O / T 上按住左键才能拖动。空白处左键不能拖图；右键/中键拖动平移。可单独锁定 A 或 B。</span>
+                        <span class="wd-arty-hint-pop">电脑：空白左键不拖图，抓住 O/T 才能拖点；右键/中键平移。手机：单指拖动画布，点在 O/T 上拖点；双指缩放。可单独锁定 A 或 B。</span>
                     </button>
                 </h2>
                 <div class="wd-arty-xy-grid">
@@ -188,14 +200,13 @@
                     <input id="wdTgtX" aria-label="目标 X" inputmode="decimal" autocomplete="off" placeholder="目标 X">
                     <input id="wdTgtY" aria-label="目标 Y" inputmode="decimal" autocomplete="off" placeholder="目标 Y">
                 </div>
+                <div class="wd-arty-actions" role="group" aria-label="地图操作">
+                    <button type="button" data-wd-place="gun" class="is-active">放置炮位</button>
+                    <button type="button" data-wd-place="tgt">放置目标</button>
+                    <button type="button" id="wdClear">清除</button>
+                    <button type="button" id="wdReset">重置视图</button>
+                </div>
             </section>
-
-            <div class="wd-arty-actions" role="group" aria-label="地图操作">
-                <button type="button" data-wd-place="gun" class="is-active">放置炮位</button>
-                <button type="button" data-wd-place="tgt">放置目标</button>
-                <button type="button" id="wdClear">清除</button>
-                <button type="button" id="wdReset">重置视图</button>
-            </div>
 
             <section class="wd-arty-block wd-arty-result" id="wdResult">
                 <h2 class="wd-arty-block-title">计算结果</h2>
@@ -214,6 +225,7 @@
                 <p class="wd-arty-subline">
                     <span>距离 <strong id="wdDist">—</strong></span>
                     <span>ΔX/ΔY <strong id="wdDelta">—</strong></span>
+                    <span>ΔZ <strong id="wdDeltaZ">—</strong></span>
                 </p>
                 <div class="wd-arty-broadcast" id="wdBroadcastBox" hidden>
                     <div class="wd-arty-broadcast-head">
@@ -285,7 +297,8 @@
     <script src="auth-api.js"></script>
     <script src="nav-dropdown.js"></script>
     <script src="nav-auth-tools.js"></script>
-    <script src="wardogs-artillery.js?v=69"></script>
+    <script src="wardogs-terrain-correction.js?v=3"></script>
+    <script src="wardogs-artillery.js?v=74"></script>
     <script src="site-footer.js"></script>
 </body>
 </html>

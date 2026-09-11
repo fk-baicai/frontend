@@ -36,7 +36,7 @@
 
 .wd-arty-main {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 308px;
+    grid-template-columns: minmax(0, 1fr) 277px;
     gap: 0;
     align-items: stretch;
     box-sizing: border-box;
@@ -111,7 +111,7 @@
 .wd-arty-sidebar {
     position: relative;
     box-sizing: border-box;
-    width: 308px;
+    width: 277px;
     min-height: calc(100vh - var(--navbar-height));
     max-height: calc(100vh - var(--navbar-height));
     background: var(--wd-bg);
@@ -120,7 +120,7 @@
 .wd-arty-toolbox {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 22px;
     box-sizing: border-box;
     width: 280px;
     height: 100%;
@@ -130,19 +130,19 @@
     overflow-y: auto;
     padding: 12px 11px 12px 13px;
     background: var(--wd-bg);
-    /* 文字/按钮整体约放大 10%（280×1.1 ≈ 308 对齐栅格列） */
-    zoom: 1.1;
+    /* 相对原 1.1 缩放再缩小 10%（280×0.99 ≈ 277 对齐栅格列） */
+    zoom: 0.99;
     scrollbar-width: thin;
     scrollbar-color: rgba(247, 143, 30, 0.55) rgba(8, 18, 28, 0.9);
 }
 
 @supports not (zoom: 1) {
     .wd-arty-toolbox {
-        font-size: 110%;
+        font-size: 99%;
     }
     .wd-arty-toolbox .wd-arty-toolbox-title { font-size: 1.05em; }
     .wd-arty-toolbox .wd-arty-block-title { font-size: 0.8em; }
-    .wd-arty-toolbox .wd-arty-map-tabs button,
+    .wd-arty-toolbox .wd-arty-map-select,
     .wd-arty-toolbox .wd-arty-actions button,
     .wd-arty-toolbox .wd-arty-add-mission,
     .wd-arty-toolbox .wd-arty-broadcast-now,
@@ -181,7 +181,7 @@
 }
 
 .wd-arty-toolbox-title {
-    margin: 0;
+    margin: 0 0 -12px;
     font-size: 0.95rem;
     font-weight: 700;
     line-height: 1.25;
@@ -263,7 +263,7 @@
     color: rgba(148, 186, 212, 0.78);
 }
 
-.wd-arty-map-tabs,
+.wd-arty-map-select,
 .wd-arty-weapons,
 .wd-arty-xy-grid,
 .wd-arty-actions,
@@ -272,27 +272,47 @@
     box-sizing: border-box;
 }
 
-.wd-arty-map-tabs {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 7px;
-}
-
-.wd-arty-map-tabs button {
-    min-width: 0;
-    width: 100%;
+.wd-arty-map-select {
+    display: block;
     height: 26px;
-    box-sizing: border-box;
-    border: 1px solid rgba(247, 143, 30, 0.22);
-    border-radius: 6px;
-    background: rgba(8, 18, 28, 0.88);
-    color: rgba(200, 220, 235, 0.86);
-    font-size: 0.72rem;
+    margin: 0;
+    padding: 0 28px 0 8px;
+    border: 1px solid rgba(247, 143, 30, 0.42);
+    border-radius: 5px;
+    background-color: rgba(8, 18, 28, 0.92);
+    background-image:
+        linear-gradient(45deg, transparent 50%, rgba(255, 214, 170, 0.9) 50%),
+        linear-gradient(135deg, rgba(255, 214, 170, 0.9) 50%, transparent 50%);
+    background-position:
+        calc(100% - 14px) 50%,
+        calc(100% - 9px) 50%;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    color: rgba(255, 214, 170, 0.92);
+    font-size: 0.7rem;
+    font-weight: 700;
     line-height: 1;
     cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
 }
 
-.wd-arty-map-tabs button.is-active,
+.wd-arty-map-select:hover {
+    border-color: rgba(247, 143, 30, 0.75);
+    background-color: rgba(247, 143, 30, 0.14);
+    color: #ffe7c4;
+}
+
+.wd-arty-map-select:focus {
+    outline: 1px solid rgba(247, 143, 30, 0.55);
+    outline-offset: 0;
+}
+
+.wd-arty-map-select option {
+    background: #0b1622;
+    color: #e8f4ff;
+}
+
 .wd-arty-wcard.is-active {
     border-color: var(--wd-accent);
     box-shadow: 0 0 0 1px rgba(247, 143, 30, 0.35) inset;
@@ -362,6 +382,66 @@
     display: block;
     width: 20px;
     height: 20px;
+}
+
+.wd-arty-terrain-btn {
+    width: 100%;
+    min-width: 0;
+    height: 26px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0 8px;
+    border: 1px solid rgba(247, 143, 30, 0.42);
+    border-radius: 5px;
+    background: rgba(8, 18, 28, 0.92);
+    color: rgba(255, 214, 170, 0.92);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        background 0.12s ease,
+        border-color 0.12s ease,
+        color 0.12s ease,
+        box-shadow 0.12s ease,
+        transform 0.08s ease;
+}
+.wd-arty-terrain-btn:hover:not(:disabled) {
+    border-color: rgba(247, 143, 30, 0.75);
+    background: rgba(247, 143, 30, 0.14);
+    color: #ffe7c4;
+}
+.wd-arty-terrain-btn:active:not(:disabled) {
+    transform: translateY(1px) scale(0.98);
+    background: rgba(247, 143, 30, 0.28);
+    border-color: var(--wd-accent);
+}
+.wd-arty-terrain-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.wd-arty-terrain-btn.is-active {
+    border-color: #ffb45a;
+    background: var(--wd-accent);
+    color: #1a1208;
+    box-shadow:
+        0 0 0 1px rgba(255, 180, 90, 0.55),
+        0 0 12px rgba(247, 143, 30, 0.35);
+}
+.wd-arty-terrain-btn.is-active:hover:not(:disabled) {
+    background: var(--wd-accent-hover, #ffa03a);
+    color: #1a1208;
+    border-color: #ffc078;
+}
+.wd-arty-terrain-note {
+    margin: 0.18rem 0 0;
+    font-size: 0.64rem;
+    line-height: 1.25;
+    color: rgba(180, 206, 224, 0.72);
+}
+.wd-arty-terrain-note[hidden] {
+    display: none !important;
 }
 
 .wd-arty-lock {
@@ -521,7 +601,7 @@
 .wd-arty-xy-grid input:focus-visible,
 .wd-arty-lock:focus-visible,
 .wd-arty-hint:focus-visible,
-.wd-arty-map-tabs button:focus-visible,
+.wd-arty-map-select:focus-visible,
 .wd-arty-wcard:focus-visible,
 .wd-arty-xy-key:focus-visible,
 .wd-arty-actions button:focus-visible {
