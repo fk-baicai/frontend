@@ -1492,11 +1492,16 @@
         var priceClass = o.tradeType === 'barter' ? ' market-card__price--barter' : '';
         var extra = formatQualityBrief(o);
         var catLine = escapeHtml(primaryCategory(o)) + ' · ' + escapeHtml(extra);
-        var status = o.status === 'closed' ? '已下架' : '进行中';
-        var statusCls = o.status === 'closed' ? ' market-card__manage-status--closed' : '';
+        var expired = false;
+        if (o.status !== 'closed' && o.expiresAt) {
+            var expMs = Date.parse(o.expiresAt);
+            expired = Number.isFinite(expMs) && expMs <= Date.now();
+        }
+        var status = o.status === 'closed' ? '已下架' : expired ? '已过期' : '进行中';
+        var statusCls = o.status === 'closed' || expired ? ' market-card__manage-status--closed' : '';
         var typeMeta = listingTypeMeta(o);
         return (
-            '<article class="market-card market-card--manage' + (o.status === 'closed' ? ' market-card--closed' : '') + '" data-order-id="' + escapeHtml(o.id) + '" role="listitem" data-listing-type="' + typeMeta.text + '">' +
+            '<article class="market-card market-card--manage' + (o.status === 'closed' || expired ? ' market-card--closed' : '') + '" data-order-id="' + escapeHtml(o.id) + '" role="listitem" data-listing-type="' + typeMeta.text + '">' +
             '<div class="market-card__media">' +
             cardMediaHtml(o) +
             listingTypeBadgeHtml(o) +

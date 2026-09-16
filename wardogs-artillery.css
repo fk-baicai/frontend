@@ -384,66 +384,6 @@
     height: 20px;
 }
 
-.wd-arty-terrain-btn {
-    width: 100%;
-    min-width: 0;
-    height: 26px;
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0 8px;
-    border: 1px solid rgba(247, 143, 30, 0.42);
-    border-radius: 5px;
-    background: rgba(8, 18, 28, 0.92);
-    color: rgba(255, 214, 170, 0.92);
-    font-size: 0.7rem;
-    font-weight: 700;
-    line-height: 1;
-    white-space: nowrap;
-    cursor: pointer;
-    transition:
-        background 0.12s ease,
-        border-color 0.12s ease,
-        color 0.12s ease,
-        box-shadow 0.12s ease,
-        transform 0.08s ease;
-}
-.wd-arty-terrain-btn:hover:not(:disabled) {
-    border-color: rgba(247, 143, 30, 0.75);
-    background: rgba(247, 143, 30, 0.14);
-    color: #ffe7c4;
-}
-.wd-arty-terrain-btn:active:not(:disabled) {
-    transform: translateY(1px) scale(0.98);
-    background: rgba(247, 143, 30, 0.28);
-    border-color: var(--wd-accent);
-}
-.wd-arty-terrain-btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-}
-.wd-arty-terrain-btn.is-active {
-    border-color: #ffb45a;
-    background: var(--wd-accent);
-    color: #1a1208;
-    box-shadow:
-        0 0 0 1px rgba(255, 180, 90, 0.55),
-        0 0 12px rgba(247, 143, 30, 0.35);
-}
-.wd-arty-terrain-btn.is-active:hover:not(:disabled) {
-    background: var(--wd-accent-hover, #ffa03a);
-    color: #1a1208;
-    border-color: #ffc078;
-}
-.wd-arty-terrain-note {
-    margin: 0.18rem 0 0;
-    font-size: 0.64rem;
-    line-height: 1.25;
-    color: rgba(180, 206, 224, 0.72);
-}
-.wd-arty-terrain-note[hidden] {
-    display: none !important;
-}
-
 .wd-arty-lock {
     display: flex;
     align-items: center;

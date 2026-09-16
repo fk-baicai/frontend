@@ -193,8 +193,7 @@
         activeId: 'm1',
         lockGun: false,
         lockTgt: false,
-        view: { scale: 0, ox: 0, oy: 0 },
-        terrain3d: false
+        view: { scale: 0, ox: 0, oy: 0 }
     };
 
     function $(id) {
@@ -593,31 +592,7 @@
         setMetric('wdAz', '—');
         setMetric('wdAzMil', '—');
         setMetric('wdDelta', '—');
-        setMetric('wdDeltaZ', '—');
         setMetric('wdMil', '—');
-    }
-
-    var _updateSeq = 0;
-
-    function solForTerrain(sol) {
-        function arc(a) {
-            if (!a) return null;
-            var m = a.mil != null ? Math.round(a.mil) : Math.round((a.minMil + a.maxMil) / 2);
-            return { mils: m, mil: m };
-        }
-        return { inRange: !!sol.inRange, single: null, low: arc(sol.low), high: arc(sol.high) };
-    }
-
-    function applyTerrainSol(sol, tcSol) {
-        if (!tcSol) return sol;
-        var next = { inRange: sol.inRange, single: sol.single, low: sol.low, high: sol.high };
-        if (tcSol.low && tcSol.low.mils != null) {
-            next.low = { mil: tcSol.low.mils, minMil: tcSol.low.mils, maxMil: tcSol.low.mils };
-        }
-        if (tcSol.high && tcSol.high.mils != null) {
-            next.high = { mil: tcSol.high.mils, minMil: tcSol.high.mils, maxMil: tcSol.high.mils };
-        }
-        return next;
     }
 
     function renderMilLine(sol) {
@@ -635,54 +610,7 @@
         setMetric('wdMil', parts.length ? parts.join(' / ') + ' mil' : '射表无解');
     }
 
-    function syncTerrainUi() {
-        var btn = $('wdTerrain3d');
-        var hint = $('wdSphLevelHint');
-        var isSpg = state.weapon === 'spg';
-        if (!isSpg) {
-            state.terrain3d = false;
-            if (window.TerrainCorrection) window.TerrainCorrection.setEnabled(false);
-        }
-        if (btn) {
-            btn.disabled = !isSpg;
-            btn.classList.toggle('is-active', !!(isSpg && state.terrain3d));
-            btn.setAttribute('aria-pressed', isSpg && state.terrain3d ? 'true' : 'false');
-            btn.textContent = isSpg && state.terrain3d ? '地形高差修正：开' : '开启地形高差修正';
-        }
-        if (hint) hint.hidden = !isSpg;
-    }
-
-    function maybeApplyTerrain(geo, sol, seq) {
-        var tc = window.TerrainCorrection;
-        setMetric('wdDeltaZ', '—');
-        if (!tc || !state.terrain3d || state.weapon !== 'spg' || !sol || !sol.inRange) return;
-        if (!state.gun || !state.tgt) return;
-        var origin = { x: state.gun.x * METERS_PER_COORD, y: state.gun.y * METERS_PER_COORD };
-        var target = { x: state.tgt.x * METERS_PER_COORD, y: state.tgt.y * METERS_PER_COORD };
-        Promise.resolve(tc.correct(state.map, 'spg', origin, target, geo.dist, solForTerrain(sol)))
-            .then(function (r) {
-                if (seq !== _updateSeq) return;
-                if (r && r.deltaZ != null && Number.isFinite(r.deltaZ)) {
-                    setMetric(
-                        'wdDeltaZ',
-                        (r.deltaZ >= 0 ? '+' : '') + Number(r.deltaZ).toFixed(1) + ' m'
-                    );
-                }
-                if (r && r.applied && r.solutions) {
-                    var fixed = applyTerrainSol(sol, r.solutions);
-                    renderMilLine(fixed);
-                    setStatus('射程内 · 高差修正', 'is-ok');
-                    syncBroadcastSolution(geo, fixed);
-                    renderMissionList();
-                } else if (r && r.deltaZ != null && Number.isFinite(r.deltaZ)) {
-                    setStatus('射程内 · ΔZ已采样未改射角', 'is-ok');
-                }
-            })
-            .catch(function () { /* ignore */ });
-    }
-
     function update() {
-        var seq = ++_updateSeq;
         if (!readInputs()) {
             setStatus('坐标无效', 'is-bad');
             clearMetrics();
@@ -716,7 +644,6 @@
             'wdDelta',
             (geo.dx >= 0 ? '+' : '') + geo.dx.toFixed(1) + ' / ' + (geo.dy >= 0 ? '+' : '') + geo.dy.toFixed(1) + ' m'
         );
-        setMetric('wdDeltaZ', '—');
 
         if (sol.inRange) {
             renderMilLine(sol);
@@ -730,7 +657,6 @@
         save();
         renderMissionList();
         syncBroadcastSolution(geo, sol);
-        maybeApplyTerrain(geo, sol, seq);
         draw();
     }
 
@@ -1965,7 +1891,6 @@
             token: token,
             enabled: !!broadcastState.enabled,
             mapId: state.map || 'bakurani',
-            terrain3d: !!state.terrain3d,
             updatedAt: new Date().toISOString()
         };
         setHelperDownloadUi(btn, '下载炮兵助手…');
@@ -1975,7 +1900,7 @@
             .then(function (buf) {
                 setHelperDownloadUi(btn, '保存炮兵助手…');
                 return triggerExeDownload(buf, 'uss-arty-helper.exe').then(function () {
-                    setBroadcastHint('已下载炮兵助手（F1/F3/F4/F5/F8）');
+                    setBroadcastHint('已下载炮兵助手（F1/F3/F4/F5 · Shift+F6/F7刻度）');
                 });
             })
             .catch(function (err) {
@@ -2247,18 +2172,6 @@
         }
         if (saveBtn) saveBtn.addEventListener('click', saveBroadcastSpeakPrefs);
         window.addEventListener('keydown', function (ev) {
-            if (ev.key === 'F8' || ev.code === 'F8') {
-                if (ev.repeat) return;
-                if (state.weapon !== 'spg') return;
-                ev.preventDefault();
-                state.terrain3d = !state.terrain3d;
-                if (window.TerrainCorrection) {
-                    window.TerrainCorrection.setEnabled(state.terrain3d);
-                }
-                syncTerrainUi();
-                update();
-                return;
-            }
             if (ev.key !== 'F2' && ev.code !== 'F2') return;
             if (ev.repeat) return;
             if (!broadcastState.enabled) return;
@@ -2276,7 +2189,6 @@
         document.querySelectorAll('[data-wd-weapon]').forEach(function (btn) {
             btn.classList.toggle('is-active', btn.getAttribute('data-wd-weapon') === id);
         });
-        syncTerrainUi();
         update();
     }
 
@@ -2375,24 +2287,6 @@
         bindBroadcastUi();
         loadIcons();
         preloadMapTiles(state.map || 'bakurani');
-        syncTerrainUi();
-        if (window.TerrainCorrection && typeof window.TerrainCorrection.init === 'function') {
-            window.TerrainCorrection.init().then(function () {
-                syncTerrainUi();
-            }).catch(function () { /* ignore */ });
-        }
-        var terrainBtn = $('wdTerrain3d');
-        if (terrainBtn) {
-            terrainBtn.addEventListener('click', function () {
-                if (state.weapon !== 'spg') return;
-                state.terrain3d = !state.terrain3d;
-                if (window.TerrainCorrection) {
-                    window.TerrainCorrection.setEnabled(state.terrain3d);
-                }
-                syncTerrainUi();
-                update();
-            });
-        }
         ['wdGunX', 'wdGunY', 'wdTgtX', 'wdTgtY'].forEach(function (id) {
             $(id).addEventListener('input', update);
         });

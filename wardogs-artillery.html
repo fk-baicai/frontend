@@ -164,18 +164,6 @@
                 </div>
             </section>
 
-            <section class="wd-arty-block" id="wdTerrainBlock">
-                <h2 class="wd-arty-block-title">
-                    地形高差修正
-                    <button type="button" class="wd-arty-hint" aria-label="地形高差说明">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
-                        <span class="wd-arty-hint-pop">仅 SPH-2。开启后显示地形 ΔZ；仅当原站认证算法返回 SAFE 时才改 mil（低弧 ΔZ±40m / 高弧±80m）。域外仍用平坦射表——atan 高低角与游戏射表不一致，不用。F8 开关。</span>
-                    </button>
-                </h2>
-                <button type="button" class="wd-arty-terrain-btn" id="wdTerrain3d" aria-pressed="false" disabled>开启地形高差修正</button>
-                <p class="wd-arty-terrain-note" id="wdSphLevelHint" hidden>射击前请将 SPH-2 调平 · F8 开关高差修正</p>
-            </section>
-
             <section class="wd-arty-block">
                 <h2 class="wd-arty-block-title">
                     坐标
@@ -225,7 +213,6 @@
                 <p class="wd-arty-subline">
                     <span>距离 <strong id="wdDist">—</strong></span>
                     <span>ΔX/ΔY <strong id="wdDelta">—</strong></span>
-                    <span>ΔZ <strong id="wdDeltaZ">—</strong></span>
                 </p>
                 <div class="wd-arty-broadcast" id="wdBroadcastBox" hidden>
                     <div class="wd-arty-broadcast-head">
@@ -270,7 +257,7 @@
                     <button type="button" id="wdHelperExe" class="wd-arty-broadcast-hotkey wd-arty-broadcast-hotkey--wide" aria-haspopup="true" aria-expanded="false">下载助手</button>
                     <div id="wdHelperMenu" class="wd-arty-helper-menu" hidden>
                         <button type="button" class="wd-arty-helper-menu-item" data-helper="voice">语音助手（F2 播报）</button>
-                        <button type="button" class="wd-arty-helper-menu-item" data-helper="arty" id="wdHelperMenuArty" hidden>炮兵助手（F1/F3/F4/F5）</button>
+                        <button type="button" class="wd-arty-helper-menu-item" data-helper="arty" id="wdHelperMenuArty" hidden>炮兵助手（F1/F3/F4/F5 · Shift+F6/F7刻度）</button>
                     </div>
                 </div>
             </section>
@@ -297,7 +284,6 @@
     <script src="auth-api.js"></script>
     <script src="nav-dropdown.js"></script>
     <script src="nav-auth-tools.js"></script>
-    <script src="wardogs-terrain-correction.js?v=3"></script>
     <script src="wardogs-artillery.js?v=74"></script>
     <script src="site-footer.js"></script>
 </body>

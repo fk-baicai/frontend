@@ -100,8 +100,19 @@
         if (!iso) return '无限';
         var t = Date.parse(iso);
         if (!Number.isFinite(t)) return '无限';
-        var d = Math.max(0, Math.ceil((t - Date.now()) / 86400000));
+        var left = t - Date.now();
+        if (left <= 0) return '已过期';
+        var d = Math.ceil(left / 86400000);
         return d + ' 天';
+    }
+
+    function orderStatusLabel(o) {
+        if (o && o.status === 'closed') return '已下架';
+        if (o && o.expiresAt) {
+            var t = Date.parse(o.expiresAt);
+            if (Number.isFinite(t) && t <= Date.now()) return '已过期';
+        }
+        return '进行中';
     }
 
     function formatDateYmd(iso) {
@@ -347,7 +358,7 @@
 
     function orderRowHtml(o) {
         var loc = (o.location && o.location.name) || '未指定地点';
-        var status = o.status === 'closed' ? '已下架' : '进行中';
+        var status = orderStatusLabel(o);
         return (
             '<article class="market-trades-row" data-order-id="' + escapeHtml(o.id) + '">' +
             '<div class="market-trades-row__main">' +
