@@ -49,8 +49,8 @@
             label: 'L81 迫击炮',
             minRange: 0.132,
             maxRange: 0.684,
-            // L81 is high-arc only in-game; keep low empty so UI still shows 低/高.
-            ballistics: { single: [], low: [], high: MORTAR_SINGLE }
+            // L81: single firing table shown as 低弧 only.
+            ballistics: { single: [], low: MORTAR_SINGLE, high: [] }
         },
         spg: {
             id: 'spg',
@@ -600,12 +600,15 @@
         var highTxt = null;
         if (sol.low) lowTxt = formatMil(sol.low);
         if (sol.high) highTxt = formatMil(sol.high);
-        // Legacy single-table weapons: treat as high arc.
+        // Legacy single-table weapons: treat as low arc.
         if (sol.single && !sol.low && !sol.high) {
-            highTxt = formatMil(sol.single);
+            lowTxt = formatMil(sol.single);
         }
         if (lowTxt == null && highTxt == null) return '射表无解';
-        return '低 ' + (lowTxt != null ? lowTxt : '—') + ' / 高 ' + (highTxt != null ? highTxt : '—') + ' mil';
+        // Only one branch (e.g. mortar): show that arc alone.
+        if (lowTxt != null && highTxt == null) return '低 ' + lowTxt + ' mil';
+        if (highTxt != null && lowTxt == null) return '高 ' + highTxt + ' mil';
+        return '低 ' + lowTxt + ' / 高 ' + highTxt + ' mil';
     }
 
     function renderMilLine(sol) {
