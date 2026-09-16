@@ -49,7 +49,8 @@
             label: 'L81 迫击炮',
             minRange: 0.132,
             maxRange: 0.684,
-            ballistics: { single: MORTAR_SINGLE, low: [], high: [] }
+            // L81 is high-arc only in-game; keep low empty so UI still shows 低/高.
+            ballistics: { single: [], low: [], high: MORTAR_SINGLE }
         },
         spg: {
             id: 'spg',
@@ -314,11 +315,9 @@
         var sol = getSolutions(weapon, dist);
         var mil = '—';
         if (sol.inRange) {
-            if (sol.single) mil = formatMil(sol.single);
-            else if (sol.high) mil = formatMil(sol.high);
-            else if (sol.low) mil = formatMil(sol.low);
+            mil = formatArcMilLine(sol);
         }
-        return weaponShort(m.weapon) + ' · ' + deg.toFixed(1) + '° · ' + mil + ' mil · ' + dist.toFixed(0) + ' m';
+        return weaponShort(m.weapon) + ' · ' + deg.toFixed(1) + '° · ' + mil + ' · ' + dist.toFixed(0) + ' m';
     }
 
     function renderMissionList() {
@@ -595,19 +594,22 @@
         setMetric('wdMil', '—');
     }
 
+    function formatArcMilLine(sol) {
+        if (!sol || !sol.inRange) return '—';
+        var lowTxt = null;
+        var highTxt = null;
+        if (sol.low) lowTxt = formatMil(sol.low);
+        if (sol.high) highTxt = formatMil(sol.high);
+        // Legacy single-table weapons: treat as high arc.
+        if (sol.single && !sol.low && !sol.high) {
+            highTxt = formatMil(sol.single);
+        }
+        if (lowTxt == null && highTxt == null) return '射表无解';
+        return '低 ' + (lowTxt != null ? lowTxt : '—') + ' / 高 ' + (highTxt != null ? highTxt : '—') + ' mil';
+    }
+
     function renderMilLine(sol) {
-        if (!sol || !sol.inRange) {
-            setMetric('wdMil', '—');
-            return;
-        }
-        if (sol.single) {
-            setMetric('wdMil', formatMil(sol.single) + ' mil');
-            return;
-        }
-        var parts = [];
-        if (sol.low) parts.push('低 ' + formatMil(sol.low));
-        if (sol.high) parts.push('高 ' + formatMil(sol.high));
-        setMetric('wdMil', parts.length ? parts.join(' / ') + ' mil' : '射表无解');
+        setMetric('wdMil', formatArcMilLine(sol));
     }
 
     function update() {
