@@ -1,4 +1,4 @@
-var CACHE = 'uss-wd-arty-tiles-v2';
+var CACHE = 'uss-wd-arty-tiles-v3';
 
 self.addEventListener('install', function (ev) {
     self.skipWaiting();
@@ -24,7 +24,7 @@ self.addEventListener('activate', function (ev) {
 
 self.addEventListener('fetch', function (ev) {
     var url = ev.request.url;
-    if (url.indexOf('wardogs.t0ki.cn/maps/tiles/') === -1) return;
+    if (url.indexOf('wardogs.t0ki.cn/maps/tiles') === -1) return;
     if (ev.request.method !== 'GET') return;
     ev.respondWith(
         caches.open(CACHE).then(function (cache) {

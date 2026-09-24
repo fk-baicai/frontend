@@ -852,6 +852,16 @@
             throwIfNotOk(r, data, 'ARTY_004');
             return data;
         },
+        /** 炮兵助手专用长效令牌（写入 exe，与网页会话分离） */
+        async getArtyHelperToken(token) {
+            var r = await fetch(joinUrl('/api/me/arty/helper-token'), {
+                cache: 'no-store',
+                headers: { Authorization: 'Bearer ' + token },
+            });
+            var data = await parseJson(r);
+            throwIfNotOk(r, data, 'ARTY_004');
+            return data;
+        },
         async adminAuditLog(token, limit, offset) {
             var q = '/api/admin/audit-log?limit=' + encodeURIComponent(limit != null ? limit : 80);
             if (offset != null && offset !== '') {

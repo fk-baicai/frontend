@@ -69,7 +69,7 @@
 
     var MAPS = {
         bakurani: {
-            cdn: 'https://wardogs.t0ki.cn/maps/tiles/bakurani',
+            cdn: 'https://wardogs.t0ki.cn/maps/tiles-color/bakurani',
             tileMin: { x: 0, y: 0 },
             tileMax: { x: 163.84, y: 163.84 },
             markers: [
@@ -92,13 +92,13 @@
                 { icon: 'spawn_board', x: 87.06, y: 32.72, label: '出生板' }
             ],
             zones: [
-                { label: 'MANTICORE', color: '#82c596', points: [[38.68, 79.88], [43.39, 78.85], [42.35, 74.15], [37.65, 75.18]] },
-                { label: 'LONESTAR', color: '#5fa8d3', points: [[83.08, 35.27], [87.72, 36.51], [88.97, 31.86], [84.32, 30.62]] },
-                { label: 'VALKYRA', color: '#d86666', points: [[117.50, 73.76], [121.22, 70.71], [118.18, 66.99], [114.45, 70.04]] }
+                { label: 'MANTICORE', color: '#3dff9a', points: [[38.68, 79.88], [43.39, 78.85], [42.35, 74.15], [37.65, 75.18]] },
+                { label: 'LONESTAR', color: '#4ec8ff', points: [[83.08, 35.27], [87.72, 36.51], [88.97, 31.86], [84.32, 30.62]] },
+                { label: 'VALKYRA', color: '#ff5a6a', points: [[117.50, 73.76], [121.22, 70.71], [118.18, 66.99], [114.45, 70.04]] }
             ]
         },
         ozeti: {
-            cdn: 'https://wardogs.t0ki.cn/maps/tiles/ozeti',
+            cdn: 'https://wardogs.t0ki.cn/maps/tiles-color/ozeti',
             tileMin: { x: 0, y: 0 },
             tileMax: { x: 163.84, y: 163.84 },
             markers: [
@@ -120,13 +120,13 @@
                 { icon: 'spawn_board', x: 83.68, y: 31.04, label: '出生板' }
             ],
             zones: [
-                { label: 'MANTICORE', color: '#82c596', points: [[69.22, 90.85], [73.09, 87.98], [70.22, 84.12], [66.36, 86.99]] },
-                { label: 'LONESTAR', color: '#5fa8d3', points: [[81.52, 34.03], [86.33, 34.03], [86.33, 29.21], [81.53, 29.22]] },
-                { label: 'VALKYRA', color: '#d86666', points: [[133.98, 68.51], [138.58, 69.92], [139.99, 65.32], [135.39, 63.91]] }
+                { label: 'MANTICORE', color: '#3dff9a', points: [[69.22, 90.85], [73.09, 87.98], [70.22, 84.12], [66.36, 86.99]] },
+                { label: 'LONESTAR', color: '#4ec8ff', points: [[81.52, 34.03], [86.33, 34.03], [86.33, 29.21], [81.53, 29.22]] },
+                { label: 'VALKYRA', color: '#ff5a6a', points: [[133.98, 68.51], [138.58, 69.92], [139.99, 65.32], [135.39, 63.91]] }
             ]
         },
         zestafona: {
-            cdn: 'https://wardogs.t0ki.cn/maps/tiles/zestafona',
+            cdn: 'https://wardogs.t0ki.cn/maps/tiles-color/zestafona',
             tileMin: { x: 0, y: 0 },
             tileMax: { x: 163.84, y: 163.84 },
             markers: [
@@ -171,7 +171,8 @@
     function pumpTileQueue() {
         while (_tileInflight < TILE_MAX_INFLIGHT && _tileQueue.length) {
             var job = _tileQueue.shift();
-            if (!job || !job.img || job.img.src) continue;
+            if (!job || !job.img || job.started) continue;
+            job.started = true;
             _tileInflight += 1;
             job.img.src = job.url;
         }
@@ -715,7 +716,14 @@
     }
 
     function tileCandidates(mapId, z, tx, ty) {
-        return [MAPS[mapId].cdn + '/zoom_' + z + '/' + tx + '_' + ty + '.webp'];
+        var file = '/zoom_' + z + '/' + tx + '_' + ty + '.webp';
+        var cdn = MAPS[mapId].cdn;
+        var urls = [cdn + file];
+        // t0ki 已把彩色瓦片迁到 tiles-color；旧 tiles 路径保留作回退
+        if (cdn.indexOf('/maps/tiles-color/') !== -1) {
+            urls.push(cdn.replace('/maps/tiles-color/', '/maps/tiles/') + file);
+        }
+        return urls;
     }
 
     function getTile(mapId, z, tx, ty, priority) {
@@ -925,12 +933,16 @@
             });
             ctx.closePath();
             ctx.fillStyle = zone.color;
-            ctx.globalAlpha = 0.12;
+            ctx.globalAlpha = 0.18;
             ctx.fill();
             ctx.globalAlpha = 1;
+            // 深色描边垫底，彩色虚线盖上，避免陷进草地
+            ctx.setLineDash([7, 5]);
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.72)';
+            ctx.stroke();
+            ctx.lineWidth = 2.2;
             ctx.strokeStyle = zone.color;
-            ctx.lineWidth = 2;
-            ctx.setLineDash([6, 6]);
             ctx.stroke();
             ctx.setLineDash([]);
         });
@@ -943,7 +955,7 @@
             var s = worldToPx(m);
             if (s.px < -30 || s.px > cssW + 30 || s.py < -30 || s.py > cssH + 30) return;
             var img = ICONS[m.icon];
-            var size = m.icon === 'tower' ? 26 : 20;
+            var size = m.icon === 'tower' ? 28 : 22;
             if (m.icon === 'tower') {
                 var labelH = 13;
                 var top = s.py - size / 2 - 2;
@@ -952,15 +964,26 @@
                 var ring = (bottom - top) / 2;
                 ctx.save();
                 ctx.setLineDash([3, 3]);
-                ctx.lineWidth = 1.2;
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                // 黑底垫一层，再画白圈，浅色地形上更清楚
+                ctx.lineWidth = 2.8;
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+                ctx.beginPath();
+                ctx.arc(s.px, cy, ring, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.lineWidth = 1.8;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
                 ctx.beginPath();
                 ctx.arc(s.px, cy, ring, 0, Math.PI * 2);
                 ctx.stroke();
                 ctx.restore();
             }
             if (img) {
+                ctx.save();
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+                ctx.shadowBlur = 6;
+                ctx.shadowOffsetY = 1;
                 ctx.drawImage(img, s.px - size / 2, s.py - size / 2, size, size);
+                ctx.restore();
             } else {
                 ctx.fillStyle = '#f78f1e';
                 ctx.beginPath();
@@ -968,11 +991,16 @@
                 ctx.fill();
             }
             if (m.icon === 'tower' && m.label) {
-                ctx.fillStyle = 'rgba(233,233,228,0.92)';
+                ctx.save();
                 ctx.font = 'bold 11px Arial, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'top';
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.78)';
+                ctx.strokeText(m.label, s.px, s.py + size / 2 + 4);
+                ctx.fillStyle = '#fff';
                 ctx.fillText(m.label, s.px, s.py + size / 2 + 4);
+                ctx.restore();
             }
         });
     }
@@ -980,13 +1008,16 @@
     function drawPoint(ctx, p, label, faded) {
         var s = worldToPx(p);
         ctx.save();
-        if (faded) ctx.globalAlpha = 0.42;
+        if (faded) ctx.globalAlpha = 0.55;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+        ctx.shadowBlur = 5;
         ctx.beginPath();
-        ctx.arc(s.px, s.py, 8, 0, Math.PI * 2);
+        ctx.arc(s.px, s.py, 9, 0, Math.PI * 2);
         ctx.fillStyle = label.charAt(0) === 'O' ? '#5fa8d3' : '#d86666';
         ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.4;
         ctx.stroke();
         ctx.fillStyle = '#fff';
         ctx.font = label.length > 2 ? 'bold 8px Arial, sans-serif' : 'bold 10px Arial, sans-serif';
@@ -1027,8 +1058,7 @@
         ctx.fillRect(0, 0, w, h);
 
         var map = currentMap();
-        // 中性灰白：降饱和，避免暖黄偏色
-        ctx.filter = 'brightness(0.9) contrast(1.08) saturate(0.42)';
+        ctx.filter = 'brightness(0.94) contrast(1.06) saturate(0.4)';
         ctx.imageSmoothingQuality = 'high';
         ctx.imageSmoothingEnabled = true;
         drawTiles(ctx, w, h, map, 0);
@@ -1041,6 +1071,20 @@
         drawMarkers(ctx, w, h, map);
 
         var metersToPx = state.view.scale / METERS_PER_COORD;
+        function strokeRing(px, py, r, color, lineW) {
+            ctx.setLineDash([7, 5]);
+            ctx.lineWidth = lineW + 2.2;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.beginPath();
+            ctx.arc(px, py, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.lineWidth = lineW;
+            ctx.strokeStyle = color;
+            ctx.beginPath();
+            ctx.arc(px, py, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
         function drawMission(m, index, faded) {
             var weapon = WEAPONS[m.weapon] || WEAPONS.mortar;
             var n = index + 1;
@@ -1049,32 +1093,26 @@
                 var rMin = Math.max(0, weapon.minRange * 1000 * metersToPx);
                 var rMax = Math.max(rMin, weapon.maxRange * 1000 * metersToPx);
                 ctx.save();
-                if (faded) ctx.globalAlpha = 0.28;
-                ctx.beginPath();
-                ctx.arc(gun.px, gun.py, rMax, 0, Math.PI * 2);
-                if (rMin > 1) ctx.arc(gun.px, gun.py, rMin, 0, Math.PI * 2, true);
-                ctx.fillStyle = faded ? 'rgba(255, 255, 255, 0.016)' : 'rgba(255, 255, 255, 0.032)';
-                ctx.fill('evenodd');
-                ctx.setLineDash([6, 5]);
-                ctx.lineWidth = faded ? 1.1 : 1.6;
-                ctx.strokeStyle = 'rgba(247, 143, 30, 0.88)';
-                ctx.beginPath();
-                ctx.arc(gun.px, gun.py, rMax, 0, Math.PI * 2);
-                ctx.stroke();
+                if (faded) ctx.globalAlpha = 0.38;
+                // 只画圈线，不在圈内铺色，避免黄/红蒙层
+                strokeRing(gun.px, gun.py, rMax, 'rgba(255, 176, 64, 0.98)', faded ? 1.5 : 2.2);
                 if (rMin > 1) {
-                    ctx.strokeStyle = 'rgba(232, 120, 128, 0.9)';
-                    ctx.beginPath();
-                    ctx.arc(gun.px, gun.py, rMin, 0, Math.PI * 2);
-                    ctx.stroke();
+                    strokeRing(gun.px, gun.py, rMin, 'rgba(255, 120, 132, 0.98)', faded ? 1.4 : 2);
                 }
                 ctx.restore();
                 if (m.tgt) {
                     var tgt = worldToPx(m.tgt);
                     ctx.save();
-                    ctx.globalAlpha = faded ? 0.28 : 1;
-                    ctx.strokeStyle = 'rgba(247,143,30,0.7)';
-                    ctx.lineWidth = 1.5;
-                    ctx.setLineDash([4, 4]);
+                    ctx.globalAlpha = faded ? 0.38 : 1;
+                    ctx.setLineDash([5, 4]);
+                    ctx.lineWidth = 3.4;
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.beginPath();
+                    ctx.moveTo(gun.px, gun.py);
+                    ctx.lineTo(tgt.px, tgt.py);
+                    ctx.stroke();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'rgba(255, 176, 64, 0.95)';
                     ctx.beginPath();
                     ctx.moveTo(gun.px, gun.py);
                     ctx.lineTo(tgt.px, tgt.py);
@@ -1891,21 +1929,35 @@
         var btn = beginHelperDownload($('wdHelperExe'), '下载助手');
         if (!btn) return;
         setHelperMenuOpen(false);
-        var cfg = {
-            apiBase: (window.UssAuthApi && window.UssAuthApi.base) || (window.USS_AUTH_API_BASE || ''),
-            token: token,
-            enabled: !!broadcastState.enabled,
-            mapId: state.map || 'bakurani',
-            updatedAt: new Date().toISOString()
-        };
-        setHelperDownloadUi(btn, '下载炮兵助手…');
-        fetchArtyHelperBuf(token, cfg, function (loaded, total) {
-            setHelperDownloadUi(btn, formatDownloadProgress(loaded, total, '炮兵助手'));
-        })
-            .then(function (buf) {
-                setHelperDownloadUi(btn, '保存炮兵助手…');
-                return triggerExeDownload(buf, 'uss-arty-helper.exe').then(function () {
-                    setBroadcastHint('已下载炮兵助手（F1/F3/F4/F5 · Shift+F6/F7刻度）');
+        setHelperDownloadUi(btn, '签发助手凭证…');
+        var apiBase = (window.UssAuthApi && window.UssAuthApi.base) || (window.USS_AUTH_API_BASE || '');
+        window.UssAuthApi.getArtyHelperToken(token)
+            .then(function (issued) {
+                var assistToken = issued && issued.token ? String(issued.token) : '';
+                if (!assistToken) throw new Error('助手凭证签发失败');
+                var cfg = {
+                    apiBase: apiBase,
+                    token: assistToken,
+                    enabled: !!broadcastState.enabled,
+                    mapId: state.map || 'bakurani',
+                    expiresAt:
+                        issued && issued.expiresAt != null
+                            ? new Date(Number(issued.expiresAt)).toISOString()
+                            : '',
+                    days: issued && issued.days != null ? Number(issued.days) : 90,
+                    updatedAt: new Date().toISOString()
+                };
+                setHelperDownloadUi(btn, '下载炮兵助手…');
+                return fetchArtyHelperBuf(token, cfg, function (loaded, total) {
+                    setHelperDownloadUi(btn, formatDownloadProgress(loaded, total, '炮兵助手'));
+                }).then(function (buf) {
+                    setHelperDownloadUi(btn, '保存炮兵助手…');
+                    var days = cfg.days || 90;
+                    return triggerExeDownload(buf, 'uss-arty-helper.exe').then(function () {
+                        setBroadcastHint(
+                            '已下载炮兵助手（登录已写入程序，约 ' + days + ' 天有效 · F1/F3/F4/F5 · F9高低密）'
+                        );
+                    });
                 });
             })
             .catch(function (err) {
@@ -2279,7 +2331,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         if (navigator.serviceWorker) {
-            navigator.serviceWorker.register('wardogs-artillery-sw.js').catch(function () { /* ignore */ });
+            navigator.serviceWorker.register('wardogs-artillery-sw.js?v=3').catch(function () { /* ignore */ });
         }
         load();
         writeInputs();
