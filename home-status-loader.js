@@ -27,6 +27,13 @@
             var obj = JSON.parse(raw);
             if (!obj || !obj.savedAt) return null;
             if (Date.now() - Number(obj.savedAt) > CACHE_TTL_MS) return null;
+            var rsi = obj.rsiServerStatus;
+            if (rsi && rsi.fetchedAt) {
+                var fetched = new Date(rsi.fetchedAt).getTime();
+                if (!isNaN(fetched) && Date.now() - fetched > 30 * 60 * 1000) {
+                    obj.rsiServerStatus = null;
+                }
+            }
             return obj;
         } catch (e) {
             return null;
