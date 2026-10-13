@@ -1102,7 +1102,8 @@
             max-height: calc(2.35rem + 5 * 2.75rem);
         }
         #secOopzTts .oopz-tts-rule-del,
-        #secOopzTts .oopz-nocool-del {
+        #secOopzTts .oopz-nocool-del,
+        #secOopzTts .oopz-monitor-area-del {
             padding: 0.22rem 0.55rem;
             border-radius: 8px;
             border: 1px solid rgba(255, 120, 120, 0.35);
@@ -2352,6 +2353,24 @@
                     <span class="hint">同频道不同人之间最短间隔（默认 1 秒）。同一人 30 秒内重复进房不重复播（免冷却名单除外）。</span>
                 </div>
 
+                <h3 class="oopz-subhead">监听域</h3>
+                <p class="hint">只监测这里添加的域 ID。机器人不会再进入、也不会播报未添加的域。域 ID 可从机器人日志「进入检测同步域」后面的那串复制，例如 01KP1ZD6ITGV。</p>
+                <div class="oopz-tts-rules-toolbar">
+                    <button type="button" id="btnAddOopzMonitorArea" class="btn-secondary">添加域 ID</button>
+                    <span class="users-count" id="oopzMonitorAreaCount"></span>
+                </div>
+                <div class="oopz-tts-rules-scroll oopz-nocool-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>域 ID</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="oopzMonitorAreaTbody"></tbody>
+                    </table>
+                </div>
+
                 <h3 class="oopz-subhead">免冷却名单</h3>
                 <p class="hint">名单内 ID 每次进频道都播报（使用默认音色/文案，无需网站绑定），不受频道间隔与 30 秒内重复进房限制；同频道普通用户排队超过 5 人时合并欢迎，免冷却仍单独播报。请填写本人 OOPZ 数字 ID。</p>
                 <div class="oopz-tts-rules-toolbar">
@@ -3037,6 +3056,8 @@
                 document.getElementById('btnAddOopzTtsRule').onclick = addOopzTtsRuleRow;
                 var btnAddNoCool = document.getElementById('btnAddOopzNoCooldown');
                 if (btnAddNoCool) btnAddNoCool.onclick = addOopzNoCooldownRow;
+                var btnAddMonitorArea = document.getElementById('btnAddOopzMonitorArea');
+                if (btnAddMonitorArea) btnAddMonitorArea.onclick = addOopzMonitorAreaRow;
                 document.getElementById('btnReloadAuditLog').onclick = loadAuditLog;
                 loadScheduleUi();
                 loadOopzCheckinUi();
@@ -5455,6 +5476,76 @@
                 return out;
             }
 
+            function normalizeMonitorAreaList(list) {
+                var seen = {};
+                var out = [];
+                (Array.isArray(list) ? list : []).forEach(function (item) {
+                    var id = String(item || '').trim();
+                    var key = id.toUpperCase();
+                    if (!/^[A-Za-z0-9]{8,40}$/.test(id) || seen[key]) return;
+                    seen[key] = true;
+                    out.push(id);
+                });
+                return out;
+            }
+
+            function renderMonitorAreaTable(ids) {
+                var tbody = document.getElementById('oopzMonitorAreaTbody');
+                var countEl = document.getElementById('oopzMonitorAreaCount');
+                if (!tbody) return;
+                var list = Array.isArray(ids)
+                    ? ids.map(function (id) {
+                          return String(id == null ? '' : id).trim();
+                      })
+                    : [];
+                var validCount = normalizeMonitorAreaList(list).length;
+                if (!list.length) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="2" class="hint">尚未添加域。未添加时机器人不监测任何域。</td></tr>';
+                } else {
+                    tbody.innerHTML = list
+                        .map(function (id, idx) {
+                            return (
+                                '<tr data-area-idx="' +
+                                idx +
+                                '">' +
+                                '<td><input type="text" class="oopz-tts-rule-id oopz-monitor-area" maxlength="40" value="' +
+                                String(id).replace(/"/g, '&quot;') +
+                                '" placeholder="01KP1ZD6ITGV" /></td>' +
+                                '<td><button type="button" class="oopz-monitor-area-del">删除</button></td>' +
+                                '</tr>'
+                            );
+                        })
+                        .join('');
+                }
+                if (countEl) {
+                    countEl.textContent = validCount ? '共 ' + validCount + ' 个域' : '';
+                }
+            }
+
+            function collectMonitorAreaRows() {
+                var tbody = document.getElementById('oopzMonitorAreaTbody');
+                if (!tbody) return [];
+                var rows = tbody.querySelectorAll('tr[data-area-idx]');
+                var out = [];
+                rows.forEach(function (tr) {
+                    var idEl = tr.querySelector('.oopz-monitor-area');
+                    out.push(idEl ? idEl.value.trim() : '');
+                });
+                return out;
+            }
+
+            function addOopzMonitorAreaRow() {
+                var current = collectMonitorAreaRows();
+                current.push('');
+                renderMonitorAreaTable(current);
+                var tbody = document.getElementById('oopzMonitorAreaTbody');
+                if (!tbody) return;
+                var inputs = tbody.querySelectorAll('.oopz-monitor-area');
+                var last = inputs.length ? inputs[inputs.length - 1] : null;
+                if (last) last.focus();
+            }
+
             function renderNoCooldownTable(ids) {
                 var tbody = document.getElementById('oopzNoCooldownTbody');
                 var countEl = document.getElementById('oopzNoCooldownCount');
@@ -5611,6 +5702,15 @@
             }
 
             document.addEventListener('click', function (ev) {
+                var areaDel = ev.target.closest('.oopz-monitor-area-del');
+                if (areaDel) {
+                    var trA = areaDel.closest('tr');
+                    if (trA && trA.parentElement) {
+                        trA.remove();
+                        renderMonitorAreaTable(collectMonitorAreaRows());
+                    }
+                    return;
+                }
                 var nocoolDel = ev.target.closest('.oopz-nocool-del');
                 if (nocoolDel) {
                     var trN = nocoolDel.closest('tr');
@@ -5730,6 +5830,7 @@
                     if (cooldownEl) {
                         cooldownEl.value = String(cfg.announceCooldownSec != null ? cfg.announceCooldownSec : 1);
                     }
+                    renderMonitorAreaTable(cfg.monitorAreaIds || []);
                     renderNoCooldownTable(cfg.noCooldownOopzIds || []);
                     renderOopzTtsRulesTable(cfg.memberRules || []);
                 } catch (eLoad) {
@@ -5752,6 +5853,7 @@
                 var memberRules = collectOopzTtsMemberRules().filter(function (rule) {
                     return /^\d{5,12}$/.test(String(rule.oopzId || '').trim());
                 });
+                var monitorAreaIds = normalizeMonitorAreaList(collectMonitorAreaRows());
                 var noCooldownOopzIds = collectNoCooldownIds();
                 var announceCooldownSec = cooldownEl ? Number(cooldownEl.value) : 1;
                 if (!Number.isFinite(announceCooldownSec)) announceCooldownSec = 1;
@@ -5769,6 +5871,7 @@
                         volume: volumeEl ? volumeEl.value : '+0%',
                         defaultTemplate: templateEl ? templateEl.value.trim() : '欢迎 {user} 登舰成功',
                         announceCooldownSec: announceCooldownSec,
+                        monitorAreaIds: monitorAreaIds,
                         noCooldownOopzIds: noCooldownOopzIds,
                         memberRules: memberRules,
                     });
@@ -5777,6 +5880,8 @@
                             '已保存 OOPZ 语音播报配置（含 ' +
                             memberRules.length +
                             ' 条成员规则，' +
+                            monitorAreaIds.length +
+                            ' 个监听域，' +
                             noCooldownOopzIds.length +
                             ' 个免冷却 ID）';
                         okEl.hidden = false;
