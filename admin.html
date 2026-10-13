@@ -2354,7 +2354,7 @@
                 </div>
 
                 <h3 class="oopz-subhead">监听域</h3>
-                <p class="hint">只监测这里添加的域 ID。机器人不会再进入、也不会播报未添加的域。域 ID 可从机器人日志「进入检测同步域」后面的那串复制，例如 01KP1ZD6ITGV。</p>
+                <p class="hint">只监测这里添加的域。填 OOPZ 域卡片上的数字 ID（例如 387086651），机器人会自动对上内部域。未添加的域不会进入，也不会播报。</p>
                 <div class="oopz-tts-rules-toolbar">
                     <button type="button" id="btnAddOopzMonitorArea" class="btn-secondary">添加域 ID</button>
                     <span class="users-count" id="oopzMonitorAreaCount"></span>
@@ -5511,7 +5511,7 @@
                                 '">' +
                                 '<td><input type="text" class="oopz-tts-rule-id oopz-monitor-area" maxlength="40" value="' +
                                 String(id).replace(/"/g, '&quot;') +
-                                '" placeholder="01KP1ZD6ITGV" /></td>' +
+                                '" placeholder="387086651" /></td>' +
                                 '<td><button type="button" class="oopz-monitor-area-del">删除</button></td>' +
                                 '</tr>'
                             );
