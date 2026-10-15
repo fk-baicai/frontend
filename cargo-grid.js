@@ -187,7 +187,7 @@
     var listEl = document.getElementById('cgShipList');
     var viewEl = document.getElementById('cgView');
     var selectedId = '';
-    var listCollapsed = false;
+    var openMaker = '';
     var rotX = -32;
     var rotY = 42;
     var zoom = 1;
@@ -322,21 +322,11 @@
         return order;
     }
 
-    function activeMaker() {
-        var i;
-        for (i = 0; i < ships.length; i++) {
-            if (ships[i].id === selectedId) return ships[i].makerZh || '其他';
-        }
-        return '';
-    }
-
     function renderList() {
         var groups = makerGroups();
-        var maker = activeMaker();
         listEl.innerHTML = groups
             .map(function (group) {
-                var on = group.zh === maker;
-                var open = on && !listCollapsed;
+                var open = group.zh === openMaker;
                 var shipsHtml = '';
                 if (open) {
                     shipsHtml =
@@ -387,7 +377,7 @@
                 return (
                     '<section class="cg-group">' +
                     '<button type="button" class="cg-maker' +
-                    (on ? ' is-selected' : '') +
+                    (open ? ' is-selected' : '') +
                     '" aria-expanded="' +
                     (open ? 'true' : 'false') +
                     '" data-maker="' +
@@ -479,7 +469,8 @@
         })[0];
         if (!ship) return;
         selectedId = ship.id;
-        listCollapsed = false;
+        openMaker = ship.makerZh || '其他';
+        shownKey = layoutKey(ship);
         panX = 0;
         panY = 0;
         panZ = 0;
@@ -914,6 +905,29 @@
         });
     }
 
+    function emptyScene() {
+        var w = 28;
+        var d = 16;
+        var lines = gridLines(w, d, w, d);
+        return {
+            boxes: [],
+            edges: lineBuffer([]),
+            edgeCount: 0,
+            selEdges: lineBuffer([]),
+            selEdgeCount: 0,
+            hits: [],
+            grid: lineBuffer(lines),
+            gridCount: lines.length / 3,
+            focusY: 1,
+            totalW: w,
+            maxD: d,
+            maxH: 2,
+            span: Math.max(w, d, 4),
+            plaque: [],
+            plaques: [],
+        };
+    }
+
     function gridLines(totalW, maxD, originW, originD) {
         var pad = 28;
         var lines = [];
@@ -1138,7 +1152,7 @@
     }
 
     function draw(size) {
-        var pixels = size || viewPixels();
+        var pixels = size && size.w && size.h ? size : viewPixels();
         var pw = pixels.w;
         var ph = pixels.h;
         if (canvas.width !== pw || canvas.height !== ph) {
@@ -1235,19 +1249,8 @@
         var makerBtn = event.target.closest('.cg-maker');
         if (makerBtn) {
             var name = makerBtn.getAttribute('data-maker');
-            if (name === activeMaker()) {
-                listCollapsed = !listCollapsed;
-                renderList();
-                return;
-            }
-            listCollapsed = false;
-            var i;
-            for (i = 0; i < ships.length; i++) {
-                if ((ships[i].makerZh || '其他') === name) {
-                    selectShip(ships[i].id, true);
-                    return;
-                }
-            }
+            openMaker = openMaker === name ? '' : name;
+            renderList();
             return;
         }
         var addBtn = event.target.closest('.cg-ship-add');
@@ -1262,6 +1265,10 @@
 
     function addShipToView(id) {
         if (!id || id === selectedId) return;
+        if (!currentShip()) {
+            selectShip(id, true);
+            return;
+        }
         var index = viewExtras.indexOf(id);
         if (index !== -1) {
             viewExtras.splice(index, 1);
@@ -1424,7 +1431,7 @@
         draw();
     });
 
-    if (window.ResizeObserver) new ResizeObserver(draw).observe(viewEl);
+    if (window.ResizeObserver) new ResizeObserver(function () { draw(); }).observe(viewEl);
     else window.addEventListener('resize', draw);
 
     function applySavedShips(list) {
@@ -1441,6 +1448,12 @@
         });
     }
 
+    function layoutKey(ship) {
+        return JSON.stringify(ship.bays) + '\n' + ship.wikiScu + '\n' + ship.nameZh;
+    }
+
+    var shownKey = '';
+
     function openInitialShip() {
         var initial = readHash();
         var start = ships.filter(function (ship) {
@@ -1449,13 +1462,45 @@
         if (start) selectShip(start.id, false);
         else {
             selectedId = '';
+            openMaker = '';
+            viewExtras = [];
+            layoutAnchor = null;
+            dropPlaques(scene);
+            scene = emptyScene();
             renderList();
             draw();
         }
     }
 
+    function adoptSavedShips() {
+        renderList();
+        if (!selectedId) return;
+        var ship = null;
+        var i;
+        for (i = 0; i < ships.length; i++) {
+            if (ships[i].id === selectedId) ship = ships[i];
+        }
+        if (!ship) return;
+        var key = layoutKey(ship);
+        if (key === shownKey) return;
+        shownKey = key;
+        var orbit = scene && scene.orbit;
+        var extras = viewExtras.slice();
+        var anchor = layoutAnchor;
+        dropPlaques(scene);
+        viewExtras = extras;
+        layoutAnchor = anchor;
+        scene = buildScene(ship);
+        if (orbit) scene.orbit = orbit;
+        draw();
+        if (window.CargoGrid && window.CargoGrid.onShip) window.CargoGrid.onShip(ship);
+    }
+
+    openInitialShip();
+
     var gridReady = fetch((window.USS_AUTH_API_BASE || 'http://127.0.0.1:3789').replace(/\/$/, '') + '/api/cargo-grid/ships', {
         cache: 'no-store',
+        signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined,
     })
         .then(function (response) {
             return response.ok ? response.json() : null;
@@ -1464,7 +1509,7 @@
             if (data && data.ships) applySavedShips(data.ships);
         })
         .catch(function () {})
-        .then(openInitialShip);
+        .then(adoptSavedShips);
 
     function clamp(value, limit) {
         return Math.max(-limit, Math.min(limit, value));
