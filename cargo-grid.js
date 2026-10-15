@@ -327,7 +327,7 @@
         for (i = 0; i < ships.length; i++) {
             if (ships[i].id === selectedId) return ships[i].makerZh || '其他';
         }
-        return ships[0] ? ships[0].makerZh || '其他' : '';
+        return '';
     }
 
     function renderList() {
@@ -1110,14 +1110,37 @@
         return { right: right, up: up };
     }
 
-    function draw() {
-        if (!scene) return;
+    function viewPixels() {
         var dpr = Math.min(window.devicePixelRatio || 1, 2);
         var rect = viewEl.getBoundingClientRect();
         var width = Math.max(1, viewEl.clientWidth, rect.width);
         var height = Math.max(1, viewEl.clientHeight, rect.height);
-        var pw = Math.round(width * dpr);
-        var ph = Math.round(height * dpr);
+        return { w: Math.max(1, Math.round(width * dpr)), h: Math.max(1, Math.round(height * dpr)) };
+    }
+
+    function exportPixels(screen) {
+        var dims = gl.getParameter(gl.MAX_VIEWPORT_DIMS);
+        var maxDim = 8192;
+        if (dims && dims.length >= 2) maxDim = Math.min(maxDim, dims[0], dims[1]);
+        var longEdge = Math.max(screen.w, screen.h);
+        var scale = maxDim / longEdge;
+        var w = Math.max(1, Math.round(screen.w * scale));
+        var h = Math.max(1, Math.round(screen.h * scale));
+        if (w > maxDim) {
+            h = Math.max(1, Math.round((h * maxDim) / w));
+            w = maxDim;
+        }
+        if (h > maxDim) {
+            w = Math.max(1, Math.round((w * maxDim) / h));
+            h = maxDim;
+        }
+        return { w: w, h: h };
+    }
+
+    function draw(size) {
+        var pixels = size || viewPixels();
+        var pw = pixels.w;
+        var ph = pixels.h;
         if (canvas.width !== pw || canvas.height !== ph) {
             canvas.width = pw;
             canvas.height = ph;
@@ -1125,6 +1148,7 @@
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.clearColor(0.086, 0.188, 0.282, 1);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        if (!scene) return;
         gl.enable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);
         var cam = camera();
@@ -1422,7 +1446,12 @@
         var start = ships.filter(function (ship) {
             return ship.id === initial;
         })[0];
-        selectShip(start ? start.id : ships[0] ? ships[0].id : '', false);
+        if (start) selectShip(start.id, false);
+        else {
+            selectedId = '';
+            renderList();
+            draw();
+        }
     }
 
     var gridReady = fetch((window.USS_AUTH_API_BASE || 'http://127.0.0.1:3789').replace(/\/$/, '') + '/api/cargo-grid/ships', {
@@ -1631,6 +1660,27 @@
         return t;
     }
 
+    function stampDownload(source) {
+        var out = document.createElement('canvas');
+        out.width = source.width;
+        out.height = source.height;
+        var ctx = out.getContext('2d');
+        ctx.drawImage(source, 0, 0);
+        var label = 'USSXC.ORG';
+        var size = Math.max(13, Math.round(Math.min(source.width, source.height) * 0.02));
+        ctx.font = '500 ' + size + 'px "Segoe UI", "Microsoft YaHei", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        if ('letterSpacing' in ctx) ctx.letterSpacing = Math.round(size * 0.06) + 'px';
+        var padX = Math.round(size * 0.95);
+        var padY = Math.round(size * 0.72);
+        ctx.shadowColor = 'rgba(6, 16, 28, 0.5)';
+        ctx.shadowBlur = Math.round(size * 0.22);
+        ctx.fillStyle = 'rgba(214, 232, 248, 0.46)';
+        ctx.fillText(label, padX, source.height - padY);
+        return out.toDataURL('image/png');
+    }
+
     function currentShip() {
         var i;
         for (i = 0; i < ships.length; i++) {
@@ -1675,12 +1725,17 @@
             draw();
         },
         capture: function () {
-            draw();
+            var screen = viewPixels();
+            var target = exportPixels(screen);
+            var url = '';
             try {
-                return canvas.toDataURL('image/png');
+                draw(target);
+                url = stampDownload(canvas);
             } catch (e) {
-                return '';
+                url = '';
             }
+            draw(screen);
+            return url;
         },
         refresh: function (refit) {
             var ship = currentShip();
