@@ -3951,18 +3951,6 @@
         }
     }
 
-    function formatTickerAgo(iso) {
-        var ms = Date.now() - Date.parse(iso);
-        if (!Number.isFinite(ms) || ms < 0) ms = 0;
-        var mins = Math.floor(ms / 60000);
-        if (mins < 1) return '刚刚';
-        if (mins < 60) return mins + ' 分钟前';
-        var hours = Math.floor(mins / 60);
-        if (hours < 24) return hours + ' 小时前';
-        var days = Math.floor(hours / 24);
-        return days + ' 天前';
-    }
-
     function tickerItemHtml(row) {
         var seller = row.sellerMasked || '用户';
         var buyer = row.buyerMasked || '用户';
@@ -3980,9 +3968,6 @@
             '</span>' +
             '<span class="market-ticker__name">' +
             escapeHtml(row.itemName || '') +
-            '</span>' +
-            '<span class="market-ticker__ago">' +
-            escapeHtml(formatTickerAgo(row.at)) +
             '</span></span>'
         );
     }

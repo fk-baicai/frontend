@@ -303,11 +303,6 @@ html:has(body.market-body) {
     color: #e8f4ff;
 }
 
-.market-ticker__ago {
-    color: var(--mkt-text-muted);
-    font-size: 0.78rem;
-}
-
 @keyframes market-ticker-scroll {
     from { transform: translateX(0); }
     to { transform: translateX(-50%); }

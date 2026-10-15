@@ -2322,7 +2322,7 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
     --sc-detail-stack-gap: 1rem;
     --sc-detail-card-radius: 14px;
     --sc-detail-card-border: 1.5px solid rgba(95, 184, 255, 0.6);
-    --sc-detail-inner-line: rgba(95, 184, 255, 0.48);
+    --sc-detail-inner-line: rgba(95, 184, 255, 0.16);
 }
 
 .sc-detail-page .sc-main {
