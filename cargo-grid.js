@@ -196,6 +196,7 @@
     var panZ = 0;
     var drag = null;
     var scene = null;
+    var layoutAnchor = null;
 
     var SCU_COLOR = {
         1: [0.725, 0.741, 0.741],
@@ -453,6 +454,7 @@
         zoom = 1;
         rotX = -32;
         rotY = 42;
+        layoutAnchor = null;
         if (pushHash) {
             if (history.replaceState) history.replaceState(null, '', '#' + ship.id);
             else location.hash = ship.id;
@@ -489,14 +491,24 @@
             });
         });
         var totalW = Math.max(1, cursor - gap);
+        if (!layoutAnchor) layoutAnchor = { totalW: totalW, maxD: maxD };
+        var placeW = layoutAnchor.totalW;
+        var placeD = layoutAnchor.maxD;
         var verts = [];
+        verts.scu = [];
         var edges = [];
         var counts = {};
+        var front = null;
         placed.forEach(function (item) {
-            addBox(verts, edges, highlight, item.ox, item.box, totalW, maxD);
+            addBox(verts, edges, highlight, item.ox, item.box, placeW, placeD);
             counts[item.box.scu] = (counts[item.box.scu] || 0) + 1;
+            var bounds = boxWorld(item.ox, item.box, placeW, placeD);
+            if (!front) front = { minX: bounds.min[0], maxX: bounds.max[0], maxZ: bounds.max[2] };
+            if (bounds.min[0] < front.minX) front.minX = bounds.min[0];
+            if (bounds.max[0] > front.maxX) front.maxX = bounds.max[0];
+            if (bounds.max[2] > front.maxZ) front.maxZ = bounds.max[2];
         });
-        var plaque = buildPlaque(ship, counts, totalW, maxD);
+        var plaque = buildPlaque(ship, counts, placeW, placeD, front);
         return {
             boxes: groupBoxes(verts),
             edges: lineBuffer(edges),
@@ -504,14 +516,14 @@
             selEdges: lineBuffer(highlight),
             selEdgeCount: highlight.length / 3,
             hits: placed.map(function (item) {
-                var bounds = boxWorld(item.ox, item.box, totalW, maxD);
+                var bounds = boxWorld(item.ox, item.box, placeW, placeD);
                 return { box: item.box, bay: item.bay, ox: item.ox, min: bounds.min, max: bounds.max };
             }),
-            grid: lineBuffer(gridLines(totalW, maxD)),
-            gridCount: gridLines(totalW, maxD).length / 3,
+            grid: lineBuffer(gridLines(Math.max(placeW, totalW), Math.max(placeD, maxD), placeW, placeD)),
+            gridCount: gridLines(Math.max(placeW, totalW), Math.max(placeD, maxD), placeW, placeD).length / 3,
             focusY: maxH / 2,
-            totalW: totalW,
-            maxD: maxD,
+            totalW: placeW,
+            maxD: placeD,
             maxH: maxH,
             span: Math.max(totalW, maxD, maxH, 4),
             plaque: plaque.points,
@@ -584,7 +596,7 @@
         });
     }
 
-    function buildPlaque(ship, counts, totalW, maxD) {
+    function buildPlaque(ship, counts, totalW, maxD, front) {
         var sizes = [32, 24, 16, 8, 4, 2, 1].filter(function (scu) {
             return counts[scu];
         });
@@ -615,10 +627,11 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        var ix = Math.round((totalW - cells.w) / 2);
-        var x0 = -totalW / 2 + ix;
+        var x0 = front
+            ? Math.round((front.minX + front.maxX - cells.w) / 2)
+            : -totalW / 2 + Math.round((totalW - cells.w) / 2);
         var x1 = x0 + cells.w;
-        var z0 = maxD / 2 + 2;
+        var z0 = front ? front.maxZ + 2 : maxD / 2 + 2;
         var z1 = z0 + cells.d;
         var y = 0.04;
         var data = new Float32Array([
@@ -764,8 +777,9 @@
         var stride = 13;
         var by = {};
         var i;
-        for (i = 0; i < flat.scu.length; i++) {
-            var scu = flat.scu[i];
+        var scus = (flat && flat.scu) || [];
+        for (i = 0; i < scus.length; i++) {
+            var scu = scus[i];
             if (!by[scu]) by[scu] = [];
             var start = i * stride;
             for (var k = 0; k < stride; k++) by[scu].push(flat[start + k]);
@@ -779,11 +793,11 @@
         });
     }
 
-    function gridLines(totalW, maxD) {
+    function gridLines(totalW, maxD, originW, originD) {
         var pad = 28;
         var lines = [];
-        var x0 = -totalW / 2;
-        var z0 = -maxD / 2;
+        var x0 = -(originW == null ? totalW : originW) / 2;
+        var z0 = -(originD == null ? maxD : originD) / 2;
         var i;
         for (i = -pad; i <= totalW + pad; i++) {
             lines.push(x0 + i, -0.012, z0 - pad, x0 + i, -0.012, z0 + maxD + pad);
@@ -802,19 +816,37 @@
     }
 
     function cargoCorners() {
-        var hx = scene.totalW / 2;
-        var hz = scene.maxD / 2;
-        var hy = scene.maxH;
-        var corners = [
-            [-hx, 0, -hz],
-            [-hx, 0, hz],
-            [hx, 0, -hz],
-            [hx, 0, hz],
-            [-hx, hy, -hz],
-            [-hx, hy, hz],
-            [hx, hy, -hz],
-            [hx, hy, hz],
-        ];
+        var corners = [];
+        if (scene.hits && scene.hits.length) {
+            scene.hits.forEach(function (hit) {
+                var a = hit.min;
+                var b = hit.max;
+                corners.push(
+                    [a[0], a[1], a[2]],
+                    [b[0], a[1], a[2]],
+                    [a[0], b[1], a[2]],
+                    [b[0], b[1], a[2]],
+                    [a[0], a[1], b[2]],
+                    [b[0], a[1], b[2]],
+                    [a[0], b[1], b[2]],
+                    [b[0], b[1], b[2]]
+                );
+            });
+        } else {
+            var hx = scene.totalW / 2;
+            var hz = scene.maxD / 2;
+            var hy = scene.maxH;
+            corners = [
+                [-hx, 0, -hz],
+                [-hx, 0, hz],
+                [hx, 0, -hz],
+                [hx, 0, hz],
+                [-hx, hy, -hz],
+                [-hx, hy, hz],
+                [hx, hy, -hz],
+                [hx, hy, hz],
+            ];
+        }
         if (scene.plaque) {
             scene.plaque.forEach(function (point) {
                 corners.push(point);
@@ -869,29 +901,57 @@
         var sp = Math.sin(pitch);
         var sinYaw = Math.sin(yaw);
         var cosYaw = Math.cos(yaw);
+        var dir = [cp * sinYaw, sp, cp * cosYaw];
+        var xaxis = norm(cross([0, 1, 0], dir));
+        var yaxis = cross(dir, xaxis);
         var fovY = (40 * Math.PI) / 180;
-        var lo = 1;
-        var hi = 240;
-        var n;
-        for (n = 0; n < 24; n++) {
-            var mid = (lo + hi) / 2;
-            var eyeTry = [cx + mid * cp * sinYaw, cy + mid * sp, cz + mid * cp * cosYaw];
-            var bounds = projectBounds(eyeTry, [cx, cy, cz], fovY, aspect, corners);
-            var limit = Math.max(
-                Math.abs(bounds.minX),
-                Math.abs(bounds.maxX),
-                Math.abs(bounds.minY),
-                Math.abs(bounds.maxY)
+        var margin = 0.88;
+        var target = [cx, cy, cz];
+        function boundsAt(dist, tgt) {
+            return projectBounds(
+                [tgt[0] + dist * dir[0], tgt[1] + dist * dir[1], tgt[2] + dist * dir[2]],
+                tgt,
+                fovY,
+                aspect,
+                corners
             );
-            if (limit > 0.82) lo = mid;
-            else hi = mid;
+        }
+        var dist = 40;
+        var iter;
+        for (iter = 0; iter < 6; iter++) {
+            var lo = 1;
+            var hi = 400;
+            var n;
+            for (n = 0; n < 24; n++) {
+                var mid = (lo + hi) / 2;
+                var trial = boundsAt(mid, target);
+                var limit = Math.max(
+                    Math.abs(trial.minX),
+                    Math.abs(trial.maxX),
+                    Math.abs(trial.minY),
+                    Math.abs(trial.maxY)
+                );
+                if (limit > margin) lo = mid;
+                else hi = mid;
+            }
+            dist = (lo + hi) / 2;
+            var fitted = boundsAt(dist, target);
+            var ndcX = (fitted.minX + fitted.maxX) / 2;
+            var ndcY = (fitted.minY + fitted.maxY) / 2;
+            var halfH = Math.tan(fovY / 2) * dist;
+            var halfW = halfH * aspect;
+            target = [
+                target[0] + ndcX * halfW * xaxis[0] + ndcY * halfH * yaxis[0],
+                target[1] + ndcX * halfW * xaxis[1] + ndcY * halfH * yaxis[1],
+                target[2] + ndcX * halfW * xaxis[2] + ndcY * halfH * yaxis[2],
+            ];
         }
         scene.orbit = {
             aspectKey: aspectKey,
-            dist: (lo + hi) / 2,
-            sx: cx,
-            sy: cy - scene.focusY,
-            sz: cz,
+            dist: dist,
+            sx: target[0],
+            sy: target[1] - scene.focusY,
+            sz: target[2],
         };
         return scene.orbit;
     }
@@ -1412,12 +1472,26 @@
         select: function (id) {
             selectShip(id, true);
         },
-        refresh: function () {
+        frame: function () {
+            if (!scene) return null;
+            return { totalW: scene.totalW, maxD: scene.maxD };
+        },
+        growAnchor: function (shiftX, shiftZ) {
+            if (!layoutAnchor) return;
+            layoutAnchor.totalW += shiftX * 2;
+            layoutAnchor.maxD += shiftZ * 2;
+        },
+        resetAnchor: function () {
+            layoutAnchor = null;
+        },
+        refresh: function (refit) {
             var ship = currentShip();
             renderList();
             if (!ship) return;
+            var orbit = !refit && scene && scene.orbit;
             if (scene && scene.plaqueTex) gl.deleteTexture(scene.plaqueTex);
             scene = buildScene(ship);
+            if (orbit) scene.orbit = orbit;
             draw();
         },
         materialize: function (ship) {

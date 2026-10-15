@@ -12,6 +12,8 @@
     var tool = 'select';
     var placeScu = 0;
     var selected = [];
+    var clipboard = null;
+    var pasteN = 0;
     var undo = [];
     var enabled = false;
     var canSave = false;
@@ -39,6 +41,8 @@
         '<button type="button" data-tool="move">移动</button>' +
         '<button type="button" data-tool="rotate">旋转</button>' +
         '<button type="button" data-act="delete">删除</button>' +
+        '<button type="button" data-act="copy">复制</button>' +
+        '<button type="button" data-act="paste">粘贴</button>' +
         '<button type="button" data-act="undo">撤销</button>' +
         '<button type="button" data-act="restore">恢复默认</button>' +
         '<button type="button" data-act="save" hidden>保存</button>' +
@@ -46,7 +50,7 @@
         '<span class="cg-editor-readout" id="cgEditorReadout"></span>' +
         '</div>' +
         '<div class="cg-legend" id="cgLegend" aria-label="SCU 图例"></div>' +
-        '<p class="cg-editor-hint">左键拖动框选。按住 Alt 拖动旋转视角，中键平移。按住 Shift 再框选：没选中的加选，已选中的减选。移动箱子时拖已选中的箱子。恢复默认回到这艘船原来的摆法。保存仅超级管理员可用。方向键走 1 格，PageUp / PageDown 改高度。旋转每次 90 度。</p>' +
+        '<p class="cg-editor-hint">左键拖动框选。按住 Alt 拖动旋转视角，中键平移。按住 Shift 再框选：没选中的加选，已选中的减选。移动箱子时拖已选中的箱子。Ctrl+C 复制，Ctrl+V 粘贴。恢复默认回到这艘船原来的摆法。保存仅超级管理员可用。方向键走 1 格，PageUp / PageDown 改高度。按 R 把选中的箱子转 90 度。</p>' +
         '<form class="cg-editor-add" id="cgEditorAdd" hidden>' +
         '<label>中文名<input name="nameZh" required></label>' +
         '<label>英文名<input name="nameEn" required></label>' +
@@ -139,7 +143,9 @@
         current.bays = JSON.parse(saved);
         selected = [];
         undo = [];
+        if (api.resetAnchor) api.resetAnchor();
         paintSelection();
+        api.refresh(true);
         var el = document.getElementById('cgEditorReadout');
         if (el) el.textContent = '已恢复默认。' + el.textContent;
     }
@@ -225,6 +231,85 @@
         bay.l = maxZ;
     }
 
+    function settleMove() {
+        var current = ship();
+        if (!current) return;
+        var minX = 0;
+        var minY = 0;
+        var minZ = 0;
+        current.bays.forEach(function (bay) {
+            (bay.boxes || []).forEach(function (box) {
+                if (box.x < minX) minX = box.x;
+                if (box.y < minY) minY = box.y;
+                if (box.z < minZ) minZ = box.z;
+            });
+        });
+        var shiftX = minX < 0 ? -minX : 0;
+        var shiftY = minY < 0 ? -minY : 0;
+        var shiftZ = minZ < 0 ? -minZ : 0;
+        if (shiftX || shiftY || shiftZ) {
+            current.bays.forEach(function (bay) {
+                (bay.boxes || []).forEach(function (box) {
+                    box.x += shiftX;
+                    box.y += shiftY;
+                    box.z += shiftZ;
+                });
+            });
+            if (api.growAnchor) api.growAnchor(shiftX, shiftZ);
+        }
+        current.bays.forEach(fitBay);
+    }
+
+    function activeBay() {
+        var current = ship();
+        if (!current || !current.bays.length) return null;
+        var found = current.bays[0];
+        if (selected[0]) {
+            current.bays.forEach(function (bay) {
+                if (bay.boxes && bay.boxes.indexOf(selected[0]) !== -1) found = bay;
+            });
+        }
+        return found;
+    }
+
+    function copySelection() {
+        if (!selected.length) return;
+        clipboard = selected.map(function (box) {
+            return { x: box.x, y: box.y, z: box.z, w: box.w, h: box.h, l: box.l, scu: box.scu };
+        });
+        pasteN = 0;
+        var el = document.getElementById('cgEditorReadout');
+        if (el) el.textContent = '已复制 ' + clipboard.length + ' 个。' + el.textContent;
+    }
+
+    function pasteSelection() {
+        var bay = activeBay();
+        if (!clipboard || !clipboard.length || !bay) return;
+        ensureBoxes();
+        bay = activeBay();
+        if (!bay) return;
+        if (!Array.isArray(bay.boxes)) bay.boxes = [];
+        snapshot();
+        pasteN += 1;
+        var copies = clipboard.map(function (box) {
+            return {
+                x: box.x + pasteN,
+                y: box.y,
+                z: box.z,
+                w: box.w,
+                h: box.h,
+                l: box.l,
+                scu: box.scu,
+            };
+        });
+        copies.forEach(function (box) { bay.boxes.push(box); });
+        selected = copies;
+        settleMove();
+        paintSelection();
+        var el = document.getElementById('cgEditorReadout');
+        if (el) el.textContent = '已粘贴 ' + copies.length + ' 个。' + el.textContent;
+    }
+
     function selectionOverlaps() {
         var current = ship();
         if (!current) return false;
@@ -253,7 +338,7 @@
                 if (bay.boxes && bay.boxes.indexOf(box) !== -1 && bays.indexOf(bay) === -1) bays.push(bay);
             });
         });
-        bays.forEach(fitBay);
+        settleMove();
         paintSelection();
         if (selectionOverlaps()) refreshReadout();
     }
@@ -372,16 +457,10 @@
 
     function boxScreenRect(box) {
         var current = ship();
-        if (!current || !api.project) return null;
-        var maxD = 1;
-        current.bays.forEach(function (bay) {
-            if (bay.l > maxD) maxD = bay.l;
-        });
-        var totalW = 0;
-        current.bays.forEach(function (bay) {
-            totalW += bay.w + 2;
-        });
-        totalW = Math.max(1, totalW - 2);
+        var frame = api.frame && api.frame();
+        if (!current || !api.project || !frame) return null;
+        var maxD = frame.maxD;
+        var totalW = frame.totalW;
         var ox = 0;
         var owner = null;
         current.bays.forEach(function (bay) {
@@ -481,6 +560,7 @@
                 kind: 'move',
                 x: event.clientX,
                 y: event.clientY,
+                ox: hit.ox,
                 lx: local ? local[0] : 0,
                 lz: local ? local[2] : 0,
                 start: selected.map(function (box) { return { box: box, x: box.x, y: box.y, z: box.z }; }),
@@ -505,16 +585,7 @@
         if (!gesture) return;
         if (gesture.kind === 'move') {
             var world = api.ground(event.clientX, event.clientY, gesture.start[0].y);
-            var hit = api.pick(gesture.x, gesture.y);
-            var ox = 0;
-            if (selected[0]) {
-                ship().bays.some(function (bay) {
-                    if (bay.boxes && bay.boxes.indexOf(selected[0]) !== -1) return true;
-                    ox += bay.w + 2;
-                    return false;
-                });
-            }
-            var local = world ? api.toLocal(world, ox) : null;
+            var local = world ? api.toLocal(world, gesture.ox || 0) : null;
             if (!local) return;
             var dx = Math.round(local[0] - gesture.lx);
             var dz = Math.round(local[2] - gesture.lz);
@@ -530,7 +601,6 @@
                 item.box.y = item.y + dy;
                 item.box.z = item.z + dz;
             });
-            ship().bays.forEach(fitBay);
             api.refresh();
             refreshReadout();
             return;
@@ -555,12 +625,7 @@
             if (gesture.kind === 'replace' && tool === 'rotate') rotateSelection();
         } else if (gesture.kind === 'toggle' || gesture.kind === 'replace') applyMarquee(gesture.kind);
         if (gesture.kind === 'move') {
-            selected.forEach(function (box) {
-                box.x = Math.max(0, box.x);
-                box.y = Math.max(0, box.y);
-                box.z = Math.max(0, box.z);
-            });
-            ship().bays.forEach(fitBay);
+            settleMove();
             paintSelection();
         }
         gesture = null;
@@ -604,12 +669,15 @@
         if (!act) return;
         var name = act.getAttribute('data-act');
         if (name === 'delete') removeSelected();
+        else if (name === 'copy') copySelection();
+        else if (name === 'paste') pasteSelection();
         else if (name === 'undo') {
             var prev = undo.pop();
             var current = ship();
             if (prev && current) {
                 current.bays = JSON.parse(prev);
                 selected = [];
+                if (api.resetAnchor) api.resetAnchor();
                 paintSelection();
             }
         } else if (name === 'restore') restoreDefault();
@@ -641,8 +709,17 @@
         else if (event.key === 'e' || event.key === 'E') {
             setPanel(true, true);
             setTool('rotate');
+        } else if (panelOpen && !event.ctrlKey && !event.metaKey && !event.altKey && (event.key === 'r' || event.key === 'R')) {
+            event.preventDefault();
+            rotateSelection();
         }
-        else if (panelOpen && (event.key === 'Delete' || event.key === 'Backspace')) {
+        else if (panelOpen && (event.ctrlKey || event.metaKey) && (event.key === 'c' || event.key === 'C')) {
+            event.preventDefault();
+            copySelection();
+        } else if (panelOpen && (event.ctrlKey || event.metaKey) && (event.key === 'v' || event.key === 'V')) {
+            event.preventDefault();
+            pasteSelection();
+        } else if (panelOpen && (event.key === 'Delete' || event.key === 'Backspace')) {
             event.preventDefault();
             removeSelected();
         } else if (panelOpen && (event.ctrlKey || event.metaKey) && (event.key === 'z' || event.key === 'Z')) {
@@ -652,6 +729,7 @@
             if (prev && current) {
                 current.bays = JSON.parse(prev);
                 selected = [];
+                if (api.resetAnchor) api.resetAnchor();
                 paintSelection();
             }
         } else if (panelOpen && tool === 'move' && selected.length && !event.shiftKey) {
@@ -802,6 +880,7 @@
                 return;
             }
             rememberDefault(current);
+            api.refresh(true);
             readout.textContent = '已保存。Wiki ' + data.wikiScu + ' / 已摆 ' + data.placed;
         } catch (e) {
             readout.textContent = '保存失败，本地接口没有连上';
