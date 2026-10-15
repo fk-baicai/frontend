@@ -58,13 +58,18 @@
         node.style.width = width + 'px';
     }
 
-    function fillRow(start, keepOriginal) {
+    function pageCount() {
+        return Math.ceil(count / visibleCount());
+    }
+
+    function fillRow(page, keepOriginal) {
         var row = document.createElement('div');
         row.className = 'hero-tools-row';
         var visible = visibleCount();
-        for (var n = 0; n < visible; n++) {
-            var srcIndex = (start + n) % count;
-            var node = keepOriginal && n === 0 ? originals[srcIndex] : makeClone(originals[srcIndex]);
+        var start = page * visible;
+        var end = Math.min(start + visible, count);
+        for (var i = start; i < end; i++) {
+            var node = keepOriginal ? originals[i] : makeClone(originals[i]);
             sizeTool(node);
             row.appendChild(node);
         }
@@ -76,7 +81,8 @@
             if (originals[i].parentNode) originals[i].parentNode.removeChild(originals[i]);
         }
         track.textContent = '';
-        for (var r = 0; r < count; r++) track.appendChild(fillRow(r, true));
+        var pages = pageCount();
+        for (var r = 0; r < pages; r++) track.appendChild(fillRow(r, true));
         track.appendChild(fillRow(0, false));
         var rows = track.children;
         var height = 0;
@@ -104,7 +110,7 @@
     track.addEventListener('transitionend', function (ev) {
         if (ev.target !== track || ev.propertyName !== 'transform') return;
         animating = false;
-        if (rowIndex >= count) {
+        if (rowIndex >= pageCount()) {
             rowIndex = 0;
             paint(false);
         }
@@ -138,8 +144,9 @@
         var link = ev.target.closest('.hero-tool');
         if (!link || link.hasAttribute('data-hero-tool-clone')) return;
         var idx = originals.indexOf(link);
-        if (idx < 0 || idx === rowIndex) return;
-        rowIndex = idx;
+        var page = idx < 0 ? -1 : Math.floor(idx / visibleCount());
+        if (page < 0 || page === rowIndex) return;
+        rowIndex = page;
         acc = 0;
         paint(false);
     });
@@ -162,7 +169,7 @@
             suppressClick = true;
             root.classList.add('is-dragging');
         }
-        var loop = count * height;
+        var loop = pageCount() * height;
         var offset = drag.base - dy;
         offset = ((offset % loop) + loop) % loop;
         drag.offset = offset;
@@ -177,8 +184,9 @@
         window.removeEventListener('pointercancel', onPointerUp);
         if (dragging) {
             var height = rowHeight() || 1;
-            rowIndex = Math.round((drag.offset || 0) / height) % count;
-            if (rowIndex < 0) rowIndex += count;
+            var pages = pageCount();
+            rowIndex = Math.round((drag.offset || 0) / height) % pages;
+            if (rowIndex < 0) rowIndex += pages;
             paint(true);
         }
         drag = null;
@@ -205,9 +213,10 @@
     }, true);
 
     function relayout() {
-        var logical = ((rowIndex % count) + count) % count;
+        var pages = pageCount();
+        var logical = ((rowIndex % pages) + pages) % pages;
         rebuild();
-        rowIndex = logical;
+        rowIndex = logical % pageCount();
         acc = 0;
         paint(false);
     }
