@@ -197,6 +197,7 @@
     var drag = null;
     var scene = null;
     var layoutAnchor = null;
+    var viewExtras = [];
 
     var SCU_COLOR = {
         1: [0.725, 0.741, 0.741],
@@ -211,7 +212,7 @@
     var canvas = document.createElement('canvas');
     canvas.className = 'cg-canvas';
     viewEl.appendChild(canvas);
-    var gl = canvas.getContext('webgl', { antialias: true, alpha: false });
+    var gl = canvas.getContext('webgl', { antialias: true, alpha: false, preserveDrawingBuffer: true });
     if (!gl) {
         viewEl.textContent = '当前浏览器无法显示立体货箱';
         return;
@@ -271,7 +272,7 @@
             '}',
         ].join('\n'),
         [
-            'precision mediump float;',
+            'precision highp float;',
             'varying vec2 vUv;',
             'uniform sampler2D uTex;',
             'void main(){',
@@ -293,6 +294,11 @@
             'void main(){ gl_FragColor = uColor; }',
         ].join('\n')
     );
+    var anisoExt =
+        gl.getExtension('EXT_texture_filter_anisotropic') ||
+        gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
+    var anisoMax = anisoExt ? gl.getParameter(anisoExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT) : 0;
+
     var labels = {};
     Object.keys(SCU_COLOR).forEach(function (scu) {
         labels[scu] = labelTexture(scu);
@@ -340,14 +346,27 @@
                         group.ships
                             .slice()
                             .sort(function (a, b) {
-                                return (a.nameEn || a.nameZh).localeCompare(b.nameEn || b.nameZh, 'en', {
+                                return (shipNameEn(a) || a.nameZh).localeCompare(shipNameEn(b) || b.nameZh, 'en', {
                                     numeric: true,
                                     sensitivity: 'base',
                                 });
                             })
                             .map(function (ship) {
+                                var added = viewExtras.indexOf(ship.id) !== -1;
+                                var here = ship.id === selectedId;
                                 return (
-                                    '<button type="button" class="cg-ship' +
+                                    '<div class="cg-ship-line"><button type="button" class="cg-ship-add' +
+                                    (added ? ' is-added' : here ? ' is-in' : '') +
+                                    '" data-add="' +
+                                    ship.id +
+                                    '" title="' +
+                                    (added ? '从当前视图移除' : '加到当前视图') +
+                                    '" aria-label="把' +
+                                    escapeHtml(shipLabel(ship)) +
+                                    (added ? '从当前视图移除' : '加到当前视图') +
+                                    '">' +
+                                    (added ? '−' : '+') +
+                                    '</button><button type="button" class="cg-ship' +
                                     (ship.id === selectedId ? ' is-selected' : '') +
                                     '" role="option" aria-selected="' +
                                     (ship.id === selectedId ? 'true' : 'false') +
@@ -356,10 +375,10 @@
                                     '"><span class="cg-ship-copy"><span class="cg-ship-zh">' +
                                     escapeHtml(shipLabel(ship)) +
                                     '</span><span class="cg-ship-en">' +
-                                    escapeHtml(ship.nameEn) +
+                                    escapeHtml(shipNameEn(ship)) +
                                     '</span></span><span class="cg-ship-scu">' +
                                     listedScu(ship) +
-                                    '</span></button>'
+                                    '</span></button></div>'
                                 );
                             })
                             .join('') +
@@ -433,12 +452,25 @@
         return rest || zh;
     }
 
+    function shipNameEn(ship) {
+        var en = ship.nameEn || '';
+        if (ship.makerZh === '武藏工业与星航') en = en.replace(/^MISC[\s\-]+/i, '');
+        return en || ship.nameEn || '';
+    }
+
     function escapeHtml(value) {
         return String(value)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
+    }
+
+    function dropPlaques(target) {
+        if (!target || !target.plaques) return;
+        target.plaques.forEach(function (plaque) {
+            if (plaque.tex) gl.deleteTexture(plaque.tex);
+        });
     }
 
     function selectShip(id, pushHash) {
@@ -455,18 +487,19 @@
         rotX = -32;
         rotY = 42;
         layoutAnchor = null;
+        viewExtras = [];
         if (pushHash) {
             if (history.replaceState) history.replaceState(null, '', '#' + ship.id);
             else location.hash = ship.id;
         }
         renderList();
-        if (scene && scene.plaqueTex) gl.deleteTexture(scene.plaqueTex);
+        dropPlaques(scene);
         scene = buildScene(ship);
         viewEl.setAttribute(
             'aria-label',
             ship.nameZh +
                 ' ' +
-                ship.nameEn +
+                shipNameEn(ship) +
                 '，左键旋转，中键或 Shift 加左键移动物体，滚轮缩放。手机单指旋转，双指拖动移动，捏合缩放'
         );
         draw();
@@ -490,25 +523,96 @@
                 placed.push({ ox: ox, box: box, bay: bay });
             });
         });
-        var totalW = Math.max(1, cursor - gap);
+        var groups = [{ ship: ship, items: placed.slice() }];
+        var hostFront = 0;
+        var edge = 0;
+        placed.forEach(function (item) {
+            hostFront = Math.max(hostFront, item.box.z + item.box.l);
+            edge = Math.max(edge, item.ox + item.box.x + item.box.w);
+        });
+        if (!placed.length) {
+            hostFront = maxD;
+            edge = Math.max(0, cursor - gap);
+        }
+        viewExtras.forEach(function (id) {
+            var extra = null;
+            var si;
+            for (si = 0; si < ships.length; si++) {
+                if (ships[si].id === id) extra = ships[si];
+            }
+            if (!extra || extra.id === ship.id) return;
+            var local = [];
+            var localCursor = 0;
+            extra.bays.forEach(function (bay, index) {
+                if (index > 0) localCursor += gap;
+                var boxes = Array.isArray(bay.boxes) ? bay.boxes : pack.packBay(bay).boxes;
+                var ox = localCursor;
+                boxes.forEach(function (box) {
+                    local.push({ ox: ox, box: box, bay: bay });
+                    maxH = Math.max(maxH, box.y + box.h);
+                });
+                localCursor += bay.w;
+            });
+            if (!local.length) return;
+            var batch = [];
+            var guestFront = 0;
+            var guestLeft = Infinity;
+            var guestRight = 0;
+            local.forEach(function (item) {
+                guestFront = Math.max(guestFront, item.box.z + item.box.l);
+                guestLeft = Math.min(guestLeft, item.ox + item.box.x);
+                guestRight = Math.max(guestRight, item.ox + item.box.x + item.box.w);
+            });
+            var zShift = hostFront - guestFront;
+            var xShift = edge + 5 - guestLeft;
+            local.forEach(function (item) {
+                var drawn = {
+                    ox: item.ox + xShift,
+                    box: {
+                        x: item.box.x,
+                        y: item.box.y,
+                        z: item.box.z + zShift,
+                        w: item.box.w,
+                        h: item.box.h,
+                        l: item.box.l,
+                        scu: item.box.scu,
+                        _guest: true,
+                    },
+                    bay: item.bay,
+                };
+                placed.push(drawn);
+                batch.push(drawn);
+            });
+            groups.push({ ship: extra, items: batch });
+            edge = guestRight + xShift;
+        });
+        var totalW = Math.max(1, cursor - gap, edge);
         if (!layoutAnchor) layoutAnchor = { totalW: totalW, maxD: maxD };
         var placeW = layoutAnchor.totalW;
         var placeD = layoutAnchor.maxD;
         var verts = [];
         verts.scu = [];
         var edges = [];
-        var counts = {};
-        var front = null;
         placed.forEach(function (item) {
             addBox(verts, edges, highlight, item.ox, item.box, placeW, placeD);
-            counts[item.box.scu] = (counts[item.box.scu] || 0) + 1;
-            var bounds = boxWorld(item.ox, item.box, placeW, placeD);
-            if (!front) front = { minX: bounds.min[0], maxX: bounds.max[0], maxZ: bounds.max[2] };
-            if (bounds.min[0] < front.minX) front.minX = bounds.min[0];
-            if (bounds.max[0] > front.maxX) front.maxX = bounds.max[0];
-            if (bounds.max[2] > front.maxZ) front.maxZ = bounds.max[2];
         });
-        var plaque = buildPlaque(ship, counts, placeW, placeD, front);
+        var plaques = [];
+        var plaquePoints = [];
+        groups.forEach(function (group) {
+            var counts = {};
+            var front = null;
+            group.items.forEach(function (item) {
+                counts[item.box.scu] = (counts[item.box.scu] || 0) + 1;
+                var bounds = boxWorld(item.ox, item.box, placeW, placeD);
+                if (!front) front = { minX: bounds.min[0], maxX: bounds.max[0], maxZ: bounds.max[2] };
+                if (bounds.min[0] < front.minX) front.minX = bounds.min[0];
+                if (bounds.max[0] > front.maxX) front.maxX = bounds.max[0];
+                if (bounds.max[2] > front.maxZ) front.maxZ = bounds.max[2];
+            });
+            var plaque = buildPlaque(group.ship, counts, placeW, placeD, front);
+            plaques.push(plaque);
+            plaquePoints.push.apply(plaquePoints, plaque.points);
+        });
         return {
             boxes: groupBoxes(verts),
             edges: lineBuffer(edges),
@@ -526,9 +630,8 @@
             maxD: placeD,
             maxH: maxH,
             span: Math.max(totalW, maxD, maxH, 4),
-            plaque: plaque.points,
-            plaqueBuf: plaque.buf,
-            plaqueTex: plaque.tex,
+            plaque: plaquePoints,
+            plaques: plaques,
         };
     }
 
@@ -553,18 +656,22 @@
         probe.font = '700 64px "Noto Sans SC", "Microsoft YaHei", sans-serif';
         var titleW = probe.measureText(ship.nameZh).width;
         probe.font = '600 36px "Segoe UI", "Noto Sans SC", sans-serif';
-        var enW = probe.measureText(ship.nameEn).width;
+        var enW = probe.measureText(shipNameEn(ship)).width;
         var rowW = 0;
+        var total = 0;
         sizes.forEach(function (scu) {
             probe.font = '700 42px "Noto Sans SC", "Microsoft YaHei", sans-serif';
             var countW = probe.measureText(counts[scu] + ' 个').width;
             probe.font = '600 42px "Segoe UI", sans-serif';
             var scuW = probe.measureText(scu + ' SCU').width;
             rowW = Math.max(rowW, chip + 18 + countW + 28 + scuW);
+            total += scu * counts[scu];
         });
+        probe.font = '700 48px "Noto Sans SC", "Microsoft YaHei", sans-serif';
+        var totalW = probe.measureText('合计 ' + total + ' SCU').width;
         return {
-            w: pad * 2 + Math.max(titleW, enW, rowW),
-            h: pad + titleH + enH + 12 + sizes.length * rowH + pad,
+            w: pad * 2 + Math.max(titleW, enW, rowW, totalW),
+            h: pad + titleH + enH + 12 + sizes.length * rowH + 56 + pad,
         };
     }
 
@@ -579,7 +686,7 @@
         ctx.fillText(ship.nameZh, ox + u(pad), oy + u(pad + titleH / 2));
         ctx.fillStyle = '#15608f';
         ctx.font = '600 ' + u(36) + 'px "Segoe UI", "Noto Sans SC", sans-serif';
-        ctx.fillText(ship.nameEn, ox + u(pad), oy + u(pad + titleH + enH / 2));
+        ctx.fillText(shipNameEn(ship), ox + u(pad), oy + u(pad + titleH + enH / 2));
         sizes.forEach(function (scu, index) {
             var y = oy + u(pad + titleH + enH + 12 + index * rowH + rowH / 2);
             var color = SCU_COLOR[scu] || [1, 1, 1];
@@ -594,6 +701,14 @@
             ctx.font = '600 ' + u(42) + 'px "Segoe UI", sans-serif';
             ctx.fillText(scu + ' SCU', ox + u(pad + chip + 18) + countW + u(28), y);
         });
+        var total = 0;
+        sizes.forEach(function (scu) {
+            total += scu * counts[scu];
+        });
+        var totalY = oy + u(pad + titleH + enH + 12 + sizes.length * rowH + 28);
+        ctx.fillStyle = '#102033';
+        ctx.font = '700 ' + u(48) + 'px "Noto Sans SC", "Microsoft YaHei", sans-serif';
+        ctx.fillText('合计 ' + total + ' SCU', ox + u(pad), totalY);
     }
 
     function buildPlaque(ship, counts, totalW, maxD, front) {
@@ -607,9 +722,14 @@
         var chip = 32;
         var layout = measurePlaque(ship, sizes, counts, pad, titleH, enH, rowH, chip);
         var cells = gridCellsForAspect(layout.w / layout.h, Math.max(totalW, maxD));
-        var px = 160;
-        var texW = cells.w * px;
-        var texH = cells.d * px;
+        var maxTex = Math.min(2048, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 2048);
+        var texW = cells.w * 512;
+        var texH = cells.d * 512;
+        if (texW > maxTex || texH > maxTex) {
+            var down = maxTex / Math.max(texW, texH);
+            texW = Math.max(1, Math.round(texW * down));
+            texH = Math.max(1, Math.round(texH * down));
+        }
         var el = document.createElement('canvas');
         el.width = texW;
         el.height = texH;
@@ -627,6 +747,7 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        if (anisoExt) gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(16, anisoMax));
         var x0 = front
             ? Math.round((front.minX + front.maxX - cells.w) / 2)
             : -totalW / 2 + Math.round((totalW - cells.w) / 2);
@@ -1048,18 +1169,21 @@
             gl.enable(gl.DEPTH_TEST);
         }
 
-        if (scene.plaqueBuf) {
+        var plaques = scene.plaques || [];
+        if (plaques.length) {
             gl.useProgram(plaqueProg.program);
             gl.uniformMatrix4fv(plaqueProg.uMvp, false, mvp);
-            gl.bindBuffer(gl.ARRAY_BUFFER, scene.plaqueBuf);
-            attrib(plaqueProg.aPos, 3, 20, 0);
-            attrib(plaqueProg.aUv, 2, 20, 12);
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, scene.plaqueTex);
-            gl.uniform1i(plaqueProg.uTex, 0);
             gl.enable(gl.BLEND);
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-            gl.drawArrays(gl.TRIANGLES, 0, 6);
+            plaques.forEach(function (plaque) {
+                gl.bindBuffer(gl.ARRAY_BUFFER, plaque.buf);
+                attrib(plaqueProg.aPos, 3, 20, 0);
+                attrib(plaqueProg.aUv, 2, 20, 12);
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, plaque.tex);
+                gl.uniform1i(plaqueProg.uTex, 0);
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+            });
             gl.disable(gl.BLEND);
         }
     }
@@ -1102,10 +1226,36 @@
             }
             return;
         }
+        var addBtn = event.target.closest('.cg-ship-add');
+        if (addBtn) {
+            addShipToView(addBtn.getAttribute('data-add'));
+            return;
+        }
         var btn = event.target.closest('.cg-ship');
         if (!btn) return;
         selectShip(btn.getAttribute('data-ship'), true);
     });
+
+    function addShipToView(id) {
+        if (!id || id === selectedId) return;
+        var index = viewExtras.indexOf(id);
+        if (index !== -1) {
+            viewExtras.splice(index, 1);
+        } else {
+            var found = false;
+            var i;
+            for (i = 0; i < ships.length; i++) {
+                if (ships[i].id === id) found = true;
+            }
+            if (!found) return;
+            viewExtras.push(id);
+        }
+        layoutAnchor = null;
+        renderList();
+        dropPlaques(scene);
+        scene = buildScene(currentShip());
+        draw();
+    }
 
     var pointers = new Map();
 
@@ -1163,6 +1313,7 @@
     }
 
     viewEl.addEventListener('pointerdown', function (event) {
+        if (event.target.closest && event.target.closest('.cg-view-tools, .cg-editor')) return;
         if (event.pointerType === 'mouse' && event.button !== 0 && event.button !== 1) return;
         if (event.button === 1) event.preventDefault();
         pointers.set(event.pointerId, pointerSnapshot(event));
@@ -1252,11 +1403,39 @@
     if (window.ResizeObserver) new ResizeObserver(draw).observe(viewEl);
     else window.addEventListener('resize', draw);
 
-    var initial = readHash();
-    var start = ships.filter(function (ship) {
-        return ship.id === initial;
-    })[0];
-    selectShip(start ? start.id : ships[0] ? ships[0].id : '', false);
+    function applySavedShips(list) {
+        if (!Array.isArray(list)) return;
+        list.forEach(function (saved) {
+            if (!saved || !saved.id || !Array.isArray(saved.bays)) return;
+            var i;
+            for (i = 0; i < ships.length; i++) {
+                if (ships[i].id !== saved.id) continue;
+                ships[i] = saved;
+                return;
+            }
+            ships.push(saved);
+        });
+    }
+
+    function openInitialShip() {
+        var initial = readHash();
+        var start = ships.filter(function (ship) {
+            return ship.id === initial;
+        })[0];
+        selectShip(start ? start.id : ships[0] ? ships[0].id : '', false);
+    }
+
+    var gridReady = fetch((window.USS_AUTH_API_BASE || 'http://127.0.0.1:3789').replace(/\/$/, '') + '/api/cargo-grid/ships', {
+        cache: 'no-store',
+    })
+        .then(function (response) {
+            return response.ok ? response.json() : null;
+        })
+        .then(function (data) {
+            if (data && data.ships) applySavedShips(data.ships);
+        })
+        .catch(function () {})
+        .then(openInitialShip);
 
     function clamp(value, limit) {
         return Math.max(-limit, Math.min(limit, value));
@@ -1465,6 +1644,7 @@
         colors: SCU_COLOR,
         dims: pack.BOX_DIMS,
         onShip: null,
+        ready: gridReady,
         current: currentShip,
         ships: function () {
             return ships;
@@ -1484,12 +1664,30 @@
         resetAnchor: function () {
             layoutAnchor = null;
         },
+        resetView: function () {
+            panX = 0;
+            panY = 0;
+            panZ = 0;
+            zoom = 1;
+            rotX = -32;
+            rotY = 42;
+            if (scene) scene.orbit = null;
+            draw();
+        },
+        capture: function () {
+            draw();
+            try {
+                return canvas.toDataURL('image/png');
+            } catch (e) {
+                return '';
+            }
+        },
         refresh: function (refit) {
             var ship = currentShip();
             renderList();
             if (!ship) return;
             var orbit = !refit && scene && scene.orbit;
-            if (scene && scene.plaqueTex) gl.deleteTexture(scene.plaqueTex);
+            dropPlaques(scene);
             scene = buildScene(ship);
             if (orbit) scene.orbit = orbit;
             draw();
@@ -1512,6 +1710,7 @@
             var best = null;
             var bestT = Infinity;
             scene.hits.forEach(function (hit) {
+                if (hit.box && hit.box._guest) return;
                 var t = rayAabb(ray.origin, ray.dir, hit.min, hit.max);
                 if (t != null && t < bestT) {
                     bestT = t;

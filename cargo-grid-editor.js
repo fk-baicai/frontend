@@ -25,11 +25,43 @@
     var toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.id = 'cgEditorToggle';
-    toggle.className = 'cg-editor-toggle';
-    toggle.textContent = '布局';
+    toggle.className = 'cg-editor-toggle cg-view-icon';
+    toggle.title = '布局';
+    toggle.setAttribute('aria-label', '布局');
+    toggle.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="4" width="7" height="7" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="4" y="13" width="16" height="7" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>';
     toggle.hidden = true;
     toggle.setAttribute('aria-pressed', 'false');
-    view.appendChild(toggle);
+
+    var tools = document.createElement('div');
+    tools.className = 'cg-view-tools';
+    tools.appendChild(toggle);
+    var icons = document.createElement('div');
+    icons.className = 'cg-view-icons';
+    icons.innerHTML =
+        '<button type="button" class="cg-view-icon" id="cgShot" title="拍照下载当前视图" aria-label="拍照下载当前视图">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7.2 9.4 5h5.2L16 7.2H19a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8.2a1 1 0 0 1 1-1h3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="12.6" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>' +
+        '</button>' +
+        '<button type="button" class="cg-view-icon" id="cgResetView" title="恢复默认视角" aria-label="恢复默认视角">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5H5.5V8M15 4.5h3.5V8M9 19.5H5.5V16M15 19.5h3.5V16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' +
+        '</button>';
+    tools.appendChild(icons);
+    view.appendChild(tools);
+
+    icons.querySelector('#cgShot').addEventListener('click', function () {
+        var url = api.capture ? api.capture() : '';
+        if (!url) return;
+        var current = api.current();
+        var name = current ? current.nameZh || current.nameEn || 'cargo' : 'cargo';
+        name = String(name).replace(/[\\/:*?"<>|]/g, ' ').trim() || 'cargo';
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = name + '.png';
+        link.click();
+    });
+    icons.querySelector('#cgResetView').addEventListener('click', function () {
+        if (api.resetView) api.resetView();
+    });
 
     var root = document.createElement('div');
     root.id = 'cgEditor';
@@ -529,7 +561,7 @@
 
     function onPointerDown(event) {
         if (!enabled || !panelOpen || event.button !== 0) return;
-        if (event.target.closest && event.target.closest('.cg-editor, .cg-editor-toggle')) return;
+        if (event.target.closest && event.target.closest('.cg-editor, .cg-view-tools')) return;
         if (event.altKey) {
             event.preventDefault();
             return;
@@ -887,7 +919,11 @@
         }
     }
 
-    boot();
-    if (enabled) api.onShip();
+    function startEditor() {
+        boot();
+        if (enabled && api.onShip) api.onShip();
+    }
+    if (api.ready && api.ready.then) api.ready.then(startEditor);
+    else startEditor();
     window.addEventListener('storage', boot);
 })();

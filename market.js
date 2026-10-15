@@ -47,6 +47,7 @@
         fps_armor: '个人护甲',
         hq_points: '签到积分',
         gift: '礼物',
+        lottery: '抽奖',
     };
 
     var CATEGORY_GROUPS = [
@@ -56,8 +57,9 @@
         { id: 'fps_weapon', label: '个人武器' },
         { id: 'fps_magazine', label: '武器配件' },
         { id: 'fps_armor', label: '个人护甲' },
-        { id: 'gift', label: '礼物' },
         { id: 'other', label: '其他' },
+        { id: 'gift', label: '礼物' },
+        { id: 'lottery', label: '抽奖' },
     ];
 
     var STATION_ZH = {
@@ -542,7 +544,7 @@
     function isOtherCategory(group) {
         var g = String(group || '').trim();
         if (!g) return true;
-        if (g === 'other' || g === 'fuel_nozzle' || g === 'mining' || g === 'salvage') return true;
+        if (g === 'hq_points' || g === 'gift' || g === 'lottery') return false;
         return !MAIN_CATEGORY_GROUPS[g];
     }
 
@@ -662,6 +664,11 @@
 
     function formatQualityBrief(order) {
         var it = (order.items && order.items[0]) || {};
+        if (order && order.tradeType === 'lottery') {
+            var lot = order.lottery || {};
+            var left = lot.remaining != null ? lot.remaining : (lot.prizeCount || it.quantity || 1);
+            return '剩余 ' + left + '/' + (lot.prizeCount || it.quantity || 1);
+        }
         if (order && order.tradeType === 'barter') {
             var want = (order.items && order.items[1]) || {};
             return '×' + String(itemSwapQty(it)) + ' → ×' + String(itemSwapQty(want));
@@ -669,7 +676,31 @@
         return '品质 ' + itemQuality(it);
     }
 
+    function formatLotteryClock(iso) {
+        var t = Date.parse(iso || '');
+        if (!Number.isFinite(t)) return '时间未定';
+        var d = new Date(t);
+        function pad(n) { return String(n).padStart(2, '0'); }
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    function lotteryActionState(order) {
+        var lot = (order && order.lottery) || {};
+        if (lot.viewerWon) return { text: '已中奖', disabled: true };
+        if (lot.mode === 'scheduled' && lot.drawnAt) return { text: '已开奖', disabled: true };
+        if (lot.mode === 'scheduled' && lot.viewerEntered) return { text: '已参与，等待开奖', disabled: true };
+        if (lot.mode === 'instant' && (Number(lot.remaining) || 0) < 1) return { text: '已抽完', disabled: true };
+        if (lot.mode === 'scheduled') return { text: '参与抽奖', disabled: false };
+        return { text: '立即抽奖', disabled: false };
+    }
+
     function formatPrice(order) {
+        if (order.tradeType === 'lottery') {
+            var lot = order.lottery || {};
+            if (lot.mode === 'scheduled') return '定时开奖 · ' + formatLotteryClock(lot.drawAt);
+            var prob = lot.probability != null ? lot.probability : '';
+            return '即抽即开 · 概率 ' + prob + '%';
+        }
         if (order.tradeType === 'barter') {
             var want = (order.items && order.items[1]) || {};
             var offer = (order.items && order.items[0]) || {};
@@ -1795,6 +1826,9 @@
     }
 
     function listingTypeMeta(order) {
+        if (order.tradeType === 'lottery') {
+            return { cls: 'market-card__badge--lottery', text: '抽奖' };
+        }
         if (order.tradeType === 'barter') {
             if (isHqPointsListing(order)) {
                 return { cls: 'market-card__badge--points-barter', text: '积分互换' };
@@ -1813,6 +1847,9 @@
     }
 
     function orderTypeBadge(order) {
+        if (order.tradeType === 'lottery') {
+            return { cls: ' market-detail__badge--lottery', text: '抽奖' };
+        }
         if (order.tradeType === 'barter') {
             if (isHqPointsListing(order)) {
                 return { cls: ' market-detail__badge--points-barter', text: '积分互换' };
@@ -1924,6 +1961,54 @@
         purchaseBtn.textContent = order.tradeType === 'barter' ? '已提交意向' : '已提交购买';
     }
 
+    function joinLottery(order, btn) {
+        if (!order || !order.id) return;
+        if (!isLoggedIn()) {
+            if (typeof window.openLoginDrawer === 'function') window.openLoginDrawer();
+            return;
+        }
+        var lot = order.lottery || {};
+        var cost = Number(lot.pointCost) || 0;
+        var message = lot.mode === 'scheduled'
+            ? (cost > 0
+                ? ('参与将扣除 ' + cost + ' 签到积分。到点在参与者中随机开奖，未中奖不退还。')
+                : '确认参与？到点在参与者中随机开奖。')
+            : (cost > 0
+                ? ('这次将扣除 ' + cost + ' 签到积分。未中奖也会扣除，抽中后不能再抽。')
+                : '确认立即抽奖？抽中后不能再抽。');
+        askConfirm({
+            title: lot.mode === 'scheduled' ? '参与抽奖' : '立即抽奖',
+            message: message,
+            confirmText: '确认',
+        }).then(function (ok) {
+            if (!ok) return;
+            if (btn) btn.disabled = true;
+            fetch(joinUrl('/api/market/orders/' + encodeURIComponent(order.id) + '/lottery'), {
+                method: 'POST',
+                headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
+            }).then(function (r) {
+                return r.json().catch(function () { return {}; }).then(function (data) {
+                    if (!r.ok) throw new Error(apiErrorText(data, '抽奖失败'));
+                    var shown = data.order ? (mergeOrderIntoState(data.order) || data.order) : order;
+                    if (el.detailBackdrop && !el.detailBackdrop.hidden) renderOrderDetail(shown, {});
+                    var title = data.won ? '抽中了' : (data.entered ? '已参与' : '未中奖');
+                    var body = data.won
+                        ? '请用挂单里的联系方式和发布者对接奖品。'
+                        : (data.entered ? '请等待开奖时间。开奖结果会显示在这条挂单里。' : '这次没有抽中。奖品还有剩余时可以再抽。');
+                    return askConfirm({ title: title, message: body, confirmText: '知道了', notice: true });
+                });
+            }).catch(function (e) {
+                if (btn) btn.disabled = false;
+                return askConfirm({
+                    title: '无法参与',
+                    message: (e && e.message) || '抽奖失败',
+                    confirmText: '知道了',
+                    notice: true,
+                });
+            });
+        });
+    }
+
     function renderOrderDetail(order, options) {
         options = options || {};
         var showPurchaseHint = !!options.showPurchaseHint;
@@ -1982,14 +2067,48 @@
             el.detailModal.classList.toggle('market-detail--barter', order.tradeType === 'barter');
         }
 
+        var isLottery = order.tradeType === 'lottery';
+        var lot = order.lottery || {};
+        var lotteryFacts = '';
+        if (isLottery) {
+            var audienceText = lot.audience === 'public' ? '所有人' : '仅舰队成员';
+            var costText = lot.pointCost > 0 ? (String(lot.pointCost) + ' 签到积分') : '免费';
+            var modeText = lot.mode === 'scheduled'
+                ? ('定时开奖，' + formatLotteryClock(lot.drawAt) + ' 随机抽取')
+                : ('即抽即开，中奖概率 ' + (lot.probability != null ? lot.probability : '—') + '%');
+            lotteryFacts =
+                '<dt>奖品份数</dt><dd>' + escapeHtml(String(lot.prizeCount || stockQty)) + '</dd>' +
+                '<dt>剩余</dt><dd>' + escapeHtml(String(lot.remaining != null ? lot.remaining : stockQty)) + '</dd>' +
+                '<dt>开奖方式</dt><dd>' + escapeHtml(modeText) + '</dd>' +
+                '<dt>参与范围</dt><dd>' + escapeHtml(audienceText) + '</dd>' +
+                '<dt>参与消耗</dt><dd>' + escapeHtml(costText) + '</dd>' +
+                '<dt>参与人数</dt><dd>' + escapeHtml(String(lot.entrantCount || 0)) + '</dd>';
+            if (lot.viewerWon) lotteryFacts += '<dt>我的结果</dt><dd>已中奖</dd>';
+            else if (lot.mode === 'scheduled' && lot.viewerEntered && !lot.drawnAt) lotteryFacts += '<dt>我的结果</dt><dd>已参与，等待开奖</dd>';
+            else if (lot.mode === 'instant' && lot.viewerAttempts) lotteryFacts += '<dt>我的结果</dt><dd>已抽 ' + escapeHtml(String(lot.viewerAttempts)) + ' 次，尚未中奖</dd>';
+            if (isOwnOrder(order) && Array.isArray(lot.winners) && lot.winners.length) {
+                lotteryFacts += '<dt>中奖记录</dt><dd>' + lot.winners.map(function (row) {
+                    return escapeHtml((row.handle || '用户') + ' · ' + formatLotteryClock(row.at));
+                }).join('<br>') + '</dd>';
+            }
+        }
+
         var canTakedown = !options.readOnly && isSuperAdminSession() && !isOwnOrder(order) && order.status !== 'closed';
-        var canPurchase = !options.readOnly && !isOwnOrder(order) && order.orderType === 'sell';
+        var canPurchase = !options.readOnly && !isOwnOrder(order) && order.orderType === 'sell' && !isLottery;
+        var lotteryBtn = isLottery ? lotteryActionState(order) : null;
+        var canLottery = !options.readOnly && !isOwnOrder(order) && isLottery && lotteryBtn;
         var detailActionsHtml = '';
-        if (canTakedown || canPurchase) {
+        if (canTakedown || canPurchase || canLottery) {
             detailActionsHtml =
-                '<div class="market-detail__actions' + (canTakedown && !canPurchase ? ' market-detail__actions--end' : '') + '">' +
+                '<div class="market-detail__actions' + (canTakedown && !canPurchase && !canLottery ? ' market-detail__actions--end' : '') + '">' +
                 (canPurchase ? '<a class="market-detail__dash-link" href="market-trades.html">查看我的贸易订单</a>' : '') +
                 '<div class="market-detail__actions-end">' +
+                (canLottery
+                    ? (
+                        '<button type="button" class="market-btn' + (lotteryBtn.disabled ? '' : ' market-btn--accent') + '" id="marketDetailLotteryBtn" data-order-id="' + escapeHtml(order.id) + '"' +
+                        (lotteryBtn.disabled ? ' disabled' : '') + '>' + escapeHtml(lotteryBtn.text) + '</button>'
+                    )
+                    : '') +
                 (canPurchase
                     ? (
                         '<p class="market-detail__hint" id="marketDetailPurchaseHint"' + (showPurchaseHint ? '' : ' hidden') + '>请等待卖家确认交易，或点击「联系」与卖家沟通。</p>' +
@@ -2021,11 +2140,13 @@
             '<h3 class="market-detail__title">' + escapeHtml(listingHeadline(order)) + '</h3>' +
             '<p class="market-detail__price' + priceClass + '" id="marketDetailPriceLine">' + escapeHtml(formatPrice(order)) + '</p>' +
             '<dl class="market-detail__dl">' +
-            (isHqPointsItem(it0)
-                ? '<dt>积分数</dt><dd>×' + escapeHtml(String(it0.hqPointsAmount || 1)) + '</dd>'
-                : '<dt>可购数量</dt><dd>×' + escapeHtml(String(stockQty)) + '</dd><dt>品质</dt><dd>' + escapeHtml(itemQuality(it0)) + '</dd>') +
-            '<dt>交易位置</dt><dd>' + escapeHtml(locLine) + '</dd>' +
-            '<dt>交易时段</dt><dd>每日 ' + escapeHtml(formatTradeWindow(order)) + '</dd>' +
+            (isLottery
+                ? lotteryFacts
+                : (isHqPointsItem(it0)
+                    ? '<dt>积分数</dt><dd>×' + escapeHtml(String(it0.hqPointsAmount || 1)) + '</dd>'
+                    : '<dt>可购数量</dt><dd>×' + escapeHtml(String(stockQty)) + '</dd><dt>品质</dt><dd>' + escapeHtml(itemQuality(it0)) + '</dd>') +
+                '<dt>交易位置</dt><dd>' + escapeHtml(locLine) + '</dd>' +
+                '<dt>交易时段</dt><dd>每日 ' + escapeHtml(formatTradeWindow(order)) + '</dd>') +
             (formatDateMinute(order.createdAt)
                 ? '<dt>上架时间</dt><dd>' + dateTimeHtml(order.createdAt) + '</dd>'
                 : '') +
@@ -2149,6 +2270,13 @@
             });
         }
         var purchaseBtn = document.getElementById('marketDetailPurchaseBtn');
+        var lotteryJoinBtn = document.getElementById('marketDetailLotteryBtn');
+        if (lotteryJoinBtn && !lotteryJoinBtn.disabled) {
+            lotteryJoinBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                joinLottery(order, lotteryJoinBtn);
+            });
+        }
         var qtyInput = document.getElementById('marketDetailQtyInput');
         var qtyMinus = document.getElementById('marketDetailQtyMinus');
         var qtyPlus = document.getElementById('marketDetailQtyPlus');
@@ -2699,6 +2827,102 @@
         return String(state.create.categoryGroup || '').trim() === 'gift';
     }
 
+    function isLotteryCategorySelected() {
+        return String(state.create.categoryGroup || '').trim() === 'lottery';
+    }
+
+    function lotterySegValue(container, attr) {
+        var btn = container && container.querySelector('button.is-active');
+        return btn ? (btn.getAttribute(attr) || '') : '';
+    }
+
+    function syncLotteryFieldVisibility() {
+        var mode = lotterySegValue(el.lotteryModeSeg, 'data-lottery-mode') || 'instant';
+        var audience = lotterySegValue(el.lotteryAudienceSeg, 'data-lottery-audience') || 'fleet';
+        var instant = mode === 'instant';
+        var fleetOnly = audience === 'fleet';
+        if (el.lotteryProbField) el.lotteryProbField.hidden = !instant;
+        if (el.lotteryDrawAtField) el.lotteryDrawAtField.hidden = instant;
+        if (el.lotteryDrawAtHint) el.lotteryDrawAtHint.hidden = instant;
+        if (el.lotteryCostField) el.lotteryCostField.hidden = !fleetOnly;
+        if (el.lotteryCostHint) el.lotteryCostHint.hidden = !fleetOnly;
+        if (el.lotteryModeHint) {
+            el.lotteryModeHint.textContent = instant
+                ? '点一次开一次。中奖概率只对即抽即开生效。未中奖也会扣除参与消耗。'
+                : '到点后在已参与的人里随机抽取，不看概率。人数少于奖品份数时，参与者全部中奖。';
+        }
+        if (el.lotteryAudienceHint) {
+            el.lotteryAudienceHint.textContent = fleetOnly
+                ? '只有舰队成员能参与，可以用总部签到积分作为参与消耗。填 0 表示免费。'
+                : '所有人都能参与，包含非舰队成员。非舰队成员没有签到积分，因此不能设置参与消耗。';
+        }
+    }
+
+    function syncLotteryFormUi() {
+        var admin = isSuperAdminSession();
+        var on = admin && isLotteryCategorySelected();
+        if (el.lotteryCategoryOption) el.lotteryCategoryOption.hidden = !admin;
+        if (el.lotteryField) el.lotteryField.hidden = !on;
+        if (el.locField) el.locField.hidden = on;
+        if (el.qualityField) el.qualityField.hidden = on;
+        if (el.tradeTimeField) el.tradeTimeField.hidden = on;
+        if (el.qtyPriceRow) el.qtyPriceRow.hidden = on;
+        if (on) {
+            if (el.tradeTypeField) el.tradeTypeField.hidden = true;
+            if (el.orderTypeField) el.orderTypeField.hidden = true;
+            if (el.priceField) el.priceField.hidden = true;
+            if (el.barterWantSection) el.barterWantSection.hidden = true;
+            if (el.qtyPriceRow) el.qtyPriceRow.hidden = true;
+            if (el.barterQtyHint) el.barterQtyHint.hidden = true;
+            if (el.offerLabel) el.offerLabel.textContent = '奖品名称';
+            if (el.itemInput && el.itemInput.placeholder !== undefined) el.itemInput.placeholder = '填写奖品名称';
+            syncLotteryFieldVisibility();
+        } else if (el.itemInput) {
+            el.itemInput.placeholder = '搜索选择物品';
+        }
+    }
+
+    function readLotteryForm() {
+        var mode = lotterySegValue(el.lotteryModeSeg, 'data-lottery-mode') || 'instant';
+        var audience = lotterySegValue(el.lotteryAudienceSeg, 'data-lottery-audience') || 'fleet';
+        var prize = Math.floor(Number(el.lotteryPrizeCount && el.lotteryPrizeCount.value));
+        if (!Number.isFinite(prize) || prize < 1 || prize > 500) {
+            return { error: '奖品份数须为 1 到 500', el: el.lotteryPrizeCount };
+        }
+        var probability = null;
+        var drawAt = null;
+        var pointCost = 0;
+        if (mode === 'instant') {
+            probability = Math.floor(Number(el.lotteryProbability && el.lotteryProbability.value));
+            if (!Number.isFinite(probability) || probability < 1 || probability > 100) {
+                return { error: '中奖概率须为 1 到 100', el: el.lotteryProbability };
+            }
+        } else {
+            var rawAt = el.lotteryDrawAt ? el.lotteryDrawAt.value : '';
+            var at = rawAt ? Date.parse(rawAt) : NaN;
+            if (!Number.isFinite(at) || at <= Date.now() + 60000) {
+                return { error: '开奖时间须晚于当前至少 1 分钟', el: el.lotteryDrawAt };
+            }
+            drawAt = new Date(at).toISOString();
+        }
+        if (audience === 'fleet') {
+            pointCost = Math.floor(Number(el.lotteryPointCost && el.lotteryPointCost.value));
+            if (!Number.isFinite(pointCost) || pointCost < 0 || pointCost > 100000) {
+                return { error: '参与消耗须为 0 到 100000 的整数', el: el.lotteryPointCost };
+            }
+        }
+        return {
+            lottery: {
+                mode: mode,
+                audience: audience,
+                prizeCount: prize,
+                probability: probability,
+                pointCost: pointCost,
+                drawAt: drawAt,
+            },
+        };
+    }
+
     function clearGiftItemIfNeeded() {
         if (isGiftCategorySelected()) return;
         var it = currentItem();
@@ -2767,6 +2991,7 @@
             el.wantQtyInput.value = isHqPointsItem(want) ? (want.hqPointsAmount || want.quantity || 1) : (want.quantity || 1);
         }
         syncGiftFormUi();
+        syncLotteryFormUi();
         renderProductImage(it);
         renderWantProductImage(want);
         syncHqPointsFormHints();
@@ -3335,6 +3560,20 @@
         if (!el.formError) return;
         readFormIntoState();
         var c = state.create;
+        var lotteryPayload = null;
+        if (isLotteryCategorySelected()) {
+            if (!isSuperAdminSession()) {
+                return failRequired('仅超级管理员可发布抽奖', el.categorySelect);
+            }
+            var parsedLottery = readLotteryForm();
+            if (parsedLottery.error) return failRequired(parsedLottery.error, parsedLottery.el);
+            lotteryPayload = parsedLottery.lottery;
+            c.tradeType = 'lottery';
+            c.orderType = 'sell';
+            if (!c.location || !c.location.name) c.location = { name: '线上' };
+            c.tradeTimeStart = '00:00';
+            c.tradeTimeEnd = '23:59';
+        }
         if (!c.location || !c.location.name) {
             return failRequired('请填写交易位置', el.locInput);
         }
@@ -3349,7 +3588,20 @@
         if (endMin <= startMin) {
             return failRequired('结束时间须晚于开始时间', el.tradeTimeEnd);
         }
-        var items = buildPayloadItems();
+        var items;
+        if (c.tradeType === 'lottery') {
+            var prizeName = el.itemInput ? el.itemInput.value.trim() : '';
+            if (!prizeName) return failRequired('请填写奖品名称', el.itemInput);
+            items = [{
+                name: prizeName,
+                nameZh: prizeName,
+                categoryGroup: 'lottery',
+                componentId: 'uss-lottery',
+                quantity: lotteryPayload.prizeCount,
+                quality: 500,
+            }];
+        } else {
+        items = buildPayloadItems();
         if (!items.length || !items[0].name) {
             return failRequired('请搜索选择我方物品', el.itemInput);
         }
@@ -3406,9 +3658,10 @@
                 }
             }
         }
+        }
         var payload = {
             tradeType: c.tradeType,
-            orderType: c.tradeType === 'barter' ? 'sell' : c.orderType,
+            orderType: c.tradeType === 'barter' || c.tradeType === 'lottery' ? 'sell' : c.orderType,
             visibility: 'visible',
             createMode: 'single',
             expireDays: c.expireDays,
@@ -3419,6 +3672,7 @@
             images: submitImages(),
             note: c.itemInfo || '',
             contact: c.contact || '',
+            lottery: lotteryPayload,
         };
         if (el.btnSubmit) {
             el.btnSubmit.disabled = true;
@@ -3704,6 +3958,17 @@
         bindSeg(el.segTradeType, 'tradeType', 'trade-type');
         bindSeg(el.segOrderType, 'orderType', 'order-type');
         bindSeg(el.segExpireDays, 'expireDays', 'expire-days');
+        [el.lotteryModeSeg, el.lotteryAudienceSeg].forEach(function (seg) {
+            if (!seg) return;
+            seg.addEventListener('click', function (ev) {
+                var btn = ev.target.closest('button');
+                if (!btn || !seg.contains(btn)) return;
+                Array.prototype.forEach.call(seg.querySelectorAll('button'), function (node) {
+                    node.classList.toggle('is-active', node === btn);
+                });
+                syncLotteryFieldVisibility();
+            });
+        });
 
         if (el.categorySelect) {
             el.categorySelect.addEventListener('change', function () {
@@ -3720,8 +3985,19 @@
                 } else {
                     clearGiftItemIfNeeded();
                 }
+                if (state.create.categoryGroup === 'lottery') {
+                    state.create.tradeType = 'lottery';
+                    it.componentId = 'uss-lottery';
+                    it.typeLabel = '抽奖';
+                    it.categoryGroup = 'lottery';
+                } else if (state.create.tradeType === 'lottery') {
+                    state.create.tradeType = 'currency';
+                    if (it.componentId === 'uss-lottery') it.componentId = null;
+                    if (it.typeLabel === '抽奖') it.typeLabel = '';
+                }
                 syncGiftFormUi();
-                syncHqPointsFormHints();
+                syncLotteryFormUi();
+                syncCreateFormUi();
             });
         }
         if (el.stockInput) {
@@ -4060,6 +4336,24 @@
         el.giftField = $('marketGiftLinkField');
         el.giftLinksList = $('marketGiftLinksList');
         el.giftHint = $('marketGiftHint');
+        el.lotteryCategoryOption = $('marketLotteryCategoryOption');
+        el.lotteryField = $('marketLotteryField');
+        el.lotteryModeSeg = $('marketSegLotteryMode');
+        el.lotteryAudienceSeg = $('marketSegLotteryAudience');
+        el.lotteryModeHint = $('marketLotteryModeHint');
+        el.lotteryAudienceHint = $('marketLotteryAudienceHint');
+        el.lotteryPrizeCount = $('marketLotteryPrizeCount');
+        el.lotteryProbField = $('marketLotteryProbField');
+        el.lotteryProbability = $('marketLotteryProbability');
+        el.lotteryCostField = $('marketLotteryCostField');
+        el.lotteryCostHint = $('marketLotteryCostHint');
+        el.lotteryPointCost = $('marketLotteryPointCost');
+        el.lotteryDrawAtField = $('marketLotteryDrawAtField');
+        el.lotteryDrawAtHint = $('marketLotteryDrawAtHint');
+        el.lotteryDrawAt = $('marketLotteryDrawAt');
+        el.locField = $('marketLocField');
+        el.qualityField = $('marketQualityField');
+        el.tradeTimeField = $('marketTradeTimeField');
         el.qualityInput = $('marketQualityInput');
         el.tradeTimeStart = $('marketTradeTimeStart');
         el.tradeTimeEnd = $('marketTradeTimeEnd');

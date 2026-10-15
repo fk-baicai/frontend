@@ -2560,17 +2560,11 @@ html:not(.hero-video-live) .video-player {
  font-weight: 700;
 }
 
-.hero-tools-row {
- display: flex;
- flex: 0 0 auto;
- width: 100%;
- align-items: stretch;
-}
-
 .hero-tools.is-ready .hero-tools-track {
  display: flex;
- flex-direction: column;
- width: 100%;
+ flex-direction: row;
+ align-items: stretch;
+ width: max-content;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -6470,7 +6464,7 @@ body.oopz-bind-open {
 .community-post-detail-card {
  border-radius: 12px;
  border: 1px solid rgba(95, 184, 255, 0.24);
- background: rgba(8, 22, 36, 0.72);
+ background: var(--navbar-bg);
  padding: 1.25rem 1.35rem 1.5rem;
 }
 

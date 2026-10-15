@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"></noscript>
-    <link rel="stylesheet" href="market.css?v=108">
+    <link rel="stylesheet" href="market.css?v=109">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -300,7 +300,7 @@
                                 </div>
                             </div>
 
-                            <div class="market-field market-suggest-wrap">
+                            <div class="market-field market-suggest-wrap" id="marketLocField">
                                 <span class="market-field__label">交易位置</span>
                                 <input type="search" id="marketLocInput" placeholder="搜索空间站或自行输入" autocomplete="off">
                                 <div id="marketLocSuggest" class="market-suggest" hidden></div>
@@ -318,6 +318,7 @@
                                         <option value="fps_armor">个人护甲</option>
                                         <option value="other">其他</option>
                                         <option value="gift" id="marketGiftCategoryOption" hidden>礼物</option>
+                                        <option value="lottery" id="marketLotteryCategoryOption" hidden>抽奖</option>
                                         <option value="hq_points">签到积分</option>
                                     </select>
                                 </label>
@@ -329,7 +330,42 @@
                                 <p class="market-field__hint" id="marketGiftHint">仅「礼物」分类显示。我方总数是几就填几条兑换链接或兑换说明；成交一次消耗一条，只会发到对方已验证邮箱。</p>
                             </div>
 
-                            <div class="market-field">
+                            <div class="market-field" id="marketLotteryField" hidden>
+                                <span class="market-field__label">开奖方式</span>
+                                <div class="market-seg market-seg--duo" id="marketSegLotteryMode">
+                                    <button type="button" class="is-active" data-lottery-mode="instant">即抽即开</button>
+                                    <button type="button" data-lottery-mode="scheduled">定时开奖</button>
+                                </div>
+                                <p class="market-field__hint" id="marketLotteryModeHint">点一次开一次。中奖概率只对即抽即开生效。未中奖也会扣除参与消耗。</p>
+                                <div class="market-row-2 market-row-2--controls">
+                                    <label class="market-inline-field" for="marketLotteryPrizeCount">
+                                        <span class="market-field__label">奖品份数</span>
+                                        <input type="number" id="marketLotteryPrizeCount" class="market-control" min="1" max="500" step="1" value="1">
+                                    </label>
+                                    <label class="market-inline-field" id="marketLotteryProbField" for="marketLotteryProbability">
+                                        <span class="market-field__label">中奖概率 (%)</span>
+                                        <input type="number" id="marketLotteryProbability" class="market-control" min="1" max="100" step="1" value="10">
+                                    </label>
+                                </div>
+                                <span class="market-field__label">参与范围</span>
+                                <div class="market-seg market-seg--duo" id="marketSegLotteryAudience">
+                                    <button type="button" class="is-active" data-lottery-audience="fleet">仅舰队成员</button>
+                                    <button type="button" data-lottery-audience="public">所有人</button>
+                                </div>
+                                <p class="market-field__hint" id="marketLotteryAudienceHint">只有舰队成员能参与时，才可以设置签到积分消耗。</p>
+                                <label class="market-inline-field" id="marketLotteryCostField" for="marketLotteryPointCost">
+                                    <span class="market-field__label">参与消耗（签到积分）</span>
+                                    <input type="number" id="marketLotteryPointCost" class="market-control" min="0" max="100000" step="1" value="0">
+                                </label>
+                                <p class="market-field__hint" id="marketLotteryCostHint">填 0 表示免费。只扣参与者的总部签到积分，发布者不加分。</p>
+                                <label class="market-inline-field" id="marketLotteryDrawAtField" for="marketLotteryDrawAt" hidden>
+                                    <span class="market-field__label">开奖时间</span>
+                                    <input type="datetime-local" id="marketLotteryDrawAt" class="market-control">
+                                </label>
+                                <p class="market-field__hint" id="marketLotteryDrawAtHint" hidden>到点后随机抽取。人数少于奖品份数时，参与者全部中奖。</p>
+                            </div>
+
+                            <div class="market-field" id="marketQualityField">
                                 <label class="market-inline-field" for="marketQualityInput">
                                     <span class="market-field__label">品质</span>
                                     <input type="number" id="marketQualityInput" class="market-control" min="0" max="1000" step="1" value="500">
@@ -357,7 +393,7 @@
                             </div>
                             <p class="market-field__hint" id="marketBarterQtyHint" hidden>我方总数是库存。给出数量 / 换取数量是单次比例，例如库存 10、给出 5、换取 4，则可成交 2 次。</p>
 
-                            <div class="market-field">
+                            <div class="market-field" id="marketTradeTimeField">
                                 <span class="market-field__label">每日交易时段</span>
                                 <div class="market-time-range">
                                     <input type="time" id="marketTradeTimeStart" value="20:00" step="900">
@@ -691,6 +727,6 @@
     <script src="community-image-lightbox.js" defer></script>
     <script src="market-notify.js?v=6" defer></script>
     <script src="market-chat.js?v=2" defer></script>
-    <script src="market.js?v=88" defer></script>
+    <script src="market.js?v=89" defer></script>
 </body>
 </html>

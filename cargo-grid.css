@@ -162,12 +162,46 @@
     border-left: 1px solid rgba(95, 184, 255, 0.18);
 }
 
+.cg-ship-line {
+    display: flex;
+    align-items: center;
+    gap: 0.28rem;
+}
+
+.cg-ship-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: auto;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: rgba(142, 224, 255, 0.9);
+    font: 600 0.68rem/1 'Segoe UI', sans-serif;
+    cursor: pointer;
+    padding: 0 0.05rem;
+}
+
+.cg-ship-add:hover {
+    background: transparent;
+    color: #fff;
+}
+
+.cg-ship-add.is-in {
+    opacity: 0.35;
+    cursor: default;
+}
+
 .cg-ship {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.6rem;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
+    width: auto;
     min-height: 44px;
     padding: 0.28rem 0.55rem;
     border: 0;
@@ -207,7 +241,10 @@
 
 .cg-maker:focus-visible,
 .cg-ship:focus-visible,
-.cg-view:focus-visible {
+.cg-ship-add:focus-visible,
+.cg-view:focus-visible,
+.cg-view-icon:focus-visible,
+.cg-editor-toggle:focus-visible {
     outline: 2px solid #8ee0ff;
     outline-offset: 2px;
 }
@@ -271,11 +308,25 @@
     display: none;
 }
 
-.cg-editor-toggle {
+.cg-view-tools {
     position: absolute;
     top: 0.55rem;
     right: 0.55rem;
     z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.35rem;
+}
+
+.cg-view-icons {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.35rem;
+}
+
+.cg-editor-toggle {
     border: 1px solid rgba(95, 184, 255, 0.35);
     background: rgba(52, 98, 138, 0.94);
     color: #e8f4ff;
@@ -285,6 +336,32 @@
     cursor: pointer;
 }
 
+.cg-view-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    padding: 0;
+    border: 1px solid rgba(95, 184, 255, 0.35);
+    border-radius: 6px;
+    background: rgba(52, 98, 138, 0.94);
+    color: #e8f4ff;
+    cursor: pointer;
+}
+
+.cg-view-icon svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    display: block;
+}
+
+.cg-view-icon:hover,
+.cg-editor-toggle:hover {
+    border-color: #8ee0ff;
+    color: #fff;
+}
+
 .cg-editor-toggle.is-on {
     border-color: #8ee0ff;
     color: #8ee0ff;
@@ -292,7 +369,7 @@
 
 .cg-editor {
     position: absolute;
-    top: 2.55rem;
+    top: 7.15rem;
     right: 0.55rem;
     bottom: 0.55rem;
     left: auto;

@@ -1171,6 +1171,12 @@ html:has(body.market-body) {
     letter-spacing: 0.02em;
 }
 
+.market-card__badge--lottery,
+.market-detail__badge--lottery {
+    border-color: rgba(142, 224, 255, 0.55);
+    color: #8ee8ff;
+}
+
 .market-card__info {
     display: flex;
     align-items: flex-end;
