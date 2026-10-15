@@ -3,9 +3,7 @@
 .hangzhou-bc-body {
     margin: 0;
     min-height: 100vh;
-    background:
-        radial-gradient(ellipse 90% 55% at 50% -8%, rgba(56, 140, 210, 0.22), transparent 58%),
-        linear-gradient(180deg, #04080e 0%, rgb(15, 44, 62) 38%, #060d14 100%);
+    background: var(--home-page-bg, #122d48);
     color: #e8f4ff;
     font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }

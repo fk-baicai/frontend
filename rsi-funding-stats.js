@@ -411,13 +411,14 @@
         if (updatedEl && data && data.fetchedAt) {
             var when = formatFetchedAt(data.fetchedAt);
             var ageMs = Number(data.cacheAgeMs) || 0;
-            var showStale = !!data.stale && ageMs > 60 * 60 * 1000;
-            if (showStale || ageMs > 6 * 60 * 60 * 1000) {
+            var staleAfterMs = 24 * 60 * 60 * 1000;
+            var showStale = ageMs > staleAfterMs;
+            if (showStale) {
                 when += ' · 待后端更新';
             }
             updatedEl.textContent = when ? '更新时间：' + when : '';
             updatedEl.hidden = !when;
-            updatedEl.classList.toggle('is-stale', showStale || ageMs > 6 * 60 * 60 * 1000);
+            updatedEl.classList.toggle('is-stale', showStale);
         }
     }
 

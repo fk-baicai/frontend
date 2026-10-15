@@ -5,12 +5,12 @@ html:has(body.market-body) {
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-gutter: stable;
-    background-color: #0b1c2e;
+    background-color: #122d48;
 }
 
 .market-body {
     --mkt-font-ui: 'Rajdhani', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-    --mkt-bg: #0b1c2e;
+    --mkt-bg: #122d48;
     --mkt-surface: #112a40;
     --mkt-surface-2: #0d2136;
     --mkt-text: #f0f4f8;
@@ -43,10 +43,10 @@ html:has(body.market-body) {
 .market-hero {
     position: relative;
     margin: 0;
-    background-color: #0b1c2e;
+    background-color: #122d48;
     box-shadow:
-        inset 0 0 72px 28px rgba(11, 28, 46, 0.45),
-        inset 0 0 140px 56px rgba(11, 28, 46, 0.22);
+        inset 0 0 72px 28px rgba(18, 45, 72, 0.45),
+        inset 0 0 140px 56px rgba(18, 45, 72, 0.22);
     filter: none;
     border-radius: 0;
     overflow: hidden;
@@ -75,11 +75,11 @@ html:has(body.market-body) {
     z-index: 1;
     pointer-events: none;
     background:
-        linear-gradient(90deg, rgba(11, 28, 46, 0.32) 0%, transparent 14%, transparent 86%, rgba(11, 28, 46, 0.32) 100%),
-        linear-gradient(180deg, rgba(11, 28, 46, 0.2) 0%, transparent 18%, transparent 74%, rgba(11, 28, 46, 0.28) 100%);
+        linear-gradient(90deg, rgba(18, 45, 72, 0.32) 0%, transparent 14%, transparent 86%, rgba(18, 45, 72, 0.32) 100%),
+        linear-gradient(180deg, rgba(18, 45, 72, 0.2) 0%, transparent 18%, transparent 74%, rgba(18, 45, 72, 0.28) 100%);
     box-shadow:
-        inset 0 0 48px 16px rgba(11, 28, 46, 0.28),
-        inset 0 0 96px 32px rgba(11, 28, 46, 0.14);
+        inset 0 0 48px 16px rgba(18, 45, 72, 0.28),
+        inset 0 0 96px 32px rgba(18, 45, 72, 0.14);
 }
 
 .market-head {
@@ -230,7 +230,7 @@ html:has(body.market-body) {
     padding: 0.42rem 0 0.42rem var(--home-content-pad-x, 40px);
     min-height: 2.35rem;
     border-bottom: 1px solid var(--mkt-border);
-    background: linear-gradient(90deg, rgba(247, 143, 30, 0.07) 0%, rgba(11, 28, 46, 0) 18%);
+    background: linear-gradient(90deg, rgba(247, 143, 30, 0.07) 0%, rgba(18, 45, 72, 0) 18%);
 }
 
 .market-ticker__tag {
@@ -461,7 +461,7 @@ html:has(body.market-body) {
     padding: 0.42rem 0.72rem;
     border: 1px solid rgba(0, 212, 255, 0.32);
     border-radius: var(--mkt-radius);
-    background: rgba(11, 28, 46, 0.55);
+    background: rgba(18, 45, 72, 0.55);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
     color: rgba(220, 235, 245, 0.92);
     cursor: pointer;
@@ -506,7 +506,7 @@ html:has(body.market-body) {
     width: min(920px, calc(100% - 2rem));
     background:
         linear-gradient(180deg, rgba(0, 212, 255, 0.04) 0%, transparent 28%),
-        linear-gradient(135deg, #0b1c2e 0%, #0d2136 55%, #0b1c2e 100%);
+        linear-gradient(135deg, #122d48 0%, #0d2136 55%, #122d48 100%);
     border: 1px solid rgba(95, 184, 255, 0.14);
     box-shadow:
         0 24px 64px rgba(0, 0, 0, 0.55),
@@ -920,7 +920,7 @@ html:has(body.market-body) {
     flex-direction: column;
     background:
         linear-gradient(180deg, rgba(0, 212, 255, 0.04) 0%, transparent 28%),
-        linear-gradient(135deg, #0b1c2e 0%, #0d2136 55%, #0b1c2e 100%);
+        linear-gradient(135deg, #122d48 0%, #0d2136 55%, #122d48 100%);
     border: 1px solid rgba(95, 184, 255, 0.14);
     box-shadow:
         0 24px 64px rgba(0, 0, 0, 0.55),
@@ -1111,7 +1111,7 @@ html:has(body.market-body) {
 .market-card__media {
     position: relative;
     aspect-ratio: 4 / 3;
-    background: linear-gradient(145deg, #152a40 0%, #0b1c2e 100%);
+    background: linear-gradient(145deg, #152a40 0%, #122d48 100%);
     overflow: hidden;
     transform: translateZ(0);
 }
@@ -1499,7 +1499,7 @@ html:has(body.market-body) {
 .market-modal {
     width: min(760px, calc(100% - 2rem));
     margin: calc(var(--mkt-header-offset) + 1.5rem) auto 2rem;
-    background: #0b1c2e;
+    background: #122d48;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
     --mkt-ctrl-h: 2.25rem;
 }
@@ -3157,7 +3157,7 @@ html:has(body.market-body) {
     margin-top: 0.3rem;
     padding: 0.4rem 0.55rem;
     border-left: 2px solid rgba(95, 184, 255, 0.35);
-    background: rgba(8, 22, 37, 0.45);
+    background: rgba(14, 41, 67, 0.45);
 }
 
 .market-seller-card__review-reply-stars {
@@ -3191,7 +3191,7 @@ html:has(body.market-body) {
     line-height: 1.45;
     color: rgba(200, 220, 235, 0.82);
     border: 1px solid rgba(95, 184, 255, 0.28);
-    background: rgba(8, 22, 37, 0.55);
+    background: rgba(14, 41, 67, 0.55);
 }
 
 .market-trades-row__status--approved {
@@ -3417,11 +3417,11 @@ html:has(body.market-body) {
 }
 
 body.market-trades-body {
-    --mkt-bg: #0b1c2e;
+    --mkt-bg: #122d48;
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
-    background-color: #0b1c2e;
+    background-color: #122d48;
     color: #e8f4ff;
 }
 
@@ -3928,8 +3928,8 @@ body.market-trades-body .uss-site-footer {
         height: auto;
         aspect-ratio: 2.15 / 1;
         background:
-            linear-gradient(90deg, rgba(11, 28, 46, 0.42) 0%, transparent 42%, transparent 70%, rgba(11, 28, 46, 0.28) 100%),
-            linear-gradient(180deg, rgba(11, 28, 46, 0.18) 0%, transparent 40%, rgba(11, 28, 46, 0.35) 100%);
+            linear-gradient(90deg, rgba(18, 45, 72, 0.42) 0%, transparent 42%, transparent 70%, rgba(18, 45, 72, 0.28) 100%),
+            linear-gradient(180deg, rgba(18, 45, 72, 0.18) 0%, transparent 40%, rgba(18, 45, 72, 0.35) 100%);
         box-shadow: none;
     }
 
@@ -4375,7 +4375,7 @@ body.market-trades-body .uss-site-footer {
     display: flex;
     flex-direction: column;
     height: min(26rem, 70vh);
-    background: var(--navbar-bg, rgb(8, 22, 37));
+    background: var(--navbar-bg, rgb(14, 41, 67));
     border: 1px solid var(--home-surface-border, rgba(95, 184, 255, 0.18));
     border-radius: 12px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
@@ -4536,7 +4536,7 @@ body.market-trades-body .uss-site-footer {
     gap: 0.75rem;
     padding: 0.85rem 1rem;
     border: 1px solid var(--mkt-border);
-    background: rgba(8, 22, 37, 0.65);
+    background: rgba(14, 41, 67, 0.65);
     cursor: pointer;
 }
 

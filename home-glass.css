@@ -3,8 +3,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 body.home-page-body {
-    --glass-bg: rgba(8, 22, 37, 0.55);
-    --glass-bg-strong: rgba(8, 22, 37, 0.78);
+    --glass-bg: rgba(14, 41, 67, 0.55);
+    --glass-bg-strong: rgba(14, 41, 67, 0.78);
     --glass-border: rgba(95, 184, 255, 0.18);
     --glass-border-bright: rgba(142, 224, 255, 0.32);
     --glass-blur: blur(18px) saturate(1.35);

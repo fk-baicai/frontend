@@ -20,11 +20,7 @@ html:has(body.bp-craft-body) {
     --bp-border: rgba(95, 184, 255, 0.22);
     --bp-border-dim: rgba(95, 184, 255, 0.1);
     --bp-surface: rgba(8, 18, 32, 0.92);
-    --bp-panel-bg: linear-gradient(
-        160deg,
-        rgba(8, 20, 36, 0.97) 0%,
-        rgba(6, 16, 30, 0.99) 100%
-    );
+    --bp-panel-bg: var(--navbar-bg);
     --bp-radius: 6px;
     --bp-radius-lg: 10px;
     --bp-header-offset: var(--navbar-height, calc(37px + 4rem));
@@ -49,7 +45,7 @@ html:has(body.bp-craft-body) {
     overflow-y: visible;
     display: flex;
     flex-direction: column;
-    background-color: var(--home-page-bg, #0b1c2e);
+    background-color: var(--home-page-bg, #122d48);
     background-image: none;
     color: #e8f4ff;
     font-family: var(--bp-font-ui);
@@ -255,7 +251,7 @@ html:has(body.bp-craft-body) {
     padding: 0.52rem 0.7rem;
     border: 1px solid rgba(0, 240, 255, 0.22);
     border-radius: var(--bp-radius);
-    background: rgba(2, 8, 18, 0.92);
+    background: var(--navbar-bg);
     color: #e8f4ff;
     font-family: var(--bp-font-ui);
     font-size: 0.92rem;
@@ -285,7 +281,7 @@ html:has(body.bp-craft-body) {
     overflow-y: auto;
     border: 1px solid rgba(0, 240, 255, 0.35);
     border-radius: var(--bp-radius);
-    background: rgba(4, 14, 28, 0.98);
+    background: var(--navbar-bg);
     box-shadow:
         0 10px 28px rgba(0, 0, 0, 0.45),
         0 0 0 1px rgba(0, 240, 255, 0.08),
@@ -380,7 +376,7 @@ html:has(body.bp-craft-body) {
     padding: 0.44rem 2rem 0.44rem 0.58rem;
     border: 1px solid rgba(0, 240, 255, 0.22);
     border-radius: var(--bp-radius);
-    background: rgba(2, 8, 18, 0.92);
+    background: var(--navbar-bg);
     color: #e8f4ff;
     font-family: var(--bp-font-ui);
     font-size: 0.88rem;
@@ -728,7 +724,7 @@ html:has(body.bp-craft-body) {
     padding: 0;
     border: 1px solid rgba(0, 240, 255, 0.32);
     border-radius: var(--bp-radius);
-    background: rgba(2, 8, 18, 0.85);
+    background: var(--navbar-bg);
     box-shadow:
         0 0 16px rgba(0, 240, 255, 0.12),
         inset 0 0 20px rgba(0, 240, 255, 0.04);
@@ -1276,7 +1272,7 @@ html:has(body.bp-craft-body) {
     position: relative;
     border: 1px solid rgba(0, 240, 255, 0.2);
     border-radius: var(--bp-radius);
-    background: rgba(2, 8, 18, 0.72);
+    background: var(--navbar-bg);
     box-shadow: inset 0 1px 0 rgba(0, 240, 255, 0.08);
     overflow: hidden;
 }
@@ -1359,7 +1355,7 @@ html:has(body.bp-craft-body) {
     padding: 0.32rem 0.45rem;
     border: 1px solid rgba(0, 240, 255, 0.14);
     border-radius: var(--bp-radius);
-    background: rgba(2, 8, 18, 0.65);
+    background: var(--navbar-bg);
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -1844,18 +1840,18 @@ html:has(body.bp-craft-body) {
 .bp-mission-wrap .sc-blueprint-mission-item {
     border: 1px solid rgba(95, 184, 255, 0.14);
     border-radius: var(--bp-radius);
-    background: rgba(12, 26, 44, 0.82);
+    background: var(--navbar-bg);
     min-width: 0;
     overflow: hidden;
     transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .bp-mission-wrap .sc-blueprint-mission-item:nth-child(odd) {
-    background: rgba(14, 32, 54, 0.88);
+    background: var(--navbar-bg);
 }
 
 .bp-mission-wrap .sc-blueprint-mission-item:nth-child(even) {
-    background: rgba(10, 22, 38, 0.9);
+    background: var(--navbar-bg);
 }
 
 .bp-mission-wrap .sc-blueprint-mission-item:hover {
@@ -1863,7 +1859,7 @@ html:has(body.bp-craft-body) {
 }
 
 .bp-mission-wrap .sc-blueprint-mission-item.is-open {
-    background: rgba(16, 38, 62, 0.95);
+    background: var(--navbar-bg);
     border-color: rgba(0, 240, 255, 0.32);
     box-shadow: 0 0 0 1px rgba(0, 240, 255, 0.08), 0 4px 14px rgba(0, 0, 0, 0.22);
     z-index: 1;

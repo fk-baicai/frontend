@@ -1054,7 +1054,7 @@
         var w = size.w;
         var h = size.h;
         ctx.clearRect(0, 0, w, h);
-        ctx.fillStyle = '#050d18';
+        ctx.fillStyle = '#122d48';
         ctx.fillRect(0, 0, w, h);
 
         var map = currentMap();

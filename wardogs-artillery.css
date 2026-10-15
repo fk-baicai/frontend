@@ -2,14 +2,14 @@
     --wd-accent: #f78f1e;
     --wd-accent-hover: #ff9f2e;
     --wd-accent-soft: #ffc978;
-    --wd-bg: #050d18;
+    --wd-bg: var(--home-page-bg, #122d48);
     margin: 0;
     min-height: 100vh;
     background: var(--wd-bg);
     color: #e8f4ff;
     font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
     scrollbar-width: thin;
-    scrollbar-color: rgba(247, 143, 30, 0.55) #050d18;
+    scrollbar-color: rgba(247, 143, 30, 0.55) var(--home-page-bg, #122d48);
 }
 
 .wd-arty-body::-webkit-scrollbar {
@@ -17,7 +17,7 @@
 }
 
 .wd-arty-body::-webkit-scrollbar-track {
-    background: #050d18;
+    background: var(--home-page-bg, #122d48);
 }
 
 .wd-arty-body::-webkit-scrollbar-thumb {

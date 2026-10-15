@@ -245,7 +245,7 @@
     function notifyStyles() {
         return (
             '.mkt-notify-stack{position:fixed;right:1.25rem;bottom:1.25rem;z-index:9600;display:flex;flex-direction:column-reverse;align-items:flex-end;gap:.65rem;width:min(22.5rem,calc(100vw - 1.5rem));pointer-events:none}' +
-            '.mkt-notify-card{pointer-events:auto;position:relative;display:grid;grid-template-columns:3px minmax(0,1fr) 44px;width:100%;overflow:hidden;background:rgba(8,22,37,.94);border:1px solid rgba(95,184,255,.18);border-radius:8px;box-shadow:0 16px 40px rgba(0,0,0,.45);backdrop-filter:blur(14px);color:#e8f4ff;transform:translateX(112%);opacity:0;transition:transform .28s ease,opacity .28s ease}' +
+            '.mkt-notify-card{pointer-events:auto;position:relative;display:grid;grid-template-columns:3px minmax(0,1fr) 44px;width:100%;overflow:hidden;background:rgba(14, 41, 67,.94);border:1px solid rgba(95,184,255,.18);border-radius:8px;box-shadow:0 16px 40px rgba(0,0,0,.45);backdrop-filter:blur(14px);color:#e8f4ff;transform:translateX(112%);opacity:0;transition:transform .28s ease,opacity .28s ease}' +
             '.mkt-notify-card.is-in{transform:translateX(0);opacity:1}' +
             '.mkt-notify-card.is-out{transform:translateX(112%);opacity:0}' +
             '.mkt-notify-card__bar{background:#5fb8ff}' +

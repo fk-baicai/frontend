@@ -3,11 +3,7 @@
 .server-ip-body {
     margin: 0;
     min-height: 100vh;
-    background:
-        radial-gradient(ellipse 90% 55% at 50% -8%, rgba(56, 140, 210, 0.28), transparent 58%),
-        radial-gradient(ellipse 60% 40% at 100% 20%, rgba(30, 90, 140, 0.18), transparent 50%),
-        radial-gradient(ellipse 50% 35% at 0% 80%, rgba(20, 70, 110, 0.14), transparent 45%),
-        linear-gradient(180deg, #04080e 0%, #0a1520 42%, #060d14 100%);
+    background: var(--home-page-bg, #122d48);
     color: #e8f4ff;
     font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }

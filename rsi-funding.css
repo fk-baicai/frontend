@@ -3,10 +3,7 @@
 .rsi-funding-page-body {
     margin: 0;
     min-height: 100vh;
-    background:
-        radial-gradient(ellipse 90% 55% at 50% -8%, rgba(56, 140, 210, 0.28), transparent 58%),
-        radial-gradient(ellipse 60% 40% at 100% 20%, rgba(30, 90, 140, 0.18), transparent 50%),
-        linear-gradient(180deg, #04080e 0%, #0a1520 42%, #060d14 100%);
+    background: var(--home-page-bg, #122d48);
     color: #e8f4ff;
     font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
@@ -144,7 +141,12 @@
     border-radius: 12px;
 }
 
-.rsi-funding-page-body .rsi-funding-updated {
+.rsi-funding-page-body .rsi-funding-head .rsi-funding-updated:not([hidden]) {
+    opacity: 1;
+    visibility: visible;
+    max-width: none;
+    overflow: visible;
+    margin-left: auto;
     font-size: var(--home-section-lead-size, 0.8125rem);
 }
 
