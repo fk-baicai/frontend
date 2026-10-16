@@ -29,11 +29,21 @@
     var raf = 0;
     var last = 0;
     var acc = 0;
-    var STEP_MS = 2000;
+    var STEP_MS = 1500;
     var ANIM_MS = 380;
 
     function visibleCount() {
-        return narrowQuery && narrowQuery.matches ? 3 : 4;
+        return 3;
+    }
+
+    function sliding() {
+        return visibleCount() < count;
+    }
+
+    function itemGap() {
+        var style = window.getComputedStyle(track);
+        var gap = parseFloat(style.columnGap || style.gap || '0');
+        return isFinite(gap) ? gap : 0;
     }
 
     function itemWidth() {
@@ -41,7 +51,12 @@
         var pad = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
         var width = viewport.clientWidth - pad;
         if (!width) return 0;
-        return width / visibleCount();
+        var visible = visibleCount();
+        return (width - itemGap() * (visible - 1)) / visible;
+    }
+
+    function stepSize() {
+        return itemWidth() + itemGap();
     }
 
     function makeClone(source) {
@@ -60,30 +75,47 @@
         node.style.width = width + 'px';
     }
 
+    function clearSize(node) {
+        node.style.flex = '';
+        node.style.maxWidth = '';
+        node.style.width = '';
+    }
+
     function rebuild() {
+        root.classList.add('is-ready');
+        root.classList.toggle('is-static', !sliding());
         for (var i = 0; i < originals.length; i++) {
             if (originals[i].parentNode) originals[i].parentNode.removeChild(originals[i]);
         }
         track.textContent = '';
+        var slide = sliding();
         for (var n = 0; n < count; n++) {
-            sizeTool(originals[n]);
+            if (slide) sizeTool(originals[n]);
+            else clearSize(originals[n]);
             track.appendChild(originals[n]);
         }
-        var visible = visibleCount();
-        for (var c = 0; c < visible; c++) {
-            var clone = makeClone(originals[c]);
-            sizeTool(clone);
-            track.appendChild(clone);
+        if (slide) {
+            var visible = visibleCount();
+            for (var c = 0; c < visible; c++) {
+                var clone = makeClone(originals[c]);
+                sizeTool(clone);
+                track.appendChild(clone);
+            }
         }
         viewport.style.height = '';
-        root.classList.add('is-ready');
     }
 
     function paint(animate) {
-        var width = itemWidth();
+        if (!sliding()) {
+            animating = false;
+            track.style.transition = 'none';
+            track.style.transform = 'none';
+            return;
+        }
+        var step = stepSize();
         animating = !!animate;
         track.style.transition = animate ? 'transform ' + ANIM_MS + 'ms ease' : 'none';
-        track.style.transform = 'translate3d(' + -index * width + 'px, 0, 0)';
+        track.style.transform = 'translate3d(' + -index * step + 'px, 0, 0)';
     }
 
     track.addEventListener('transitionend', function (ev) {
@@ -100,7 +132,7 @@
         var dt = now - last;
         last = now;
         if (dt > 200) dt = 0;
-        if (hovering || dragging || focused || document.hidden) return raf = window.requestAnimationFrame(tick);
+        if (!sliding() || hovering || dragging || focused || document.hidden) return raf = window.requestAnimationFrame(tick);
         acc += dt;
         if (!animating && acc >= STEP_MS) {
             acc -= STEP_MS;
@@ -144,14 +176,14 @@
         var dx = ev.clientX - drag.x;
         drag.moved = dx;
         if (Math.abs(dx) <= 6) return;
-        var width = itemWidth();
-        if (!width) return;
+        var step = stepSize();
+        if (!step) return;
         if (!dragging) {
             dragging = true;
             suppressClick = true;
             root.classList.add('is-dragging');
         }
-        var loop = count * width;
+        var loop = count * step;
         var offset = drag.base - dx;
         offset = ((offset % loop) + loop) % loop;
         drag.offset = offset;
@@ -165,8 +197,8 @@
         window.removeEventListener('pointerup', onPointerUp);
         window.removeEventListener('pointercancel', onPointerUp);
         if (dragging) {
-            var width = itemWidth() || 1;
-            index = Math.round((drag.offset || 0) / width) % count;
+            var step = stepSize() || 1;
+            index = Math.round((drag.offset || 0) / step) % count;
             if (index < 0) index += count;
             paint(true);
         }
@@ -179,10 +211,11 @@
         ev.preventDefault();
     });
     viewport.addEventListener('pointerdown', function (ev) {
+        if (!sliding()) return;
         if (ev.pointerType && ev.pointerType !== 'mouse') return;
         if (ev.button != null && ev.button !== 0) return;
-        var width = itemWidth() || 0;
-        drag = { id: ev.pointerId, x: ev.clientX, base: index * width, offset: index * width, moved: 0 };
+        var step = stepSize() || 0;
+        drag = { id: ev.pointerId, x: ev.clientX, base: index * step, offset: index * step, moved: 0 };
         window.addEventListener('pointermove', onPointerMove);
         window.addEventListener('pointerup', onPointerUp);
         window.addEventListener('pointercancel', onPointerUp);

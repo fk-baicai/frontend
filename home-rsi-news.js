@@ -80,7 +80,7 @@
     fetch(api)
         .then(function (res) { return res.json(); })
         .then(function (data) {
-            render((data && data.items) || []);
+            render(((data && data.items) || []).slice(0, 5));
         })
         .catch(function () {
             grid.innerHTML = '<p class="home-rsi-news-status">暂时没有拉到官方资讯</p>';
