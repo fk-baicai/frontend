@@ -218,91 +218,6 @@
         return modMs(Date.now() - anchorStartTime + calibrationOffsetMs, CYCLE_MS);
     }
 
-    function buildCard(title, sub, badgeText, tone, details, ledDetails, opts) {
-        opts = opts || {};
-        var card = document.createElement('article');
-        card.className = 'rsi-status-card rsi-status-card--' + (tone || 'gray');
-
-        var head = document.createElement('div');
-        head.className = 'rsi-status-card-head';
-
-        var h3 = document.createElement('h3');
-        h3.className = 'rsi-status-card-title';
-        h3.textContent = title;
-
-        var p = document.createElement('p');
-        p.className = 'rsi-status-card-sub';
-        if (opts.subEmphasis) p.classList.add('is-emphasis-' + opts.subEmphasis);
-        p.textContent = sub || '';
-
-        head.appendChild(h3);
-        head.appendChild(p);
-
-        if (Array.isArray(details) && details.length) {
-            var dl = document.createElement('dl');
-            dl.className = 'home-exec-card-details';
-            details.forEach(function (row) {
-                if (!row || !row.label) return;
-                var dt = document.createElement('dt');
-                dt.textContent = row.label;
-                if (row.emphasis) dt.classList.add('is-' + row.emphasis);
-                var dd = document.createElement('dd');
-                dd.textContent = row.value || '—';
-                if (row.emphasis) dd.classList.add('is-' + row.emphasis);
-                if (row.urgent) dd.classList.add('is-urgent');
-                dl.appendChild(dt);
-                dl.appendChild(dd);
-            });
-            head.appendChild(dl);
-        }
-
-        if (Array.isArray(ledDetails) && ledDetails.length === 5) {
-            var ledRow = document.createElement('div');
-            ledRow.className = 'home-exec-pipeline';
-            var greenLit = ledDetails.filter(function (d) {
-                return d && d.green;
-            }).length;
-            ledRow.setAttribute('aria-label', '五盏指示灯 ' + greenLit + ' 盏绿');
-            ledDetails.forEach(function (d) {
-                var dot = document.createElement('span');
-                var cls = 'home-exec-pipeline-dot';
-                if (d && d.green) cls += ' is-on';
-                else if (d && d.red) cls += ' is-red';
-                dot.className = cls;
-                dot.setAttribute('aria-hidden', 'true');
-                ledRow.appendChild(dot);
-            });
-            head.appendChild(ledRow);
-        }
-
-        var badge = document.createElement('div');
-        badge.className = 'rsi-status-badge rsi-status-badge--' + (tone || 'gray');
-
-        var dot = document.createElement('span');
-        dot.className = 'rsi-status-dot';
-        dot.setAttribute('aria-hidden', 'true');
-
-        var label = document.createElement('span');
-        label.className = 'rsi-status-label';
-        label.textContent = badgeText || '—';
-
-        badge.appendChild(dot);
-        badge.appendChild(label);
-        card.appendChild(head);
-        card.appendChild(badge);
-        return card;
-    }
-
-    function phaseTone(phase, canInsert) {
-        if (phase === 'discharge') return canInsert ? 'green' : 'yellow';
-        if (phase === 'charging') return 'blue';
-        return 'gray';
-    }
-
-    function isSoon(ms) {
-        return ms != null && ms <= 10 * 60000;
-    }
-
     function insertHint(state) {
         if (state.canInsert) {
             if (state.goldenWindow) return '五盏全绿 · 前 12 分钟黄金窗口，建议优先插卡';
@@ -312,100 +227,108 @@
         return '充电段结束后进入放电，全程可插卡';
     }
 
+    function ensureBoard() {
+        if (gridEl.querySelector('.home-exec-console')) return;
+        gridEl.innerHTML =
+            '<article class="home-exec-console" data-phase="charging" data-can-insert="no">' +
+            '<div class="home-exec-console-bar">' +
+            '<span class="home-exec-kicker">PYRO · 185 MIN</span>' +
+            '<span class="home-exec-phase" data-home-exec="phase"></span>' +
+            '</div>' +
+            '<div class="home-exec-leds" data-home-exec="leds" aria-hidden="true"></div>' +
+            '<p class="home-exec-clock-label">本轮剩余</p>' +
+            '<div class="home-exec-clock" data-home-exec="clock">' +
+            '<b data-home-exec="h">00</b><span class="home-exec-colon">:</span>' +
+            '<b data-home-exec="m">00</b><span class="home-exec-colon">:</span>' +
+            '<b data-home-exec="s">00</b>' +
+            '</div>' +
+            '<div class="home-exec-stats">' +
+            '<div class="home-exec-stat"><span data-home-exec="phaseLabel">当前阶段</span><strong data-home-exec="phaseRemain"></strong><em data-home-exec="nextLight"></em></div>' +
+            '<div class="home-exec-stat"><span data-home-exec="insertTitle">插卡窗口</span><strong data-home-exec="insertValue"></strong><em data-home-exec="insertNote"></em></div>' +
+            '<div class="home-exec-stat"><span>本轮进度</span><strong data-home-exec="progress"></strong><em data-home-exec="elapsed"></em></div>' +
+            '</div>' +
+            '</article>';
+        var board = gridEl.querySelector('.home-exec-console');
+        var head = document.querySelector('.home-exec-hangar-head');
+        if (board && head && head.parentNode !== board) {
+            board.insertBefore(head, board.firstChild);
+        }
+        if (!board || !head) return;
+        var text = head.querySelector('.home-exec-hangar-head-text');
+        var notify = document.getElementById('homeExecHangarNotifyMount');
+        var phase = board.querySelector('.home-exec-phase');
+        var kicker = board.querySelector('.home-exec-kicker');
+        var bar = board.querySelector('.home-exec-console-bar');
+        var aside = board.querySelector('.home-exec-hangar-aside');
+        if (!aside) {
+            aside = document.createElement('div');
+            aside.className = 'home-exec-hangar-aside';
+            board.appendChild(aside);
+        }
+        if (notify) aside.appendChild(notify);
+        if (phase) aside.appendChild(phase);
+        var stage = board.querySelector('.home-exec-stage');
+        if (!stage) {
+            stage = document.createElement('div');
+            stage.className = 'home-exec-stage';
+            ['home-exec-leds', 'home-exec-clock-label', 'home-exec-clock'].forEach(function (cls) {
+                var node = board.querySelector('.' + cls);
+                if (node) stage.appendChild(node);
+            });
+            board.appendChild(stage);
+        }
+        if (kicker && text) text.appendChild(kicker);
+        if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
+    }
+
+    function setText(name, value) {
+        var el = gridEl.querySelector('[data-home-exec="' + name + '"]');
+        if (el) el.textContent = value == null ? '' : String(value);
+    }
+
     function render(state) {
         if (!state || !gridEl) return;
-
+        var parts = state.cycleRemainingParts || { h: 0, m: 0, s: 0 };
         var chargingNote =
             state.phase === 'charging'
                 ? '当前充电段进行中'
                 : state.cycleRemainingText + ' 后开始（含冷却）';
-
-        var phaseSub = state.phaseLabel + ' · ' + state.phaseRange;
-        var showIndicator = state.phase === 'charging' || state.phase === 'discharge';
-        var insertSoon = !state.canInsert && isSoon(state.nextAccessMs);
-        var insertClosing = state.canInsert && isSoon(state.phaseRemainingMs);
-
-        gridEl.innerHTML = '';
-        gridEl.appendChild(
-            buildCard(
-                '当前阶段',
-                phaseSub,
-                state.phaseLabel,
-                phaseTone(state.phase, state.canInsert),
-                [
-                    {
-                        label: state.phaseRemainLabel,
-                        value: state.phaseRemainingDisplayText,
-                        emphasis: showIndicator ? 'key' : '',
-                        urgent: showIndicator && isSoon(state.phaseRemainingMs),
-                    },
-                    {
-                        label: '阶段还剩',
-                        value: state.phaseRemainingText,
-                        emphasis: 'key',
-                        urgent: isSoon(state.phaseRemainingMs),
-                    },
-                    {
-                        label: 'PIPELINE',
-                        value: state.greenCount + ' / 5 盏绿灯 · ' + state.pipelineHint,
-                        emphasis: state.goldenWindow ? 'key' : 'hint',
-                    },
-                ],
-                state.ledDetails,
-            ),
-        );
-        gridEl.appendChild(
-            buildCard(
-                '插卡窗口',
-                state.canInsert
-                    ? state.goldenWindow
-                        ? '黄金窗口 · 五盏全绿，建议立即插卡'
-                        : '当前可插卡 · 放电段全程开放'
-                    : '当前不可插卡',
-                state.insertLabel,
-                state.insertTone,
-                [
-                    {
-                        label: state.nextAccessLabelText,
-                        value: state.nextAccessText,
-                        emphasis: 'key',
-                        urgent: insertSoon || insertClosing,
-                    },
-                    {
-                        label: '说明',
-                        value: insertHint(state),
-                        emphasis: 'hint',
-                    },
-                ],
-                null,
-                {
-                    subEmphasis: state.canInsert
-                        ? state.goldenWindow
-                            ? 'open-golden'
-                            : 'open'
-                        : state.phase === 'cooldown'
-                          ? 'cooldown'
-                          : 'blocked',
-                },
-            ),
-        );
-        gridEl.appendChild(
-            buildCard(
-                '本轮周期',
-                '185 分钟周期 · 进度 ' + state.cycleProgress + '%',
-                state.cycleRemainingText,
-                state.canInsert ? 'green' : 'blue',
-                [
-                    { label: '已进行', value: state.elapsedText, emphasis: 'hint' },
-                    {
-                        label: '距本轮结束',
-                        value: state.cycleRemainingText,
-                        emphasis: 'key',
-                    },
-                    { label: '下轮充电', value: chargingNote, emphasis: 'hint' },
-                ],
-            ),
-        );
+        ensureBoard();
+        var board = gridEl.querySelector('.home-exec-console');
+        board.setAttribute('data-phase', state.phase || 'charging');
+        board.setAttribute('data-can-insert', state.canInsert ? 'yes' : 'no');
+        if (state.goldenWindow) board.setAttribute('data-golden', 'yes');
+        else board.removeAttribute('data-golden');
+        setText('phase', state.phaseLabel);
+        setText('h', pad2(parts.h));
+        setText('m', pad2(parts.m));
+        setText('s', pad2(parts.s));
+        var clock = gridEl.querySelector('[data-home-exec="clock"]');
+        if (clock) clock.setAttribute('aria-label', '本轮剩余 ' + state.cycleRemainingText);
+        setText('phaseLabel', state.phaseRemainLabel || '当前阶段');
+        setText('phaseRemain', state.phaseRemainingDisplayText);
+        setText('nextLight', state.phaseRange + ' · ' + state.greenCount + '/5 · ' + state.pipelineHint);
+        setText('insertTitle', state.canInsert ? '当前可插卡' : state.nextAccessLabelText || '距下次插卡');
+        setText('insertValue', state.nextAccessText);
+        setText('insertNote', insertHint(state));
+        setText('progress', state.cycleProgress + '%');
+        setText('elapsed', '已进行 ' + state.elapsedText + ' · 下轮充电 ' + chargingNote);
+        var leds = gridEl.querySelector('[data-home-exec="leds"]');
+        if (leds) {
+            var details = state.ledDetails || [];
+            var html = '';
+            var i;
+            for (i = 0; i < details.length; i++) {
+                var cls = 'home-exec-led';
+                if (details[i] && details[i].green) cls += ' is-on';
+                else if (details[i] && details[i].red) cls += ' is-red';
+                html += '<span class="' + cls + '"></span>';
+            }
+            if (leds.getAttribute('data-sig') !== html) {
+                leds.innerHTML = html;
+                leds.setAttribute('data-sig', html);
+            }
+        }
     }
 
     function renderLoading() {

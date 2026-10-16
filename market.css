@@ -2662,8 +2662,8 @@ html:has(body.market-body) {
 }
 
 .market-seller-card {
-    background: linear-gradient(145deg, rgba(8, 20, 32, 0.92), rgba(4, 10, 18, 0.88));
-    border: 1px solid rgba(0, 212, 255, 0.14);
+    background: var(--home-page-bg, #122d48);
+    border: 1px solid rgba(95, 184, 255, 0.18);
     overflow: hidden;
 }
 

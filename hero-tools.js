@@ -14,7 +14,7 @@
 
     var narrowQuery =
         typeof window.matchMedia === 'function'
-            ? window.matchMedia('(max-width: 520px)')
+            ? window.matchMedia('(max-width: 600px)')
             : null;
     var originals = Array.prototype.slice.call(track.querySelectorAll('.hero-tool'));
     var count = originals.length;
@@ -33,7 +33,7 @@
     var ANIM_MS = 380;
 
     function visibleCount() {
-        return narrowQuery && narrowQuery.matches ? 2 : 4;
+        return narrowQuery && narrowQuery.matches ? 3 : 4;
     }
 
     function itemWidth() {

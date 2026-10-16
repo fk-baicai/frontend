@@ -515,7 +515,7 @@
 
     function mapCitizenProxyApiError(status, data) {
         var code = data && data.code ? String(data.code) : '';
-        if (status === 404 || code === 'AUTH_R008' || (status === 400 && code === 'RSI_E001')) {
+        if (status === 404 || code === 'AUTH_R008' || code === 'AUTH_R010' || (status === 400 && code === 'RSI_E001')) {
             return new Error('未找到该绑定 ID 对应的 RSI 公民页。');
         }
         if (code === 'RSI_CF001') {

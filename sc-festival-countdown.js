@@ -100,7 +100,8 @@
             if (progressEl) progressEl.hidden = true;
             if (daysEl) {
                 daysEl.hidden = false;
-                daysEl.textContent = parts.days + '天';
+                var numEl = daysEl.querySelector('.sc-festival-days-num');
+                if (numEl) numEl.textContent = String(parts.days);
                 daysEl.classList.toggle('sc-festival-days--soon', parts.days < 30);
             }
             if (clockEl) {
@@ -148,6 +149,14 @@
 
         var days = document.createElement('span');
         days.className = 'sc-festival-days';
+        var daysNum = document.createElement('b');
+        daysNum.className = 'sc-festival-days-num';
+        daysNum.textContent = '0';
+        var daysUnit = document.createElement('i');
+        daysUnit.className = 'sc-festival-days-unit';
+        daysUnit.textContent = '天';
+        days.appendChild(daysNum);
+        days.appendChild(daysUnit);
         var clock = document.createElement('span');
         clock.className = 'sc-festival-clock';
         var progress = document.createElement('span');

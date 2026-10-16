@@ -239,11 +239,13 @@
             location: null,
             items: [{ componentId: null, name: '', categoryGroup: null, typeLabel: '', quantity: 1, swapGiveQty: 1, pricePerUnit: '', quality: DEFAULT_QUALITY, giftRedeemUrls: [''] }],
             autoImage: null,
+            autoImageComponentId: null,
             userImage: null,
             existingImage: null,
             barterWant: { componentId: null, name: '', nameZh: null, categoryGroup: null, typeLabel: '', quantity: 1, quality: DEFAULT_QUALITY },
             barterWantCategoryGroup: '',
             barterWantAutoImage: null,
+            barterWantAutoComponentId: null,
             barterWantUserImage: null,
             barterWantExistingImage: null,
         },
@@ -2680,6 +2682,7 @@
                     : (it0.giftRedeemUrl ? [it0.giftRedeemUrl] : ['']),
             }],
             autoImage: null,
+            autoImageComponentId: null,
             userImage: null,
             existingImage: (order.images && order.images[0]) ? absMediaUrl(order.images[0]) : null,
             barterWant: {
@@ -2694,6 +2697,7 @@
             },
             barterWantCategoryGroup: it1.categoryGroup || '',
             barterWantAutoImage: null,
+            barterWantAutoComponentId: null,
             barterWantUserImage: null,
             barterWantExistingImage: (order.images && order.images[1]) ? absMediaUrl(order.images[1]) : null,
         };
@@ -2729,11 +2733,13 @@
             location: null,
             items: [{ componentId: null, name: '', categoryGroup: null, typeLabel: '', quantity: 1, swapGiveQty: 1, pricePerUnit: '', quality: DEFAULT_QUALITY, giftRedeemUrls: [''] }],
             autoImage: null,
+            autoImageComponentId: null,
             userImage: null,
             existingImage: null,
             barterWant: emptyBarterWant(),
             barterWantCategoryGroup: '',
             barterWantAutoImage: null,
+            barterWantAutoComponentId: null,
             barterWantUserImage: null,
             barterWantExistingImage: null,
         };
@@ -3080,33 +3086,29 @@
         el.wantImagePreviewImg.src = src;
     }
 
+    function catalogImageRef(componentId) {
+        if (!componentId || componentId === 'uss-lottery' || componentId === 'uss-gift' || componentId === 'uss-hq-points') {
+            return '';
+        }
+        return componentImageUrl(componentId);
+    }
+
     function submitImages() {
-        var offer = state.create.userImage || state.create.existingImage || state.create.autoImage || '';
+        var offer = state.create.userImage || state.create.existingImage || '';
+        if (!offer) {
+            offer = catalogImageRef(state.create.autoImageComponentId) || state.create.autoImage || '';
+        }
         if (state.create.tradeType !== 'barter') {
             return offer ? [offer] : [];
         }
-        var want = state.create.barterWantUserImage || state.create.barterWantExistingImage || state.create.barterWantAutoImage || '';
+        var want = state.create.barterWantUserImage || state.create.barterWantExistingImage || '';
+        if (!want) {
+            want = catalogImageRef(state.create.barterWantAutoComponentId) || state.create.barterWantAutoImage || '';
+        }
         var out = [];
         if (offer) out[0] = offer;
         if (want) out[1] = want;
         return out;
-    }
-
-    async function cacheComponentImageDataUrl(componentId) {
-        if (!componentId) return null;
-        try {
-            var r = await fetch(componentImageUrl(componentId));
-            if (!r.ok) return null;
-            var blob = await r.blob();
-            return await new Promise(function (resolve) {
-                var reader = new FileReader();
-                reader.onload = function () { resolve(String(reader.result || '')); };
-                reader.onerror = function () { resolve(null); };
-                reader.readAsDataURL(blob);
-            });
-        } catch (e) {
-            return null;
-        }
     }
 
     async function applyWantItemPick(picked) {
@@ -3125,6 +3127,7 @@
             }
             hideSuggest(el.wantItemSuggest);
             state.create.barterWantAutoImage = null;
+            state.create.barterWantAutoComponentId = null;
             renderWantProductImage(want);
             syncHqPointsFormHints();
             return;
@@ -3144,8 +3147,8 @@
             el.wantItemInput.setAttribute('aria-expanded', 'false');
         }
         hideSuggest(el.wantItemSuggest);
-        var dataUrl = await cacheComponentImageDataUrl(want.componentId);
-        state.create.barterWantAutoImage = dataUrl || null;
+        state.create.barterWantAutoComponentId = want.componentId;
+        state.create.barterWantAutoImage = componentImageUrl(want.componentId);
         renderWantProductImage(want);
     }
 
@@ -3155,6 +3158,7 @@
         want.typeLabel = '';
         if (!state.create.barterWantCategoryGroup) want.categoryGroup = null;
         state.create.barterWantAutoImage = null;
+        state.create.barterWantAutoComponentId = null;
         want.quality = DEFAULT_QUALITY;
         if (el.wantQualityInput) el.wantQualityInput.value = DEFAULT_QUALITY;
         renderWantProductImage(want);
@@ -3176,6 +3180,7 @@
             }
             hideSuggest(el.itemSuggest);
             state.create.autoImage = null;
+            state.create.autoImageComponentId = null;
             renderProductImage(it);
             syncHqPointsFormHints();
             return;
@@ -3195,8 +3200,8 @@
             el.itemInput.setAttribute('aria-expanded', 'false');
         }
         hideSuggest(el.itemSuggest);
-        var dataUrl = await cacheComponentImageDataUrl(it.componentId);
-        state.create.autoImage = dataUrl || null;
+        state.create.autoImageComponentId = it.componentId;
+        state.create.autoImage = componentImageUrl(it.componentId);
         renderProductImage(it);
     }
 
@@ -3206,6 +3211,7 @@
         it.typeLabel = '';
         if (!state.create.categoryGroup) it.categoryGroup = null;
         state.create.autoImage = null;
+        state.create.autoImageComponentId = null;
         it.quality = DEFAULT_QUALITY;
         if (el.qualityInput) el.qualityInput.value = DEFAULT_QUALITY;
         renderProductImage(it);

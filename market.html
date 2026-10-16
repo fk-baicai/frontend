@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"></noscript>
-    <link rel="stylesheet" href="market.css?v=109">
+    <link rel="stylesheet" href="market.css?v=110">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -74,7 +74,11 @@
         <div class="nav-right">
             <button type="button" class="nav-login-trigger" id="navLoginBtn" onclick="openLoginDrawer()" aria-label="登录或注册">
                 <span id="navLoginGuestWrap" class="nav-login-guest-inner">
-                    <span class="nav-login-label">登录/注册</span>
+                    <span class="nav-login-label">
+                        <svg class="nav-login-icon" viewBox="0 0 1024 1024" aria-hidden="true" focusable="false">
+                            <path d="M324.224 497.707a213.333 213.333 0 1 1 145.11 56.96 298.667 298.667 0 0 0-298.667 298.666H85.333a384.128 384.128 0 0 1 238.891-355.626z m145.11-28.374a128 128 0 1 0 0-256 128 128 0 0 0 0 256z m213.333 213.334v-128H768v128h128V768H768v128h-85.333V768h-128v-85.333h128z"></path>
+                        </svg>
+                    </span>
                 </span>
                 <span id="navLoginAvatarWrap" class="nav-login-avatar-inner is-hidden">
                     <img id="navUserAvatarImg" class="nav-user-avatar" src="" alt="">
@@ -715,7 +719,7 @@
     <script src="login-drawer-mount.js"></script>
     <script src="home-boot.js"></script>
     <script defer src="pw-toggle-icons.js"></script>
-    <script src="api-error.js?v=3" defer></script>
+    <script src="api-error.js?v=4" defer></script>
     <script src="auth-api.js" defer></script>
     <script src="auth-session-sync.js" defer></script>
     <script defer src="rsi-client.js?v=20260827b"></script>
@@ -727,6 +731,6 @@
     <script src="community-image-lightbox.js" defer></script>
     <script src="market-notify.js?v=6" defer></script>
     <script src="market-chat.js?v=2" defer></script>
-    <script src="market.js?v=89" defer></script>
+    <script src="market.js?v=90" defer></script>
 </body>
 </html>

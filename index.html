@@ -59,7 +59,8 @@
         }
 </style>
     <link rel="canonical" href="https://ussxc.org/">
-    <link rel="stylesheet" href="styles.css?v=20261015d">
+    <link rel="stylesheet" href="styles.css?v=20261016af">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
@@ -184,7 +185,11 @@
         <div class="nav-right">
             <button type="button" class="nav-login-trigger" id="navLoginBtn" onclick="openLoginDrawer()" aria-label="登录或注册">
                 <span id="navLoginGuestWrap" class="nav-login-guest-inner">
-                    <span class="nav-login-label">登录/注册</span>
+                    <span class="nav-login-label">
+                        <svg class="nav-login-icon" viewBox="0 0 1024 1024" aria-hidden="true" focusable="false">
+                            <path d="M324.224 497.707a213.333 213.333 0 1 1 145.11 56.96 298.667 298.667 0 0 0-298.667 298.666H85.333a384.128 384.128 0 0 1 238.891-355.626z m145.11-28.374a128 128 0 1 0 0-256 128 128 0 0 0 0 256z m213.333 213.334v-128H768v128h128V768H768v128h-85.333V768h-128v-85.333h128z"></path>
+                        </svg>
+                    </span>
                 </span>
                 <span id="navLoginAvatarWrap" class="nav-login-avatar-inner is-hidden">
                     <img id="navUserAvatarImg" class="nav-user-avatar" src="" alt="">
@@ -385,7 +390,7 @@
         </div>
     </div>
 
-    <section class="home-exec-hangar-section" id="home-exec-hangar-section" aria-label="行政机库">
+    <section class="home-exec-hangar-section" id="home-exec-hangar-section" aria-label="行政机库与服务器状态">
         <div class="home-exec-hangar-wrap">
             <header class="home-exec-hangar-head">
                 <div class="home-exec-hangar-head-text">
@@ -406,56 +411,42 @@
         </div>
     </section>
 
-    <section class="rsi-status-section" id="rsi-status-section" aria-label="RSI 服务器状态">
-        <div class="rsi-status-wrap">
-            <header class="rsi-status-head">
-                <div class="rsi-status-head-text">
-                    <h2 class="rsi-status-title">服务器状态</h2>
-                    <div class="rsi-status-lead-row">
-                        <p class="rsi-status-lead">星际公民官方服务 · 数据来自 Roberts Space Industries</p>
-                        <span class="rsi-status-updated" id="rsiServerStatusUpdated" hidden></span>
+    <section class="home-side-board" aria-label="服务器状态与节日倒计时">
+        <div class="home-side-board-inner">
+            <section class="home-ops-status" id="rsi-status-section" aria-label="RSI 服务器状态">
+                <header class="rsi-status-head">
+                    <div class="rsi-status-head-text">
+                        <h2 class="rsi-status-title">服务器状态</h2>
+                        <div class="rsi-status-lead-row">
+                            <p class="rsi-status-lead">星际公民官方服务 · 数据来自 Roberts Space Industries</p>
+                            <span class="rsi-status-updated" id="rsiServerStatusUpdated" hidden></span>
+                        </div>
                     </div>
+                </header>
+                <div class="rsi-status-grid" id="rsiServerStatusGrid">
+                    <div class="rsi-status-loading" role="status">正在获取 RSI 服务器状态…</div>
                 </div>
-            </header>
-            <div class="rsi-status-grid" id="rsiServerStatusGrid">
-                <div class="rsi-status-loading" role="status">正在获取 RSI 服务器状态…</div>
-            </div>
-            <div id="rsiServerStatusDetail" class="rsi-status-detail" hidden></div>
-        </div>
-    </section>
-
-    <section class="sc-festival-section" id="sc-festival-section" aria-label="节日倒计时">
-        <div class="sc-festival-wrap">
-            <header class="sc-festival-head">
-                <div class="sc-festival-head-text">
-                    <h2 class="sc-festival-title rsi-status-title">节日倒计时</h2>
-                    <div class="sc-festival-lead-row">
-                        <p class="sc-festival-lead">星际公民社区活动 · 数据来自 SCToolBox</p>
+                <div id="rsiServerStatusDetail" class="rsi-status-detail" hidden></div>
+            </section>
+            <div class="sc-festival-board" id="sc-festival-section" aria-label="节日倒计时">
+                <header class="sc-festival-head">
+                    <div class="sc-festival-head-text">
+                        <h2 class="sc-festival-title rsi-status-title">节日倒计时</h2>
+                        <div class="sc-festival-lead-row">
+                            <p class="sc-festival-lead">星际公民社区活动 · 数据来自 SCToolBox</p>
+                        </div>
                     </div>
+                </header>
+                <div class="sc-festival-grid" id="scFestivalGrid">
+                    <div class="sc-festival-loading" role="status">正在加载节日倒计时…</div>
                 </div>
-            </header>
-            <div class="sc-festival-grid" id="scFestivalGrid">
-                <div class="sc-festival-loading" role="status">正在加载节日倒计时…</div>
+                <p class="sc-festival-disclaimer" id="scFestivalDisclaimer" hidden></p>
             </div>
-            <p class="sc-festival-disclaimer" id="scFestivalDisclaimer" hidden></p>
         </div>
     </section>
 
     <section class="oopz-bridge-section auth-member-gated" id="oopz-bridge-section" aria-label="OOPZ语音">
         <div class="oopz-bridge-wrap">
-            <header class="oopz-bridge-head">
-                <h2 class="oopz-bridge-title rsi-status-title">OOPZ语音</h2>
-                <div class="oopz-bridge-head-actions">
-                    <div class="oopz-bind-head-block">
-                        <button type="button" id="oopzBindOpenBtn" class="oopz-bind-head-btn">OOPZ 绑定</button>
-                    </div>
-                    <div class="oopz-bridge-status" aria-live="polite">
-                        <span id="oopzBridgeStatusDot" class="oopz-bridge-status-dot" aria-hidden="true"></span>
-                        <span id="oopzBridgeStatusText" class="oopz-bridge-status-text">连接中…</span>
-                    </div>
-                </div>
-            </header>
-
             <div id="oopzBindBackdrop" class="oopz-bind-backdrop" hidden>
                 <div class="oopz-bind-panel" role="dialog" aria-modal="true" aria-labelledby="oopzBindTitle">
                     <div class="oopz-bind-panel-head">
@@ -475,6 +466,18 @@
             </div>
 
             <div class="oopz-bridge-panel">
+                <header class="oopz-bridge-head">
+                    <h2 class="oopz-bridge-title rsi-status-title">OOPZ语音</h2>
+                    <div class="oopz-bridge-head-actions">
+                        <div class="oopz-bind-head-block">
+                            <button type="button" id="oopzBindOpenBtn" class="oopz-bind-head-btn">OOPZ 绑定</button>
+                        </div>
+                        <div class="oopz-bridge-status" aria-live="polite">
+                            <span id="oopzBridgeStatusDot" class="oopz-bridge-status-dot" aria-hidden="true"></span>
+                            <span id="oopzBridgeStatusText" class="oopz-bridge-status-text">连接中…</span>
+                        </div>
+                    </div>
+                </header>
                 <div class="oopz-bridge-panel-bar">
                     <span class="oopz-bridge-panel-bar-icon" aria-hidden="true"></span>
                     <span class="oopz-bridge-panel-bar-title">实时频道</span>
@@ -1146,20 +1149,20 @@
     <script defer src="material-icons-svg.js"></script>
     <script defer src="pw-toggle-icons.js"></script>
     <script defer src="hero-image.js?v=20260822h"></script>
-    <script defer src="hero-tools.js?v=20261015e"></script>
+    <script defer src="hero-tools.js?v=20261016a"></script>
     <script defer src="hero-sc-search.js?v=20260708k"></script>
     <script defer src="script.js"></script>
     <script defer src="rsi-client.js?v=20260827b"></script>
     <script defer src="rsi-sync.js"></script>
     <script defer src="auth-session-sync.js"></script>
-    <script defer src="api-error.js"></script>
+    <script defer src="api-error.js?v=4"></script>
     <script defer src="auth-api.js"></script>
     <script defer src="home-app.js?v=20260902c"></script>
     <script defer src="oopz-bind.js"></script>
     <script defer src="oopz-user-prefs.js"></script>
     <script defer src="rsi-server-status.js?v=20261012b"></script>
-    <script defer src="sc-festival-countdown.js?v=20260606a"></script>
-    <script defer src="home-exec-hangar.js?v=20260825a"></script>
+    <script defer src="sc-festival-countdown.js?v=20261016a"></script>
+    <script defer src="home-exec-hangar.js?v=20261016c"></script>
     <script defer src="oopz-bridge.js"></script>
     <script defer src="site-footer.js"></script>
 </body>
