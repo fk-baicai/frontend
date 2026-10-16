@@ -1034,19 +1034,28 @@
         return '';
     }
 
+    function listingImgHtml(orig, className, fallbackOrig) {
+        var thumb = marketThumbUrl(orig);
+        var fallback = fallbackOrig && fallbackOrig !== orig ? marketThumbUrl(fallbackOrig) : '';
+        var emptyClass = className.indexOf('market-detail__') >= 0
+            ? 'market-detail__media--empty'
+            : 'market-card__media--empty';
+        return '<img class="' + className + '" src="' + escapeHtml(thumb) + '"' +
+            ' data-full="' + escapeHtml(orig) + '"' +
+            (fallback ? ' data-fallback="' + escapeHtml(fallback) + '"' : '') +
+            ' alt="点击查看大图" loading="lazy" decoding="async"' +
+            ' onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.onerror=null;this.classList.add(\'is-broken\');var p=this.parentNode;if(p&&!p.querySelector(\'.' + emptyClass + '\')){var s=document.createElement(\'span\');s.className=\'' + emptyClass + '\';s.textContent=\'?\';p.appendChild(s);}}">';
+    }
+
     function cardMediaHtml(order) {
         var orig = orderImageSrc(order);
         if (orig) {
-            var thumb = marketThumbUrl(orig);
-            var fallback = orig;
             var it0 = (order.items && order.items[0]) || {};
+            var fallback = '';
             if (it0.componentId && !isHqPointsItem(it0)) {
                 fallback = componentImageUrl(it0.componentId);
             }
-            return '<img class="market-card__zoom" src="' + escapeHtml(thumb) + '"' +
-                ' data-full="' + escapeHtml(orig) + '"' +
-                (fallback && fallback !== orig ? ' data-fallback="' + escapeHtml(fallback) + '"' : '') +
-                ' alt="" loading="lazy" decoding="async" onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}else if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.onerror=null;this.classList.add(\'is-broken\');this.alt=\'\';var p=this.parentNode;if(p&&!p.querySelector(\'.market-card__media--empty\')){var s=document.createElement(\'span\');s.className=\'market-card__media--empty\';s.textContent=\'?\';p.appendChild(s);}}">';
+            return listingImgHtml(orig, 'market-card__zoom', fallback);
         }
         var it0m = (order.items && order.items[0]) || {};
         if (isHqPointsItem(it0m)) {
@@ -1811,9 +1820,7 @@
         if (img) {
             var it0 = (order.items && order.items[0]) || {};
             var fallback = it0.componentId && !isHqPointsItem(it0) ? componentImageUrl(it0.componentId) : '';
-            return '<img class="market-detail__media-img market-detail__media-img--zoom" src="' + escapeHtml(img) + '"' +
-                (fallback && fallback !== img ? ' data-fallback="' + escapeHtml(fallback) + '"' : '') +
-                ' alt="点击查看大图" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.onerror=null;this.classList.add(\'is-broken\');var p=this.parentNode;if(p&&!p.querySelector(\'.market-detail__media--empty\')){var s=document.createElement(\'span\');s.className=\'market-detail__media--empty\';s.textContent=\'?\';p.appendChild(s);}}">';
+            return listingImgHtml(img, 'market-detail__media-img market-detail__media-img--zoom', fallback);
         }
         var initial = escapeHtml(primaryItemName(order).charAt(0) || '?');
         var it0e = (order.items && order.items[0]) || {};
@@ -2048,7 +2055,7 @@
             var wantImg = wantImageSrc(order);
             var wantName = wantItemName(order) || '未指定';
             var wantMediaInner = wantImg
-                ? '<img class="market-detail__media-img market-detail__media-img--zoom" src="' + escapeHtml(wantImg) + '" alt="点击查看大图">'
+                ? listingImgHtml(wantImg, 'market-detail__media-img market-detail__media-img--zoom')
                 : '<span class="market-detail__media--empty">' + escapeHtml(isHqPointsItem(it1) ? '分' : (wantName.charAt(0) || '?')) + '</span>';
             barterWantHtml =
                 '<div class="market-detail__section market-detail__barter-want">' +
@@ -2088,9 +2095,11 @@
             if (lot.viewerWon) lotteryFacts += '<dt>我的结果</dt><dd>已中奖</dd>';
             else if (lot.mode === 'scheduled' && lot.viewerEntered && !lot.drawnAt) lotteryFacts += '<dt>我的结果</dt><dd>已参与，等待开奖</dd>';
             else if (lot.mode === 'instant' && lot.viewerAttempts) lotteryFacts += '<dt>我的结果</dt><dd>已抽 ' + escapeHtml(String(lot.viewerAttempts)) + ' 次，尚未中奖</dd>';
-            if (isOwnOrder(order) && Array.isArray(lot.winners) && lot.winners.length) {
+            if ((isOwnOrder(order) || isSuperAdminSession()) && Array.isArray(lot.winners) && lot.winners.length) {
                 lotteryFacts += '<dt>中奖记录</dt><dd>' + lot.winners.map(function (row) {
-                    return escapeHtml((row.handle || '用户') + ' · ' + formatLotteryClock(row.at));
+                    var who = row.handle || '用户';
+                    var mail = row.email ? row.email : '未填写邮箱';
+                    return escapeHtml(who + ' · ' + mail + ' · ' + formatLotteryClock(row.at));
                 }).join('<br>') + '</dd>';
             }
         }
@@ -2227,10 +2236,10 @@
         el.detailBody.querySelectorAll('.market-detail__media-img--zoom').forEach(function (img) {
             img.addEventListener('click', function (ev) {
                 ev.stopPropagation();
-                var src = img.currentSrc || img.src;
+                var src = img.getAttribute('data-full') || img.currentSrc || img.src;
                 if (!src) return;
                 if (window.UssCommunityImageLightbox && typeof window.UssCommunityImageLightbox.open === 'function') {
-                    window.UssCommunityImageLightbox.open(src);
+                    window.UssCommunityImageLightbox.open(marketOriginalUrl(src));
                 }
             });
         });

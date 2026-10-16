@@ -37,7 +37,9 @@
     }
 
     function itemWidth() {
-        var width = viewport.clientWidth;
+        var style = window.getComputedStyle(viewport);
+        var pad = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+        var width = viewport.clientWidth - pad;
         if (!width) return 0;
         return width / visibleCount();
     }

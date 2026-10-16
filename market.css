@@ -283,8 +283,8 @@ html:has(body.market-body) {
 }
 
 .market-ticker__party {
-    color: rgba(200, 220, 235, 0.9);
-    font-weight: 600;
+    color: #f6c453;
+    font-weight: 700;
 }
 
 .market-ticker__arrow {
@@ -1145,7 +1145,7 @@ html:has(body.market-body) {
     font-weight: 600;
     letter-spacing: 0.04em;
     padding: 0.2rem 0.45rem;
-    background: rgba(8, 18, 28, 0.88);
+    background: var(--navbar-bg);
     border: 1px solid var(--mkt-accent-dim, rgba(247, 143, 30, 0.45));
     color: var(--mkt-accent, #f78f1e);
 }
@@ -2455,7 +2455,7 @@ html:has(body.market-body) {
     font-weight: 600;
     letter-spacing: 0.04em;
     padding: 0.2rem 0.45rem;
-    background: rgba(8, 18, 28, 0.88);
+    background: var(--navbar-bg);
     border: 1px solid var(--mkt-accent-dim, rgba(0, 212, 255, 0.35));
     color: var(--mkt-accent, #00d4ff);
 }
@@ -3265,7 +3265,7 @@ html:has(body.market-body) {
     border: 1px solid var(--mkt-border);
     border-radius: var(--mkt-radius, 2px);
     overflow: hidden;
-    background: rgba(8, 14, 22, 0.65);
+    background: var(--navbar-bg);
 }
 
 .market-detail__qty-btn {
@@ -4514,7 +4514,7 @@ body.market-trades-body .uss-site-footer {
     padding: 0.35rem 0.6rem;
     border: 1px solid var(--mkt-border);
     border-radius: 6px;
-    background: rgba(8, 18, 28, 0.88);
+    background: var(--navbar-bg);
     color: #e8f4ff;
     font: inherit;
 }

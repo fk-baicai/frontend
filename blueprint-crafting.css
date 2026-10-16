@@ -785,9 +785,7 @@ html:has(body.bp-craft-body) {
     padding: 0.35rem;
     border: 1px dashed rgba(0, 240, 255, 0.28);
     border-radius: var(--bp-radius);
-    background:
-        linear-gradient(135deg, rgba(95, 184, 255, 0.05), rgba(8, 18, 32, 0.88)),
-        rgba(2, 8, 18, 0.88);
+    background: var(--navbar-bg);
     font-family: var(--bp-font-digit);
     font-size: 0.65rem;
     letter-spacing: 0.08em;
@@ -1071,7 +1069,7 @@ html:has(body.bp-craft-body) {
     position: absolute;
     inset: 5px;
     border-radius: 50%;
-    background: rgba(4, 10, 22, 0.95);
+    background: var(--navbar-bg);
     box-shadow: inset 0 0 0 1px rgba(0, 240, 255, 0.15);
 }
 
@@ -1599,7 +1597,7 @@ html:has(body.bp-craft-body) {
     padding: 0.18rem 0.28rem;
     border: 1px solid rgba(0, 240, 255, 0.32);
     border-radius: var(--bp-radius);
-    background: rgba(2, 8, 18, 0.88);
+    background: var(--navbar-bg);
     color: var(--bp-neon);
     font-family: var(--bp-font-digit);
     font-size: 0.82rem;
@@ -1681,7 +1679,7 @@ html:has(body.bp-craft-body) {
     padding: 0.32rem 0.45rem;
     border: 1px solid rgba(0, 240, 255, 0.14);
     border-radius: var(--bp-radius);
-    background: rgba(2, 8, 18, 0.55);
+    background: var(--navbar-bg);
     font-size: 0.82rem;
     transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -1690,7 +1688,7 @@ html:has(body.bp-craft-body) {
     border-color: rgba(57, 255, 154, 0.28);
     border-left: 2px solid rgba(57, 255, 154, 0.45);
     padding-left: 0.45rem;
-    background: linear-gradient(90deg, rgba(57, 255, 154, 0.06), rgba(2, 8, 18, 0.55));
+    background: linear-gradient(90deg, rgba(57, 255, 154, 0.06), var(--navbar-bg));
     box-shadow: inset 0 0 12px rgba(57, 255, 154, 0.04);
 }
 
@@ -2065,7 +2063,7 @@ html:has(body.bp-craft-body) {
     padding: 0.45rem 0.55rem;
     border: 1px solid rgba(0, 240, 255, 0.16);
     border-radius: var(--bp-radius);
-    background: rgba(2, 8, 18, 0.55);
+    background: var(--navbar-bg);
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 

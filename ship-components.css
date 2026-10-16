@@ -400,7 +400,7 @@ button.sc-lead-item.is-active {
     padding: 0.5rem 0.75rem;
     border-radius: 8px;
     border: 1.5px solid rgba(95, 184, 255, 0.54);
-    background: rgba(4, 10, 20, 0.92);
+    background: var(--navbar-bg);
     color: #dceef8;
     font-size: 0.88rem;
     max-width: 100%;
@@ -628,7 +628,7 @@ button.sc-lead-item.is-active {
 }
 
 .sc-table thead th.sc-col-gap {
-    background: rgba(6, 14, 26, 0.96);
+    background: var(--navbar-bg);
 }
 
 .sc-table th,
@@ -656,7 +656,7 @@ button.sc-lead-item.is-active {
     color: rgba(180, 215, 235, 0.78);
     white-space: nowrap;
     line-height: 1.25;
-    background: rgba(6, 14, 26, 0.96);
+    background: var(--navbar-bg);
     box-shadow: none;
     text-align: left;
     vertical-align: middle;
@@ -2579,7 +2579,7 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
     padding: 0;
     border: 1.5px solid rgba(95, 184, 255, 0.5);
     border-radius: 10px;
-    background: #05080e;
+    background: var(--navbar-bg);
     box-shadow: inset 0 1px 0 rgba(142, 224, 255, 0.04);
     cursor: zoom-in;
     touch-action: manipulation;
@@ -2900,7 +2900,7 @@ body.sc-img-desk-open {
     height: 5.2rem;
     object-fit: contain;
     border-radius: 8px;
-    background: #071018;
+    background: var(--navbar-bg);
 }
 
 .sc-img-desk__pager {
@@ -3395,7 +3395,7 @@ body.sc-img-desk-open {
     gap: 0.18rem;
     padding: 0.45rem 0.55rem;
     border-radius: 8px;
-    background: rgba(8, 18, 28, 0.35);
+    background: var(--navbar-bg);
     border: 1.5px solid rgba(95, 184, 255, 0.38);
 }
 
@@ -4604,7 +4604,7 @@ td.sc-stat-loadout-mod:hover {
     padding: 0.32rem 0.42rem;
     border: 1.5px solid rgba(95, 184, 255, 0.48);
     border-radius: 8px;
-    background: rgba(8, 18, 32, 0.72);
+    background: var(--navbar-bg);
     color: inherit;
     text-align: left;
     cursor: pointer;
@@ -4656,7 +4656,7 @@ td.sc-stat-loadout-mod:hover {
     padding: 0.22rem 0.45rem;
     border: 1.5px solid rgba(95, 184, 255, 0.5);
     border-radius: 999px;
-    background: rgba(8, 18, 28, 0.88);
+    background: var(--navbar-bg);
 }
 
 .sc-loadout-search__icon {
@@ -4717,7 +4717,7 @@ td.sc-stat-loadout-mod:hover {
     padding: 0.28rem 0.42rem;
     border: 1.5px solid rgba(95, 184, 255, 0.44);
     border-radius: 8px;
-    background: rgba(8, 18, 32, 0.65);
+    background: var(--navbar-bg);
     color: inherit;
     text-align: left;
     cursor: pointer;
@@ -4731,7 +4731,7 @@ td.sc-stat-loadout-mod:hover {
     margin-top: 0.06rem;
     border: 1.5px solid rgba(95, 184, 255, 0.6);
     border-radius: 50%;
-    background: rgba(4, 10, 20, 0.6);
+    background: var(--navbar-bg);
 }
 
 .sc-loadout-pick__body {
@@ -4784,7 +4784,7 @@ td.sc-stat-loadout-mod:hover {
     padding: 0.38rem 0.48rem;
     border-radius: 8px;
     border: 1.5px solid rgba(95, 184, 255, 0.44);
-    background: rgba(6, 14, 26, 0.72);
+    background: var(--navbar-bg);
 }
 
 .sc-loadout-effects__title {
@@ -4876,7 +4876,7 @@ td.sc-stat-loadout-mod:hover {
     padding: 0.45rem 0.6rem;
     border-radius: 10px;
     border: 1.5px solid rgba(95, 184, 255, 0.46);
-    background: rgba(8, 18, 32, 0.65);
+    background: var(--navbar-bg);
     color: inherit;
     text-align: left;
     cursor: pointer;
@@ -5141,7 +5141,7 @@ button.sc-facet-tag:focus-visible {
     border: 1.5px solid rgba(95, 184, 255, 0.54);
     border-radius: 5px;
     overflow: hidden;
-    background: rgba(8, 18, 28, 0.88);
+    background: var(--navbar-bg);
 }
 
 .sc-view-btn {

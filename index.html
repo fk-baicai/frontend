@@ -59,7 +59,7 @@
         }
 </style>
     <link rel="canonical" href="https://ussxc.org/">
-    <link rel="stylesheet" href="styles.css?v=20261016af">
+    <link rel="stylesheet" href="styles.css?v=20261016bk">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -305,7 +305,31 @@
                 >
             </div>
         </div>
+        </div>
 
+        <div class="hero-bottom-bar">
+            <div class="hero-bottom-bar-inner">
+            <div class="ship-info">
+                <div class="ship-info-inner">
+                    <div class="ship-details">
+                        <p class="ship-hero-copy">
+                            <span class="ship-hero-title" aria-label="USS 星巢">
+                                <span class="ship-hero-uss">USS</span>
+                                <span class="ship-hero-title-vrule" aria-hidden="true"></span>
+                                <strong class="ship-hero-name">星巢</strong>
+                            </span>
+                            <span class="ship-hero-tagline">
+                                <span class="ship-hero-tagline-hrule" aria-hidden="true"></span>
+                                <span class="ship-hero-tagline-text">欢迎舰长登舰！</span>
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <aside class="hero-dock" aria-label="搜索、工具与 COMM-LINK">
         <div class="hero-sc-search" aria-label="舰船配件搜索">
             <div class="hero-sc-search-inner">
                 <form class="hero-sc-search-form" id="heroScSearchForm" action="ship-components.html" method="get" role="search">
@@ -334,27 +358,6 @@
                 </form>
             </div>
         </div>
-        </div>
-
-        <div class="hero-bottom-bar">
-            <div class="hero-bottom-bar-inner">
-            <div class="ship-info">
-                <div class="ship-info-inner">
-                    <div class="ship-details">
-                        <p class="ship-hero-copy">
-                            <span class="ship-hero-title" aria-label="USS 星巢">
-                                <span class="ship-hero-uss">USS</span>
-                                <span class="ship-hero-title-vrule" aria-hidden="true"></span>
-                                <strong class="ship-hero-name">星巢</strong>
-                            </span>
-                            <span class="ship-hero-tagline">
-                                <span class="ship-hero-tagline-hrule" aria-hidden="true"></span>
-                                <span class="ship-hero-tagline-text">欢迎舰长登舰！</span>
-                            </span>
-                        </p>
-                    </div>
-                </div>
-            </div>
 
             <nav class="hero-tools" id="heroTools" aria-label="工具">
                 <div class="hero-tools-viewport">
@@ -379,15 +382,18 @@
                             <span class="hero-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3.5" width="16" height="6.2" rx="1.4"/><rect x="4" y="14.3" width="16" height="6.2" rx="1.4"/><path d="M8 6.6h.01M8 17.4h.01M11 6.6h5M11 17.4h5"/></svg></span>
                             <span class="hero-tool-name">服务器 IP</span>
                         </a>
-                        <a class="hero-tool" draggable="false" href="/wardogs-artillery">
-                            <span class="hero-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6.5"/><path d="M12 3.2v2.4M12 18.4v2.4M3.2 12h2.4M18.4 12h2.4"/><path d="M12 12l4.1-4.1"/></svg></span>
-                            <span class="hero-tool-name">WARDOGS<span class="hero-tool-break">炮兵计算</span></span>
-                        </a>
                     </div>
                 </div>
             </nav>
-            </div>
-        </div>
+            <section class="home-rsi-news" id="homeRsiNews" aria-label="COMM-LINK">
+                <header class="home-rsi-news-head">
+                    <h2 class="home-rsi-news-title">COMM-LINK</h2>
+                </header>
+                <div class="home-rsi-news-grid" id="homeRsiNewsGrid">
+                    <p class="home-rsi-news-status" role="status">正在读取官方资讯…</p>
+                </div>
+            </section>
+        </aside>
     </div>
 
     <section class="home-exec-hangar-section" id="home-exec-hangar-section" aria-label="行政机库与服务器状态">
@@ -1149,7 +1155,8 @@
     <script defer src="material-icons-svg.js"></script>
     <script defer src="pw-toggle-icons.js"></script>
     <script defer src="hero-image.js?v=20260822h"></script>
-    <script defer src="hero-tools.js?v=20261016a"></script>
+    <script defer src="hero-tools.js?v=20261016c"></script>
+    <script defer src="home-rsi-news.js?v=20261016c"></script>
     <script defer src="hero-sc-search.js?v=20260708k"></script>
     <script defer src="script.js"></script>
     <script defer src="rsi-client.js?v=20260827b"></script>

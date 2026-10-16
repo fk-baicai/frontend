@@ -1,7 +1,7 @@
 :root {
-    --bg-deep: #030810;
-    --bg: #0a1624;
-    --card: rgba(12, 24, 46, 0.68);
+    --bg-deep: rgb(14, 41, 67);
+    --bg: rgb(14, 41, 67);
+    --card: rgb(14, 41, 67);
     --card-border: rgba(95, 184, 255, 0.22);
     --bd: rgba(95, 184, 255, 0.32);
     --txt: rgba(232, 246, 255, 0.97);
@@ -48,7 +48,7 @@ body {
     padding: 0.45rem 0.65rem;
     border-radius: 8px;
     border: 1px solid var(--bd);
-    background: rgba(8, 18, 36, 0.85);
+    background: rgb(14, 41, 67);
     color: var(--txt);
 }
 
@@ -238,7 +238,7 @@ code {
     padding: 0.35rem 0.5rem;
     border-radius: 6px;
     border: 1px solid rgba(95, 184, 255, 0.22);
-    background: rgba(4, 10, 20, 0.85);
+    background: rgb(14, 41, 67);
     color: inherit;
     font: inherit;
 }
@@ -311,7 +311,7 @@ code {
     padding: 0.38rem 0.65rem;
     border-radius: 8px;
     border: 1px solid rgba(95, 184, 255, 0.22);
-    background: rgba(4, 10, 20, 0.85);
+    background: rgb(14, 41, 67);
     color: inherit;
     font: inherit;
 }
@@ -461,7 +461,7 @@ code {
     padding: 0.3rem 0.65rem;
     border-radius: 6px;
     border: 1px solid rgba(95, 184, 255, 0.28);
-    background: rgba(8, 18, 36, 0.6);
+    background: rgb(14, 41, 67);
     color: var(--accent);
     cursor: pointer;
     text-decoration: none;
@@ -607,7 +607,7 @@ body.sc-sync-dock-open {
     padding: 0.7rem;
     border-radius: 12px;
     border: 1px solid rgba(95, 184, 255, 0.2);
-    background: rgba(8, 18, 36, 0.55);
+    background: rgb(14, 41, 67);
     cursor: pointer;
 }
 
@@ -627,7 +627,7 @@ body.sc-sync-dock-open {
     height: 9rem;
     object-fit: contain;
     border-radius: 8px;
-    background: #071018;
+    background: rgb(14, 41, 67);
 }
 
 .sc-user-img-review-card--compact .sc-user-img-review-thumb {
@@ -712,7 +712,7 @@ body.sc-sync-dock-open {
     padding: 0.4rem 0.5rem;
     border-radius: 8px;
     border: 1px solid rgba(95, 184, 255, 0.22);
-    background: rgba(8, 18, 28, 0.88);
+    background: rgb(14, 41, 67);
     color: #e8f4ff;
     font: inherit;
 }
