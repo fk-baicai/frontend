@@ -2095,9 +2095,11 @@
             if (lot.viewerWon) lotteryFacts += '<dt>我的结果</dt><dd>已中奖</dd>';
             else if (lot.mode === 'scheduled' && lot.viewerEntered && !lot.drawnAt) lotteryFacts += '<dt>我的结果</dt><dd>已参与，等待开奖</dd>';
             else if (lot.mode === 'instant' && lot.viewerAttempts) lotteryFacts += '<dt>我的结果</dt><dd>已抽 ' + escapeHtml(String(lot.viewerAttempts)) + ' 次，尚未中奖</dd>';
-            if ((isOwnOrder(order) || isSuperAdminSession()) && Array.isArray(lot.winners) && lot.winners.length) {
-                lotteryFacts += '<dt>中奖记录</dt><dd>' + lot.winners.map(function (row) {
+            if (lot.drawnAt && Array.isArray(lot.winners) && lot.winners.length) {
+                var showFullWinner = isSuperAdminSession();
+                lotteryFacts += '<dt>中奖公示</dt><dd>' + lot.winners.map(function (row) {
                     var who = row.handle || '用户';
+                    if (!showFullWinner) return escapeHtml(who);
                     var mail = row.email ? row.email : '未填写邮箱';
                     return escapeHtml(who + ' · ' + mail + ' · ' + formatLotteryClock(row.at));
                 }).join('<br>') + '</dd>';
@@ -4243,6 +4245,18 @@
     }
 
     function tickerItemHtml(row) {
+        if (row.kind === '抽奖中奖') {
+            return (
+                '<span class="market-ticker__item">' +
+                '<span class="market-ticker__party">' +
+                escapeHtml(row.buyerMasked || '用户') +
+                '</span>' +
+                '<span class="market-ticker__kind">抽奖中奖</span>' +
+                '<span class="market-ticker__name">' +
+                escapeHtml(row.itemName || '') +
+                '</span></span>'
+            );
+        }
         var seller = row.sellerMasked || '用户';
         var buyer = row.buyerMasked || '用户';
         return (
