@@ -403,7 +403,16 @@
         return !!LOCATION_LABEL_OMIT[key.replace(/\s+/g, '')];
     }
 
-    function getLocationHierarchyParts(loc) {
+    function splitLocSegments(val) {
+        return String(val || '')
+            .split(/\s*[·•]\s*/)
+            .map(function (seg) {
+                return seg.trim();
+            })
+            .filter(Boolean);
+    }
+
+    function getPlaceHierarchyParts(loc) {
         if (!loc) return [];
         var parts = [];
         var seen = {};
@@ -417,33 +426,82 @@
             push(loc.star_system_zh);
             push(loc.planet_zh);
             push(loc.city_zh || loc.moon_zh || loc.outpost_zh || loc.space_station_zh);
-            var term = loc.terminal_name_zh || loc.terminal_name || '';
-            if (term) {
-                term.split(/\s*[·•]\s*/).forEach(function (seg) {
-                    push(seg);
-                });
-            }
-        } else {
-            var label = loc.location_label_zh || loc.terminal_name_zh || loc.terminal_name || '';
-            label.split(/\s*[·•]\s*/).forEach(function (seg) {
-                push(seg);
-            });
+            return parts;
         }
+        splitLocSegments(loc.location_label_zh || '').forEach(push);
         return parts;
     }
 
+    function terminalBrandLabel(loc, places) {
+        var brands = (typeof window !== 'undefined' && window.USS_TERMINAL_BRANDS) || {};
+        var fromCode = loc.terminal_code ? String(brands[loc.terminal_code] || '').trim() : '';
+        if (fromCode) return fromCode;
+        var fromApi = String(loc.terminal_brand_zh || '').trim();
+        if (fromApi && places.indexOf(fromApi) < 0) return fromApi;
+        var segs = splitLocSegments(loc.terminal_name_zh || loc.terminal_name || '');
+        var i;
+        for (i = 0; i < segs.length; i++) {
+            if (places.indexOf(segs[i]) < 0 && !shouldOmitLocSegment(segs[i])) return segs[i];
+        }
+        for (i = 0; i < segs.length; i++) {
+            if (places.indexOf(segs[i]) < 0) return segs[i];
+        }
+        var en = String(loc.terminal_name || '')
+            .split(/\s+-\s+/)[0]
+            .trim();
+        if (en && places.indexOf(en) < 0) return en;
+        return fromApi;
+    }
+
     function renderLocationLevelsHtml(loc) {
-        var parts = getLocationHierarchyParts(loc);
-        if (!parts.length) return escapeHtml('—');
-        return (
-            '<span class="sc-loc-path">' +
-            parts
-                .map(function (part, i) {
-                    return '<span class="sc-loc-level sc-loc-level--' + Math.min(i, 4) + '">' + escapeHtml(part) + '</span>';
-                })
-                .join('') +
-            '</span>'
-        );
+        if (!loc) return escapeHtml('—');
+        var places = getPlaceHierarchyParts(loc);
+        var brand = terminalBrandLabel(loc, places);
+        var seen = {};
+        var parts = [];
+        function push(val) {
+            val = String(val || '').trim();
+            if (!val || seen[val] || val === brand) return;
+            seen[val] = true;
+            parts.push(val);
+        }
+        places.forEach(push);
+        splitLocSegments(loc.terminal_name_zh || '').forEach(function (seg) {
+            if (shouldOmitLocSegment(seg)) return;
+            push(seg);
+        });
+        if (!parts.length && !brand) return escapeHtml('—');
+        var html = '<span class="sc-loc-path">';
+        parts.forEach(function (part, i) {
+            html +=
+                '<span class="sc-loc-level sc-loc-level--' +
+                Math.min(i, 4) +
+                '">' +
+                escapeHtml(part) +
+                '</span>';
+        });
+        if (brand) {
+            var level = Math.min(parts.length, 4);
+            if (loc.terminal_code) {
+                html +=
+                    '<a class="sc-loc-level sc-loc-level--' +
+                    level +
+                    ' sc-loc-level--terminal sc-loc-shop-link" href="/sales-terminals?shop=' +
+                    encodeURIComponent(loc.terminal_code) +
+                    '">' +
+                    escapeHtml(brand) +
+                    '</a>';
+            } else {
+                html +=
+                    '<span class="sc-loc-level sc-loc-level--' +
+                    level +
+                    ' sc-loc-level--terminal">' +
+                    escapeHtml(brand) +
+                    '</span>';
+            }
+        }
+        html += '</span>';
+        return html;
     }
 
     function trimTrailingDotZeroZero(text) {

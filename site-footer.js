@@ -47,9 +47,6 @@
         '<li><a class="uss-footer-link-row" href="https://apps.microsoft.com/detail/9nf3swfwnkl1?launch=false&amp;mode=mini&amp;hl=zh-CN&amp;gl=CN" target="_blank" rel="noopener noreferrer" aria-label="SC汉化盒子 · Microsoft Store">' +
         '<span class="uss-footer-link-row-icon"><img class="uss-footer-hanghua-logo" src="sp/png/hanghua.webp" alt="" width="32" height="32" decoding="async"><span class="uss-footer-link-desc-tip" role="tooltip">Microsoft Store</span></span>' +
         '<span class="uss-footer-link-row-text"><span class="uss-footer-link-title">SC汉化盒子</span></span></a></li>' +
-        '<li><a class="uss-footer-link-row uss-footer-link-row--chub" href="https://citizenshub.app/app-settings" target="_blank" rel="noopener noreferrer" aria-label="Citizens\' Hub · CCU 路线规划">' +
-        '<span class="uss-footer-link-row-icon"><img class="uss-footer-chub-logo" src="sp/png/citizenshub.webp" alt="" width="32" height="32" decoding="async"><span class="uss-footer-link-desc-tip" role="tooltip">CCU 路线规划</span></span>' +
-        '<span class="uss-footer-link-row-text"><span class="uss-footer-link-title">Citizens\' Hub</span></span></a></li>' +
         '<li><a class="uss-footer-link-row uss-footer-link-row--erkul" href="https://www.erkul.games/live/calculator" target="_blank" rel="noopener noreferrer" aria-label="DPS 计算器 · Erkul.games">' +
         '<span class="uss-footer-link-row-icon"><img class="uss-footer-erkul-logo" src="sp/png/erkul.webp" alt="" width="32" height="32" decoding="async"><span class="uss-footer-link-desc-tip" role="tooltip">Erkul.games</span></span>' +
         '<span class="uss-footer-link-row-text"><span class="uss-footer-link-title">DPS 计算器</span></span></a></li>' +

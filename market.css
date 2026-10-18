@@ -283,7 +283,7 @@ html:has(body.market-body) {
 }
 
 .market-ticker__party {
-    color: #f6c453;
+    color: #fff;
     font-weight: 700;
 }
 
@@ -296,6 +296,18 @@ html:has(body.market-body) {
 .market-ticker__kind {
     color: var(--mkt-accent);
     font-weight: 600;
+}
+
+.market-ticker__kind--sale {
+    color: #5fb8ff;
+}
+
+.market-ticker__kind--barter {
+    color: #7ddea0;
+}
+
+.market-ticker__kind--lottery {
+    color: #f78f1e;
 }
 
 .market-ticker__name {

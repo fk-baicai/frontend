@@ -59,7 +59,7 @@
         }
 </style>
     <link rel="canonical" href="https://ussxc.org/">
-    <link rel="stylesheet" href="styles.css?v=20261016cc">
+    <link rel="stylesheet" href="styles.css?v=20261016cs">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -151,7 +151,12 @@
                     <span class="nav-dropdown-caret" aria-hidden="true"></span>
                 </button>
             </div>
-            
+            <div class="nav-dropdown" id="navSalesWrap">
+                <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true" data-mega-target="navMegaSales" aria-controls="navMegaSales">
+                    终端
+                    <span class="nav-dropdown-caret" aria-hidden="true"></span>
+                </button>
+            </div>
             <div class="nav-dropdown">
                 <button
                     type="button"
@@ -226,6 +231,15 @@
             </div>
         </div>
     </div>
+    <div id="navMegaSales" class="nav-mega-panel" role="region" aria-label="终端" hidden>
+        <div class="nav-mega-inner">
+            <div class="nav-mega-col">
+                <ul class="nav-mega-list">
+                    <li><a href="/sales-terminals" class="nav-mega-link"><span class="nav-mega-link-title">终端</span><span class="nav-mega-link-desc">星系 · 区域 · 站点 · 在售物品</span></a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
             
 
     <div id="navMegaTools" class="nav-mega-panel" role="region" aria-label="工具" hidden>
@@ -246,6 +260,7 @@
             </div>
         </div>
     </div>
+    
     </header>
     <script>
         (function () {
@@ -374,10 +389,6 @@
                         <a class="hero-tool" draggable="false" href="/rsi-funding">
                             <span class="hero-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5h16"/><path d="M7 19.5V13M12 19.5V8M17 19.5v-6"/></svg></span>
                             <span class="hero-tool-name">资金统计</span>
-                        </a>
-                        <a class="hero-tool" draggable="false" href="/server-ip">
-                            <span class="hero-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3.5" width="16" height="6.2" rx="1.4"/><rect x="4" y="14.3" width="16" height="6.2" rx="1.4"/><path d="M8 6.6h.01M8 17.4h.01M11 6.6h5M11 17.4h5"/></svg></span>
-                            <span class="hero-tool-name">服务器 IP</span>
                         </a>
                     </div>
                 </div>
@@ -1154,8 +1165,8 @@
     <script defer src="material-icons-svg.js"></script>
     <script defer src="pw-toggle-icons.js"></script>
     <script defer src="hero-image.js?v=20260822h"></script>
-    <script defer src="hero-tools.js?v=20261016f"></script>
-    <script defer src="home-rsi-news.js?v=20261016d"></script>
+    <script defer src="hero-tools.js?v=20261016h"></script>
+    <script defer src="home-rsi-news.js?v=20261016e"></script>
     <script defer src="hero-sc-search.js?v=20260708k"></script>
     <script defer src="script.js"></script>
     <script defer src="rsi-client.js?v=20260827b"></script>

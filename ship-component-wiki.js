@@ -125,6 +125,7 @@
         regen_delay: ' s',
         cooldown: ' s',
         cooldown_time: ' s',
+        spool_up_time: ' s',
         duration: ' s',
         detection_lifetime: ' s',
         fuel_rate: ' SCU/s',
@@ -2577,16 +2578,17 @@
             },
             {
                 key: 'wiki_q_engage',
-                label: '启动速度',
+                label: '卷绕时间',
                 get: function (item) {
                     var q = item.wiki_fields && item.wiki_fields.quantum_drive;
                     var jump = q && q.standard_jump;
-                    return jump ? formatWikiScalar(jump.engage_speed_formatted || jump.engage_speed) : null;
+                    if (!jump || jump.spool_up_time == null || jump.spool_up_time === '') return null;
+                    return formatWikiFieldDisplay('spool_up_time', jump.spool_up_time);
                 },
                 sortGet: function (item) {
                     var q = item.wiki_fields && item.wiki_fields.quantum_drive;
                     var jump = q && q.standard_jump;
-                    var v = jump && jump.engage_speed;
+                    var v = jump && jump.spool_up_time;
                     return v != null && Number.isFinite(Number(v)) ? Number(v) : null;
                 },
             },

@@ -5588,3 +5588,29 @@ button.sc-facet-tag:focus-visible {
         font-size: 0.7rem;
     }
 }
+
+.sc-loc-shop-link {
+    color: #8ee0ff;
+    text-decoration: none;
+}
+.sc-loc-shop-link:hover {
+    color: #9ee8ff;
+    text-decoration: underline;
+}
+a.sc-loc-level--terminal {
+    color: #8ee0ff;
+    border-color: rgba(142, 224, 255, 0.72);
+    background: rgba(95, 184, 255, 0.16);
+    cursor: pointer;
+    text-decoration: none;
+}
+a.sc-loc-level--terminal:hover {
+    color: #e8f4ff;
+    border-color: #8ee0ff;
+    background: rgba(95, 184, 255, 0.28);
+    text-decoration: none;
+}
+a.sc-loc-level--terminal:focus-visible {
+    outline: 2px solid #8ee0ff;
+    outline-offset: 2px;
+}

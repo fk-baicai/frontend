@@ -4244,14 +4244,26 @@
         }
     }
 
+    function tickerKindClass(kind) {
+        if (kind === '售出成交') return ' market-ticker__kind--sale';
+        if (kind === '互换成交') return ' market-ticker__kind--barter';
+        if (kind === '抽奖中奖') return ' market-ticker__kind--lottery';
+        return '';
+    }
+
     function tickerItemHtml(row) {
-        if (row.kind === '抽奖中奖') {
+        var kind = row.kind || '成交';
+        var kindHtml =
+            '<span class="market-ticker__kind' + tickerKindClass(kind) + '">' +
+            escapeHtml(kind) +
+            '</span>';
+        if (kind === '抽奖中奖') {
             return (
                 '<span class="market-ticker__item">' +
                 '<span class="market-ticker__party">' +
                 escapeHtml(row.buyerMasked || '用户') +
                 '</span>' +
-                '<span class="market-ticker__kind">抽奖中奖</span>' +
+                kindHtml +
                 '<span class="market-ticker__name">' +
                 escapeHtml(row.itemName || '') +
                 '</span></span>'
@@ -4268,9 +4280,7 @@
             '<span class="market-ticker__party">' +
             escapeHtml(buyer) +
             '</span>' +
-            '<span class="market-ticker__kind">' +
-            escapeHtml(row.kind || '成交') +
-            '</span>' +
+            kindHtml +
             '<span class="market-ticker__name">' +
             escapeHtml(row.itemName || '') +
             '</span></span>'
