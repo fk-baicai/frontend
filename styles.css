@@ -3826,6 +3826,27 @@ body.home-page-body .home-exec-hangar-section {
  }
 }
 
+@media (pointer: coarse) {
+ .home-exec-hangar-lead-row .rsi-status-updated:not([hidden]) {
+  opacity: 0;
+  visibility: hidden;
+  max-width: 0;
+  margin: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+   opacity 0.18s ease,
+   visibility 0.18s ease,
+   max-width 0.24s ease;
+ }
+
+ .home-exec-hangar-head:focus-within .home-exec-hangar-lead-row .rsi-status-updated:not([hidden]) {
+  opacity: 1;
+  visibility: visible;
+  max-width: 24rem;
+ }
+}
+
 .rsi-status-loading,
 .rsi-status-error {
  grid-column: 1 / -1;
@@ -5398,8 +5419,23 @@ body.home-page-body .home-ops-status .rsi-status-card {
  .home-exec-hangar-aside {
   grid-column: 1;
   grid-row: 2;
-  justify-self: end;
-  margin-top: 0.65rem;
+  justify-self: stretch;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.45rem;
+ }
+ .home-exec-hangar-aside .exec-notify-mount {
+  min-width: 0;
+ }
+ .home-exec-hangar-aside .exec-notify-toggle__label {
+  white-space: nowrap;
+ }
+ .home-exec-hangar-aside .home-exec-phase {
+  flex-shrink: 0;
+  margin-left: auto;
+  text-align: right;
  }
  .home-exec-stage {
   grid-column: 1;
