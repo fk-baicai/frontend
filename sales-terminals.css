@@ -868,6 +868,20 @@
 }
 
 @media (max-width: 980px) {
+    .st-page {
+        --st-edge-gap: 0.75rem;
+        padding-bottom: 1.5rem;
+    }
+
+    .st-kiosk {
+        height: auto;
+        min-height: 0;
+    }
+
+    .st-kiosk-body {
+        overflow: visible;
+    }
+
     .st-source {
         max-width: 100%;
         text-align: left;
@@ -885,7 +899,14 @@
 
     .st-kiosk-main {
         grid-template-columns: 1fr;
-        grid-template-rows: 200px minmax(0, 1fr) 180px;
+        grid-template-rows: auto auto auto;
+    }
+
+    .st-cats,
+    .st-list,
+    .st-detail {
+        max-height: none;
+        overflow: visible;
     }
 
     .st-cats {
