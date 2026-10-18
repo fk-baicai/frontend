@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="ship-components.css?v=101">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600&family=Rajdhani:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
-    <link rel="stylesheet" href="sales-terminals.css?v=27">
+    <link rel="stylesheet" href="sales-terminals.css?v=35">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -122,24 +122,24 @@
     </header>
 
     <main class="sc-main st-page">
-        <header class="sc-hero">
-            <div class="sc-hero-head">
-                <span class="sc-hero-kicker">SALES TERMINALS</span>
-                <span class="sc-hero-vrule" aria-hidden="true"></span>
-                <h1 class="sc-title" id="stTitle">终端</h1>
-            </div>
-        </header>
-        <div class="st-super">
-            <div class="st-super-box">
-                <input id="stSuper" class="st-super-input" type="search" placeholder="输入物品名称，查找哪台终端在售" aria-label="搜索物品" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="stSuperResults" aria-autocomplete="list">
-                <div id="stSuperResults" class="st-super-results" role="listbox" hidden></div>
-            </div>
-        </div>
-        <p id="stStatus" class="st-status">正在加载终端…</p>
         <section class="st-kiosk" aria-label="购买终端">
             <span class="st-kiosk-age" aria-hidden="true"></span>
             <header class="st-kiosk-bar">
-                <p class="st-kiosk-kicker">ITEM TERMINAL</p>
+                <div class="st-kiosk-top">
+                    <div class="sc-hero-head">
+                        <span class="sc-hero-kicker">SALES TERMINALS</span>
+                        <span class="sc-hero-vrule" aria-hidden="true"></span>
+                        <h1 class="sc-title" id="stTitle">终端</h1>
+                    </div>
+                    <p class="st-source" id="stSource"></p>
+                </div>
+                <div class="st-super">
+                    <div class="st-super-box">
+                        <input id="stSuper" class="st-super-input" type="search" placeholder="输入物品名称，查找哪台终端在售" aria-label="搜索物品" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="stSuperResults" aria-autocomplete="list">
+                        <div id="stSuperResults" class="st-super-results" role="listbox" hidden></div>
+                    </div>
+                </div>
+                <p id="stStatus" class="st-status">正在加载终端…</p>
                 <div class="st-rail">
                     <label class="st-field">星系
                         <select id="stSystem" class="st-select"></select>
@@ -155,6 +155,7 @@
                     </label>
                 </div>
             </header>
+            <div class="st-kiosk-body">
             <div class="st-kiosk-id">
                 <div>
                     <h2 class="st-shop-name" id="stShopName">未接入终端</h2>
@@ -167,11 +168,12 @@
                 <div id="stList" class="st-list"></div>
                 <aside id="stDetail" class="st-detail"></aside>
             </div>
+            </div>
         </section>
     </main>
     <script src="site-footer.js" defer></script>
     <script src="nav-dropdown.js" defer></script>
     <script src="nav-auth-tools.js" defer></script>
-    <script src="sales-terminals.js?v=50" defer></script>
+    <script src="sales-terminals.js?v=54" defer></script>
 </body>
 </html>

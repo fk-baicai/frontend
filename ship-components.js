@@ -5542,6 +5542,15 @@
         rememberListReturnState: rememberListReturnState,
     };
 
+    window.addEventListener('pageshow', function (event) {
+        if (!event.persisted) return;
+        try {
+            sessionStorage.removeItem(LIST_RESTORE_FLAG_KEY);
+        } catch (e) {
+            /* ignore */
+        }
+    });
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

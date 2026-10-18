@@ -2,23 +2,35 @@
     --st-neon: #5fb8ff;
     --st-ice: #8ee0ff;
     --st-hot: #ff4fd8;
-    --st-edge-gap: 3.25rem;
-    max-width: min(96vw, 1240px);
-    padding-top: var(--st-edge-gap);
-    padding-bottom: var(--st-edge-gap);
+    --st-edge-gap: 3rem;
+    max-width: min(100vw, 1680px);
+    padding: var(--st-edge-gap) clamp(0.75rem, 1.5vw, 1.25rem) 4rem;
 }
 
-.st-page .sc-hero {
-    padding-top: 0;
-    padding-bottom: 0.35rem;
-    margin-bottom: 0.85rem;
+.st-page .sc-hero-head {
+    justify-content: flex-start;
+}
+
+.st-page .sc-hero-kicker {
+    color: var(--st-neon);
+    letter-spacing: 0.22em;
+    text-indent: 0.22em;
+}
+
+.st-page .sc-hero-vrule {
+    background: rgba(142, 224, 255, 0.45);
+}
+
+.st-page .sc-title {
+    font-size: clamp(1.2rem, 2vw, 1.5rem);
+    letter-spacing: 0.08em;
 }
 
 .st-super {
     position: relative;
     z-index: 20;
-    width: min(760px, 100%);
-    margin: 0 auto 0.85rem;
+    width: 100%;
+    margin: 0.15rem 0 0.2rem;
 }
 
 .st-super-box {
@@ -28,13 +40,11 @@
 .st-super-input {
     width: 100%;
     box-sizing: border-box;
-    min-height: 52px;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    border: 1px solid rgba(142, 224, 255, 0.55);
-    background:
-        linear-gradient(90deg, rgba(95, 184, 255, 0.12), transparent 28%),
-        rgba(8, 18, 32, 0.92);
+    min-height: 44px;
+    padding: 0.55rem 0.85rem;
+    border-radius: 6px;
+    border: 1px solid rgba(142, 224, 255, 0.42);
+    background: rgba(5, 14, 26, 0.82);
     color: #e8f4ff;
     font: inherit;
     font-size: 1rem;
@@ -213,10 +223,10 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    height: min(860px, calc(100vh - 10.5rem));
-    min-height: 560px;
+    height: calc(100dvh - var(--navbar-height, calc(37px + 4rem)) - 3rem - 4rem - 0.5rem);
+    min-height: 420px;
     border-radius: var(--home-module-radius);
-    overflow: hidden;
+    overflow: visible;
     background:
         linear-gradient(180deg, rgba(18, 42, 68, 0.55), rgba(8, 20, 36, 0.2) 90px),
         rgba(8, 22, 37, 0.88);
@@ -259,17 +269,29 @@
     animation: st-tear 11s linear infinite;
 }
 
+.st-kiosk-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: 0 0 var(--home-module-radius) var(--home-module-radius);
+}
+
 .st-kiosk-kicker,
 .st-kiosk-count {
     animation: st-glyph 5.2s steps(1, end) infinite;
 }
 
 .st-kiosk-bar {
+    position: relative;
+    z-index: 6;
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 0.35rem;
+    gap: 0.45rem;
     padding: 0.85rem 1rem 0.95rem;
+    border-radius: var(--home-module-radius) var(--home-module-radius) 0 0;
     background:
         linear-gradient(180deg, rgba(95, 184, 255, 0.1), transparent),
         repeating-linear-gradient(
@@ -280,13 +302,30 @@
     border-bottom: 1px solid rgba(142, 224, 255, 0.22);
 }
 
+.st-kiosk-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
 .st-kiosk-kicker {
-    margin: 0 0 0.45rem;
+    margin: 0;
     color: var(--st-neon);
     font-family: Orbitron, Rajdhani, sans-serif;
     font-size: 0.68rem;
     letter-spacing: 0.2em;
     text-shadow: 0 0 10px rgba(95, 184, 255, 0.8);
+}
+
+.st-source {
+    margin: 0;
+    max-width: 70%;
+    color: rgba(148, 186, 212, 0.62);
+    font-size: 0.68rem;
+    letter-spacing: 0.03em;
+    line-height: 1.35;
+    text-align: right;
 }
 
 .st-rail {
@@ -350,26 +389,28 @@
 .st-kiosk-id {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
-    gap: 1rem;
-    padding: 0.85rem 1.1rem 0.75rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.32rem 1rem;
     border-bottom: 1px solid rgba(142, 224, 255, 0.16);
 }
 
 .st-shop-name {
     margin: 0;
     color: #fff;
-    font-size: clamp(1.25rem, 2vw, 1.7rem);
+    font-size: 0.95rem;
     font-weight: 600;
+    line-height: 1.2;
     font-family: Rajdhani, 'Noto Sans SC', sans-serif;
     letter-spacing: 0.04em;
     text-shadow: 0 0 16px rgba(142, 224, 255, 0.35);
 }
 
 .st-kiosk-path {
-    margin: 0.2rem 0 0;
+    margin: 0.05rem 0 0;
     color: rgba(200, 220, 235, 0.78);
-    font-size: 0.88rem;
+    font-size: 0.72rem;
+    line-height: 1.3;
 }
 
 .st-kiosk-count {
@@ -566,6 +607,81 @@
     text-shadow: 0 0 8px rgba(142, 224, 255, 0.55);
 }
 
+.st-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    padding: 0.75rem;
+}
+
+.st-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+    background: rgba(8, 22, 37, 0.72);
+    border: 1px solid rgba(95, 184, 255, 0.18);
+    border-radius: 8px;
+    color: #e8f4ff;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+
+.st-card:hover {
+    border-color: rgba(142, 224, 255, 0.72);
+    background: rgba(95, 184, 255, 0.1);
+}
+
+.st-card:focus-visible {
+    outline: 2px solid #8ee0ff;
+    outline-offset: 2px;
+}
+
+.st-card.is-on {
+    border-color: #8ee0ff;
+    box-shadow: inset 0 0 0 1px #8ee0ff;
+}
+
+.st-card-img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 351 / 210;
+    object-fit: cover;
+    background: #08141f;
+}
+
+.st-card-img-empty {
+    display: grid;
+    place-items: center;
+    color: rgba(148, 186, 212, 0.78);
+    font-size: 0.75rem;
+}
+
+.st-card-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.55rem 0.7rem 0.65rem;
+}
+
+.st-card-name {
+    min-width: 0;
+    line-height: 1.35;
+}
+
+.st-card-name .st-bi-en {
+    display: block;
+    margin-left: 0;
+    margin-top: 0.12rem;
+}
+
+.st-card-price {
+    color: #8ee0ff;
+    font-variant-numeric: tabular-nums;
+}
+
 .st-detail {
     position: relative;
     min-height: 0;
@@ -743,12 +859,19 @@
     line-height: 1.6;
 }
 
-.st-empty,
-.st-status {
+.st-empty {
     padding: 1rem 0.2rem;
 }
 
+.st-status[hidden] {
+    display: none;
+}
+
 @media (max-width: 980px) {
+    .st-source {
+        max-width: 100%;
+        text-align: left;
+    }
     .st-kiosk-bar,
     .st-kiosk-id {
         display: flex;
@@ -870,4 +993,116 @@
     .st-idle-core {
         animation: none;
     }
+}
+
+.st-kiosk {
+    background: #0e2943;
+    border-color: rgba(0, 240, 255, 0.42);
+    box-shadow: 0 0 28px rgba(0, 240, 255, 0.12), inset 0 1px 0 rgba(142, 224, 255, 0.16);
+}
+
+.st-kiosk-age {
+    background: none;
+}
+
+.st-kiosk-bar {
+    background: transparent;
+    border-bottom-color: rgba(95, 184, 255, 0.16);
+}
+
+.st-page .sc-title,
+.st-shop-name,
+.st-detail-name,
+.st-row,
+.st-card,
+.st-hit,
+.st-cat,
+.st-super-input,
+.st-select,
+.st-hit-sys {
+    color: #e8f4ff;
+}
+
+.st-source,
+.st-kiosk-path,
+.st-row-cat,
+.st-detail-empty,
+.st-empty,
+.st-hit-empty,
+.st-card-img-empty,
+.st-bi-en,
+.st-hit-loc {
+    color: rgba(232, 244, 255, 0.72);
+}
+
+.st-super-input,
+.st-select,
+.st-card,
+.st-cats,
+.st-detail,
+.st-list-head,
+.st-super-results,
+.st-hit-systems {
+    background-color: #122d48;
+    border-color: rgba(95, 184, 255, 0.22);
+}
+
+.st-super-input::placeholder {
+    color: rgba(142, 224, 255, 0.55);
+}
+
+.st-select option,
+.st-select optgroup {
+    color: #e8f4ff;
+    background: #122d48;
+}
+
+.st-hit:hover,
+.st-hit.is-active,
+.st-row:hover,
+.st-cat:hover,
+.st-card:hover {
+    background: rgba(18, 45, 72, 0.72);
+}
+
+.st-hit-sys.is-on,
+.st-cat.is-on,
+.st-row.is-on,
+.st-card.is-on {
+    color: #fff;
+    background: rgba(95, 184, 255, 0.18);
+    border-color: #8ee0ff;
+}
+
+.st-list-head {
+    color: #8ee0ff;
+}
+
+.st-row {
+    background: transparent;
+    border-bottom-color: rgba(95, 184, 255, 0.16);
+}
+
+.st-row-price,
+.st-card-price,
+.st-hit-price,
+.st-detail-price,
+.st-field,
+.st-hit-loc b {
+    color: #8ee0ff;
+}
+
+.st-kiosk-main {
+    background-color: #122d48;
+    background-image:
+        linear-gradient(rgba(142, 224, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(142, 224, 255, 0.05) 1px, transparent 1px);
+}
+
+.st-card-img {
+    background: #0e2943;
+}
+
+.st-kiosk-id {
+    border-bottom-color: rgba(95, 184, 255, 0.16);
 }

@@ -1,5 +1,6 @@
 (function () {
     var data = null;
+    var shipArt = {};
     var catById = {};
     var pickedKey = '';
     var pendingScroll = false;
@@ -356,6 +357,15 @@
         els.cats.innerHTML = catHtml;
         if (!rows.length) {
             els.list.innerHTML = '<p class="st-empty">这个分类里没有匹配的物品。</p>';
+        } else if (rows.every(function (item) { return item[2] === 102 || item[2] === 9001; })) {
+            els.list.innerHTML = '<div class="st-cards">' + rows.map(function (item) {
+                var on = itemKey(item) === pickedKey;
+                var src = shipArt[String(item[0] || '').replace(/（租赁）$/, '').trim()] || '';
+                var photo = src
+                    ? '<img class="st-card-img" src="' + escapeHtml(shipCardUrl(src)) + '" data-local="' + escapeHtml(src) + '" alt="" width="351" height="210" decoding="async" loading="lazy" onerror="if(this.dataset.local){this.src=this.dataset.local;this.removeAttribute(\'data-local\')}">'
+                    : '<span class="st-card-img st-card-img-empty">暂无图片</span>';
+                return '<button type="button" class="st-card' + (on ? ' is-on' : '') + '" data-key="' + escapeHtml(itemKey(item)) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + photo + '<span class="st-card-copy"><span class="st-card-name">' + biHtml(item[3], item[0]) + '</span><span class="st-card-price">' + money(item[1]) + '</span></span></button>';
+            }).join('') + '</div>';
         } else {
             els.list.innerHTML =
                 '<div class="st-list-head"><span>物品</span><span>分类</span><span>买入价</span></div>' +
@@ -576,10 +586,41 @@
         pickedKey = pickedKey === key ? '' : key;
         renderKiosk();
     });
-    fetch('sales-terminals-data.json?v=26')
-        .then(function (res) { return res.json(); })
+    function renderSource() {
+        var el = document.getElementById('stSource');
+        if (!el || !data) return;
+        var meta = data.meta || {};
+        var parts = [meta.data_source_label_zh || 'UEX'];
+        if (meta.game_version) parts.push('游戏版本 ' + meta.game_version);
+        if (meta.api_version) parts.push('API v' + meta.api_version);
+        el.textContent = parts.join(' · ');
+    }
+    function apiUrl(path) {
+        var base = (window.USS_AUTH_API_BASE || '').replace(/\/$/, '');
+        return (base || '') + path;
+    }
+    function shipCardUrl(src) {
+        if (!src) return '';
+        return apiUrl('/api/sc/' + String(src).replace(/^\//, ''));
+    }
+    function fetchJson(primary, fallback) {
+        return fetch(primary).then(function (res) {
+            if (!res.ok) throw new Error('status');
+            return res.json();
+        }).catch(function () {
+            return fetch(fallback).then(function (res) { return res.json(); });
+        });
+    }
+    fetchJson(apiUrl('/api/sc/ship-card-map'), 'ship-cards.json?v=2')
+        .then(function (json) {
+            shipArt = json || {};
+            if (data) renderKiosk();
+        })
+        .catch(function () {});
+    fetchJson(apiUrl('/api/sc/sales-terminals'), 'sales-terminals-data.json?v=27')
         .then(function (json) {
             data = json;
+            renderSource();
             codeUses = {};
             (data.shops || []).forEach(function (shop) { codeUses[shop.code] = (codeUses[shop.code] || 0) + 1; });
             (data.categories || []).forEach(function (cat) { catById[cat.id] = cat; });

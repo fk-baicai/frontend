@@ -2073,11 +2073,29 @@
         return withListFilters(buildListPageHref(group, type, q));
     }
 
+    function referrerIsCatalogList() {
+        try {
+            if (window.history.length < 2) return false;
+            var ref = document.referrer || '';
+            if (!ref) return false;
+            var saved = new URL(ref);
+            if (saved.origin !== window.location.origin) return false;
+            return isCatalogListPath(saved.pathname);
+        } catch (e) {
+            return false;
+        }
+    }
+
     function bindBackLinkRestore() {
         var link = document.getElementById('scDetailBackLink');
         if (!link || link.dataset.restoreBound === '1') return;
         link.dataset.restoreBound = '1';
-        link.addEventListener('click', function () {
+        link.addEventListener('click', function (event) {
+            if (referrerIsCatalogList() && !isReturningFromBlueprintCrafting()) {
+                event.preventDefault();
+                history.back();
+                return;
+            }
             try {
                 if (isReturningFromBlueprintCrafting()) {
                     sessionStorage.setItem(BP_CRAFT_RESTORE_FLAG_KEY, '1');
