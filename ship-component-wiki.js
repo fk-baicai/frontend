@@ -2681,12 +2681,19 @@
                 },
             },
             {
-                key: 'wiki_w_rpm',
-                label: '射速',
+                key: 'wiki_w_speed',
+                label: '弹速',
                 get: function (item) {
                     var w = item.wiki_fields && item.wiki_fields.vehicle_weapon;
-                    var rpm = formatPersonalWeaponRpm(w);
-                    return rpm != null ? rpm + ' RPM' : null;
+                    var ammo = w && w.ammunition;
+                    var speed = ammo && ammo.speed;
+                    return speed != null && Number(speed) !== 0 ? formatWikiScalar(speed) + ' m/s' : null;
+                },
+                sortGet: function (item) {
+                    var w = item.wiki_fields && item.wiki_fields.vehicle_weapon;
+                    var ammo = w && w.ammunition;
+                    var speed = ammo && Number(ammo.speed);
+                    return Number.isFinite(speed) && speed !== 0 ? speed : null;
                 },
             },
             {
@@ -3404,6 +3411,18 @@
                 rows = rowsFromWikiObject(nestedObj, def.fields, sectionKey, def.nested);
             } else if (def.fields) {
                 rows = rowsFromWikiObject(block, def.fields, sectionKey);
+            }
+            if (def.title === '武器性能' && item.type === 'ship_weapon' && block && block.ammunition) {
+                var ammoSpeed = block.ammunition.speed;
+                if (ammoSpeed != null && ammoSpeed !== '' && Number(ammoSpeed) !== 0) {
+                    var speedRow = { label: '弹速', value: formatWikiScalar(ammoSpeed) + ' m/s' };
+                    var rangeAt = -1;
+                    for (var ri = 0; ri < rows.length; ri++) {
+                        if (rows[ri].label === '射程') rangeAt = ri;
+                    }
+                    if (rangeAt >= 0) rows.splice(rangeAt + 1, 0, speedRow);
+                    else rows.push(speedRow);
+                }
             }
             rows = dedupeWikiDetailRows(rows);
             if (rows.length) sections.push({ title: def.title, rows: rows });

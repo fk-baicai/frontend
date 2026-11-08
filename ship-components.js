@@ -1957,7 +1957,7 @@
             'size',
             'wiki_w_type',
             'wiki_w_dmg',
-            'wiki_w_rpm',
+            'wiki_w_speed',
             'wiki_w_range',
             'wiki_w_dps',
             'wiki_w_cap',

@@ -470,8 +470,8 @@
         var systems = sortSystems(found.map(function (entry) { return entry.row.system; }));
         if (hitSystem && systems.indexOf(hitSystem) < 0) hitSystem = '';
         var pool = hitSystem ? found.filter(function (entry) { return entry.row.system === hitSystem; }) : found;
-        var extra = pool.length > 24 ? pool.length - 24 : 0;
-        hits = pool.slice(0, 24).map(function (entry) { return entry.row; });
+        var extra = 0;
+        hits = pool.map(function (entry) { return entry.row; });
         hitIndex = hits.length ? 0 : -1;
         var filters = '<div class="st-hit-systems" role="group" aria-label="按星系筛选">' +
             '<button type="button" class="st-hit-sys' + (hitSystem ? '' : ' is-on') + '" data-hit-system="">全部<span class="st-hit-sys-n">' + found.length + '</span></button>' +

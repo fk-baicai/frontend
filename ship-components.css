@@ -2548,12 +2548,12 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
 }
 
 .sc-detail-hero-media {
-    --sc-detail-hero-img-max-w: 180px;
+    --sc-detail-hero-img-max-w: min(52vw, 520px);
     position: relative;
     align-self: start;
     justify-self: end;
     display: block;
-    width: var(--sc-detail-hero-img-h, 180px);
+    width: max-content;
     max-width: var(--sc-detail-hero-img-max-w);
     height: var(--sc-detail-hero-img-h, 180px);
     margin: var(--sc-detail-hero-media-inset, 30px) var(--sc-detail-hero-media-inset, 30px) var(--sc-detail-hero-media-inset, 30px) 0;
@@ -2571,10 +2571,10 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
 .sc-detail-media-btn {
     display: block;
     position: relative;
-    width: 100%;
+    width: max-content;
+    max-width: 100%;
     height: 100%;
     min-height: 0;
-    max-width: none;
     margin: 0;
     padding: 0;
     border: 1.5px solid rgba(95, 184, 255, 0.5);
@@ -2604,10 +2604,11 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
 
 .sc-detail-image {
     display: block;
-    width: 100%;
+    width: auto;
     height: 100%;
-    object-fit: cover;
-    object-position: center;
+    max-width: 100%;
+    object-fit: contain;
+    object-position: center right;
     transition: transform 0.2s ease, filter 0.2s ease;
 }
 
@@ -3581,30 +3582,31 @@ body.sc-img-desk-open {
         align-self: start;
         justify-self: end;
         box-sizing: border-box;
-        width: var(--sc-detail-hero-img-size);
-        height: var(--sc-detail-hero-img-size);
-        min-width: var(--sc-detail-hero-img-size);
-        min-height: var(--sc-detail-hero-img-size);
-        max-width: none;
-        aspect-ratio: 1 / 1;
+        width: max-content;
+        height: var(--sc-detail-hero-img-h, 140px);
+        min-width: 0;
+        min-height: 0;
+        max-width: min(46vw, 280px);
+        aspect-ratio: auto;
         margin: 0;
         padding: 0;
     }
 
     .sc-detail-hero-media .sc-detail-media-btn {
-        width: 100% !important;
+        width: max-content !important;
         height: 100% !important;
-        max-width: none;
+        max-width: 100%;
         min-height: 0;
-        aspect-ratio: 1 / 1;
+        aspect-ratio: auto;
     }
 
     .sc-detail-hero-media .sc-detail-image {
-        width: 100%;
+        width: auto;
         height: 100%;
+        max-width: 100%;
         max-height: none;
-        object-fit: cover;
-        object-position: center;
+        object-fit: contain;
+        object-position: center right;
     }
 
     .sc-detail-hero-stats--3,

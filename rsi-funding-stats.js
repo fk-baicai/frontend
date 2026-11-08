@@ -63,6 +63,52 @@
         return Math.round(v).toLocaleString('en-US');
     }
 
+    function formatUsdSigned(n) {
+        var v = Number(n);
+        if (!isFinite(v)) return '—';
+        var sign = v > 0 ? '+' : v < 0 ? '-' : '';
+        return sign + '$' + Math.abs(Math.round(v)).toLocaleString('en-US');
+    }
+
+    function formatUsdCompact(n) {
+        var v = Number(n);
+        if (!isFinite(v)) return '—';
+        var sign = v < 0 ? '-' : '';
+        var abs = Math.abs(v);
+        if (abs >= 1000000) return sign + '$' + (abs / 1000000).toFixed(abs >= 10000000 ? 1 : 2) + 'M';
+        if (abs >= 1000) return sign + '$' + (abs / 1000).toFixed(abs >= 10000 ? 0 : 1) + 'K';
+        return sign + '$' + Math.round(abs).toLocaleString('en-US');
+    }
+
+    var PERIOD_COMPARE = {
+        hour: { now: '本小时', prev: '上一小时' },
+        day: { now: '本日', prev: '上一天' },
+        week: { now: '本周', prev: '上一周' },
+        month: { now: '本月', prev: '上一月' },
+    };
+
+    function periodCopy(period) {
+        return PERIOD_COMPARE[period] || { now: '本时段', prev: '上一时段' };
+    }
+
+    function withPeriodDeltas(points) {
+        var list = Array.isArray(points) ? points : [];
+        var out = [];
+        for (var i = 0; i < list.length; i++) {
+            var raised = Number(list[i].grossUsd) || 0;
+            var prevRaised = i > 0 ? Number(list[i - 1].grossUsd) || 0 : null;
+            out.push({
+                key: list[i].key,
+                axis: list[i].axis,
+                grossUsd: raised,
+                raised: raised,
+                prevRaised: prevRaised,
+                diff: prevRaised == null ? null : raised - prevRaised,
+            });
+        }
+        return out;
+    }
+
     function formatAxisLabel(point, period) {
         if (!point) return '';
         if (period === 'hour' && point.key) {
@@ -113,7 +159,19 @@
         if (!tip || !svg || !point) return;
 
         var valEl = tip.querySelector('.rsi-funding-chart-tooltip-value');
-        if (valEl) valEl.textContent = '$' + formatInt(point.grossUsd);
+        var cmpEl = tip.querySelector('.rsi-funding-chart-tooltip-compare');
+        if (valEl) valEl.textContent = '$' + formatInt(point.raised);
+        if (cmpEl) {
+            if (point.diff == null || point.prevRaised == null) {
+                cmpEl.textContent = '累计 $' + formatInt(point.grossUsd);
+                cmpEl.className = 'rsi-funding-chart-tooltip-compare';
+            } else {
+                var pct = point.prevRaised ? (point.diff / Math.abs(point.prevRaised)) * 100 : null;
+                var pctText = pct == null || !isFinite(pct) ? '' : ' · ' + (pct > 0 ? '+' : '') + pct.toFixed(1) + '%';
+                cmpEl.textContent = '较' + periodCopy(currentPeriod).prev + ' ' + formatUsdSigned(point.diff) + pctText;
+                cmpEl.className = 'rsi-funding-chart-tooltip-compare' + (point.diff > 0 ? ' is-up' : point.diff < 0 ? ' is-down' : '');
+            }
+        }
 
         var frameRect = chartEl.getBoundingClientRect();
         var svgRect = svg.getBoundingClientRect();
@@ -192,7 +250,7 @@
         var height = compact ? (mobile ? 230 : 250) : 260;
         var padL = mobile ? 14 : 18;
         var padR = mobile ? 12 : 16;
-        var padT = mobile ? 12 : 18;
+        var padT = mobile ? 42 : 46;
         var padB = mobile ? 26 : 32;
         var axisOffset = mobile ? 12 : 10;
         var axisFont = mobile ? 14 : compact ? 12 : 11;
@@ -202,9 +260,7 @@
             var padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
             var padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
             var innerW = chartEl.clientWidth - padX;
-            var innerH = chartEl.clientHeight - padY;
             if (innerW > 100) width = Math.max(280, Math.round(innerW));
-            if (innerH > 80) height = Math.max(160, Math.round(innerH));
         }
 
         return {
@@ -222,7 +278,7 @@
     function renderChart(points, period) {
         if (!chartEl) return;
         hideChartTip();
-        var list = Array.isArray(points) ? points : [];
+        var list = withPeriodDeltas(points);
         chartPoints = list;
         if (!list.length) {
             chartEl.innerHTML = '<p class="rsi-funding-chart-empty">暂无图表数据</p>';
@@ -242,7 +298,7 @@
         chartLayout = { width: width, height: height };
 
         var values = list.map(function (p) {
-            return Number(p.grossUsd) || 0;
+            return Number(p.raised) || 0;
         });
         var maxV = Math.max.apply(null, values.concat([1]));
         var minV = Math.min.apply(null, values.concat([0]));
@@ -264,7 +320,7 @@
         var plotPoints = list.map(function (p, i) {
             return {
                 x: xAt(i),
-                y: yAt(Number(p.grossUsd) || 0),
+                y: yAt(Number(p.raised) || 0),
             };
         });
         var linePath = buildLinePath(plotPoints);
@@ -289,8 +345,30 @@
         var dots = list
             .map(function (p, i) {
                 var x = xAt(i);
-                var y = yAt(Number(p.grossUsd) || 0);
+                var y = yAt(Number(p.raised) || 0);
                 var label = formatAxisLabel(p, period);
+                var deltaLabel = '';
+                if (p.diff != null) {
+                    var deltaClass = p.diff > 0 ? 'is-up' : p.diff < 0 ? 'is-down' : '';
+                    deltaLabel =
+                        '<text x="' +
+                        x +
+                        '" y="' +
+                        (y - 24) +
+                        '" class="rsi-funding-chart-pct ' +
+                        deltaClass +
+                        '" text-anchor="middle">' +
+                        formatUsdSigned(p.diff) +
+                        '</text>';
+                }
+                var valueLabel =
+                    '<text x="' +
+                    x +
+                    '" y="' +
+                    (y - 10) +
+                    '" class="rsi-funding-chart-value" text-anchor="middle">' +
+                    formatUsdCompact(p.raised) +
+                    '</text>';
                 var anchor = 'middle';
                 var labelX = x;
                 if (i === 0) {
@@ -305,8 +383,8 @@
                     i +
                     '" role="button" tabindex="0" aria-label="' +
                     label +
-                    ' 金额 $' +
-                    formatInt(p.grossUsd) +
+                    ' 新增 $' +
+                    formatInt(p.raised) +
                     '">' +
                     '<circle cx="' +
                     x +
@@ -323,6 +401,8 @@
                     '" cy="' +
                     y +
                     '" r="4.5" class="rsi-funding-chart-dot"/>' +
+                    deltaLabel +
+                    valueLabel +
                     '</g>' +
                     '<text x="' +
                     labelX +
@@ -339,9 +419,39 @@
             })
             .join('');
 
+        var latest = list[list.length - 1];
+        var copy = periodCopy(period);
+        var summaryDelta = '';
+        if (latest && latest.diff != null) {
+            var latestPct = latest.prevRaised ? (latest.diff / Math.abs(latest.prevRaised)) * 100 : null;
+            var latestPctText = latestPct == null || !isFinite(latestPct) ? '' : ' · ' + (latestPct > 0 ? '+' : '') + latestPct.toFixed(1) + '%';
+            var deltaClass = latest.diff > 0 ? ' is-up' : latest.diff < 0 ? ' is-down' : '';
+            summaryDelta =
+                '<span class="rsi-funding-chart-summary-delta' +
+                deltaClass +
+                '"><span class="rsi-funding-chart-summary-k">较' +
+                copy.prev +
+                '</span><b>' +
+                formatUsdSigned(latest.diff) +
+                '</b><b>' +
+                (latestPctText ? latestPctText.replace(' · ', '') : '') +
+                '</b></span>';
+        }
+        var summary =
+            '<div class="rsi-funding-chart-summary">' +
+            '<span class="rsi-funding-chart-summary-now"><span class="rsi-funding-chart-summary-k">' +
+            copy.now +
+            '</span><b>$' +
+            formatInt(latest ? latest.raised : 0) +
+            '</b></span>' +
+            summaryDelta +
+            '</div>';
+
         chartEl.innerHTML =
+            summary +
             '<div class="rsi-funding-chart-tooltip" hidden aria-live="polite">' +
             '<span class="rsi-funding-chart-tooltip-value"></span>' +
+            '<span class="rsi-funding-chart-tooltip-compare"></span>' +
             '</div>' +
             '<svg class="rsi-funding-chart-svg" viewBox="0 0 ' +
             width +
@@ -371,7 +481,7 @@
             requestAnimationFrame(function () {
                 chartEl._rsiLayoutRetry = false;
                 var next = getChartMetrics();
-                if (Math.abs(next.height - height) > 6 || Math.abs(next.width - width) > 6) {
+                if (Math.abs(next.width - width) > 6) {
                     renderChart(points, period);
                 }
             });

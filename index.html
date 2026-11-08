@@ -59,7 +59,7 @@
         }
 </style>
     <link rel="canonical" href="https://ussxc.org/">
-    <link rel="stylesheet" href="styles.css?v=20261018a">
+    <link rel="stylesheet" href="styles.css?v=20261109d">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -253,7 +253,6 @@
                     </li>
                     <li class="nav-mega-tools-row">
                         <a class='nav-mega-link' href='/cargo-grid'><span class="nav-mega-link-title">货物网格</span><span class="nav-mega-link-desc">货舱格子 · 按 SCU 查看摆放</span></a>
-                        <a class='nav-mega-link' href='/rsi-funding'><span class="nav-mega-link-title">资金统计</span><span class="nav-mega-link-desc">RSI 众筹资金与玩家数量</span></a>
                         <a class='nav-mega-link' href='/wardogs-artillery'><span class="nav-mega-link-title">WARDOGS炮兵计算</span><span class="nav-mega-link-desc">迫击炮 · PzH 2000 / SPH-2</span></a>
                     </li>
                     </ul>
@@ -386,10 +385,6 @@
                             <span class="hero-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3.5" width="16" height="17" rx="1.4"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
                             <span class="hero-tool-name">蓝图制造</span>
                         </a>
-                        <a class="hero-tool" draggable="false" href="/rsi-funding">
-                            <span class="hero-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5h16"/><path d="M7 19.5V13M12 19.5V8M17 19.5v-6"/></svg></span>
-                            <span class="hero-tool-name">资金统计</span>
-                        </a>
                     </div>
                 </div>
             </nav>
@@ -423,6 +418,52 @@
 
             <div class="home-exec-hangar-grid rsi-status-grid" id="homeExecHangarGrid" aria-live="polite">
                 <div class="rsi-status-loading" role="status">正在同步行政机库…</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="home-exec-hangar-section" id="home-funding-section" aria-label="资金统计">
+        <div class="home-exec-hangar-wrap">
+            <div class="rsi-funding-panel">
+                <header class="home-exec-hangar-head">
+                    <div class="home-exec-hangar-head-text">
+                        <h2 class="home-exec-hangar-title rsi-status-title">资金统计</h2>
+                        <div class="home-exec-hangar-lead-row">
+                            <p class="home-exec-hangar-lead">星际公民众筹 · 数据来自 Roberts Space Industries</p>
+                            <span class="rsi-status-updated" id="rsiFundingUpdated" hidden></span>
+                        </div>
+                    </div>
+                </header>
+                <div class="rsi-funding-body">
+                    <h2 class="rsi-funding-subtitle rsi-funding-body-title rsi-funding-body-title--stats">星际公民实时数据</h2>
+                    <div class="rsi-funding-chart-head">
+                        <h2 class="rsi-funding-subtitle rsi-funding-body-title">众筹时间线</h2>
+                        <div class="rsi-funding-period-tabs" id="rsiFundingPeriodTabs" role="tablist" aria-label="时间范围"></div>
+                    </div>
+                    <div class="rsi-funding-stat-cards">
+                        <article class="rsi-funding-stat-card">
+                            <span class="rsi-funding-stat-icon rsi-funding-stat-icon--funds" aria-hidden="true">$</span>
+                            <div class="rsi-funding-stat-copy">
+                                <span class="rsi-funding-stat-label">已筹集资金（美元）</span>
+                                <span class="rsi-funding-stat-value" id="rsiFundingFunds">—</span>
+                            </div>
+                        </article>
+                        <article class="rsi-funding-stat-card">
+                            <span class="rsi-funding-stat-icon rsi-funding-stat-icon--players" aria-hidden="true">
+                                <svg class="rsi-funding-stat-svg" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true">
+                                    <path d="M560 512.2c-1.5 80.7 296.9 108.2 297 280h0.9V902c0 14.9-12.1 27-27 27h-757c-14.9 0-27-12.1-27-27V792.2h0.9c0.7-185.2 295.6-202.4 297-280 0.4-4 0.5-46.5-14-69.8-15.4-24.7-67.6-102.7-67.6-175.7 0-112 77.3-202.8 189.3-202.8s189.3 90.8 189.3 202.8c0 73-59.8 154.7-67.6 175.7-8.6 22.8-13.8 64.4-14.2 69.8z"></path>
+                                </svg>
+                            </span>
+                            <div class="rsi-funding-stat-copy">
+                                <span class="rsi-funding-stat-label">玩家数量</span>
+                                <span class="rsi-funding-stat-value" id="rsiFundingFans">—</span>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="rsi-funding-chart-frame" id="rsiFundingChart">
+                        <p class="rsi-funding-chart-empty" role="status">正在获取 RSI 资金统计…</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -1180,6 +1221,7 @@
     <script defer src="rsi-server-status.js?v=20261012b"></script>
     <script defer src="sc-festival-countdown.js?v=20261016a"></script>
     <script defer src="home-exec-hangar.js?v=20261016c"></script>
+    <script defer src="rsi-funding-stats.js?v=20261109b"></script>
     <script defer src="oopz-bridge.js"></script>
     <script defer src="site-footer.js"></script>
 </body>

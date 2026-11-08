@@ -1,0 +1,87 @@
+.bp-detail,
+.cg-view,
+.sc-detail-article {
+    position: relative;
+}
+
+.uss-share-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 30;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid rgba(95, 184, 255, 0.4);
+    background: rgb(14, 41, 67);
+    color: #e8f4ff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+}
+
+.uss-share-btn:hover {
+    border-color: rgba(122, 232, 255, 0.7);
+}
+
+.uss-share-btn svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.uss-share-btn[disabled] {
+    opacity: 0.55;
+    cursor: progress;
+}
+
+.sc-detail-page .sc-detail-back > .uss-share-btn--nav {
+    position: static;
+    width: 1.55rem;
+    height: 1.15rem;
+    margin: 0 0 0 auto;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: #8ee0ff;
+}
+
+.sc-detail-page .sc-detail-back > .uss-share-btn--nav + .sc-detail-image-upload {
+    margin-left: 0.35rem;
+}
+
+.rsi-funding-panel-bar > .uss-share-btn--bar {
+    position: static;
+    width: 28px;
+    height: 28px;
+    margin-left: auto;
+    border-radius: 6px;
+    box-shadow: none;
+}
+
+.sc-detail-page .sc-detail-back > .uss-share-btn--nav svg {
+    width: 1.05rem;
+    height: 1.05rem;
+}
+
+.uss-share-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%);
+    z-index: 80;
+    margin: 0;
+    padding: 0.45rem 0.85rem;
+    border-radius: 8px;
+    border: 1px solid rgba(95, 184, 255, 0.35);
+    background: rgb(14, 41, 67);
+    color: #e8f4ff;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+}

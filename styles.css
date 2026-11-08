@@ -76,7 +76,7 @@ body.home-page-body .community-post-card {
  --home-content-pad-x: 40px;
  --hero-overlay-inset-x: var(--home-content-pad-x);
 
- --home-section-block-gap: clamp(52px, 6vw, 68px);
+ --home-section-block-gap: clamp(42px, 4.8vw, 54px);
  --home-section-block-gap-split: calc(var(--home-section-block-gap) / 2);
  --home-section-title-size: clamp(17px, 1.85vw, 20px);
  --home-section-title-weight: 500;
@@ -3910,6 +3910,40 @@ body.home-page-body .home-exec-hangar-section {
  overflow: hidden;
 }
 
+#home-funding-section .rsi-funding-panel {
+ border-radius: var(--home-module-radius, 17px);
+ border: 1px solid rgba(0, 240, 255, 0.42);
+ background: var(--navbar-bg);
+ box-shadow:
+  0 0 28px rgba(0, 240, 255, 0.12),
+  inset 0 1px 0 rgba(142, 224, 255, 0.16);
+ padding: 1.15rem 1.25rem 1.1rem;
+}
+
+#home-funding-section .rsi-funding-panel::before {
+ display: none;
+}
+
+#home-funding-section .home-exec-hangar-head {
+ margin-bottom: 0.85rem;
+}
+
+#home-funding-section .home-exec-hangar-title {
+ border-left: none;
+ padding-left: 0;
+ font-size: var(--home-section-title-size);
+ font-weight: var(--home-section-title-weight);
+ letter-spacing: var(--home-section-title-tracking);
+}
+
+#home-funding-section .home-exec-hangar-lead-row {
+ padding-left: 0;
+}
+
+#home-funding-section .home-exec-hangar-lead {
+ font-size: var(--home-section-lead-size);
+}
+
 .rsi-funding-panel::before {
  content: '';
  position: absolute;
@@ -4149,9 +4183,9 @@ body.home-page-body .home-exec-hangar-section {
 
 .rsi-funding-chart-svg {
  display: block;
- flex: 1 1 auto;
+ flex: 0 0 auto;
  width: 100%;
- height: 100%;
+ height: 260px;
  min-height: 0;
  overflow: visible;
 }
@@ -4205,6 +4239,81 @@ body.home-page-body .home-exec-hangar-section {
  font-variant-numeric: tabular-nums;
 }
 
+.rsi-funding-chart-tooltip-compare {
+ display: block;
+ margin-top: 0.12rem;
+ font-size: 0.72rem;
+ color: rgba(180, 210, 230, 0.82);
+ font-variant-numeric: tabular-nums;
+}
+
+.rsi-funding-chart-tooltip-compare.is-up {
+ color: #7ddea0;
+}
+
+.rsi-funding-chart-tooltip-compare.is-down {
+ color: #ff8f9a;
+}
+
+.rsi-funding-chart-summary-delta.is-up {
+ color: #b8f5cc;
+ background: rgba(125, 222, 160, 0.16);
+ border-color: rgba(125, 222, 160, 0.45);
+}
+
+.rsi-funding-chart-summary-delta.is-down {
+ color: #ffd0d4;
+ background: rgba(255, 143, 154, 0.16);
+ border-color: rgba(255, 143, 154, 0.45);
+}
+
+.rsi-funding-chart-summary {
+ display: flex;
+ flex-wrap: wrap;
+ align-items: center;
+ gap: 0.55rem 0.75rem;
+ margin: 0 0 0.55rem;
+}
+
+.rsi-funding-chart-summary-now,
+.rsi-funding-chart-summary-delta {
+ display: inline-flex;
+ align-items: baseline;
+ gap: 0.45rem;
+ font-variant-numeric: tabular-nums;
+ border-radius: 8px;
+ padding: 0.35rem 0.7rem;
+}
+
+.rsi-funding-chart-summary-k {
+ font-size: 0.78rem;
+ font-weight: 600;
+ letter-spacing: 0.04em;
+ color: rgba(190, 220, 240, 0.78);
+}
+
+.rsi-funding-chart-summary-now {
+ background: rgba(95, 184, 255, 0.14);
+ border: 1px solid rgba(95, 184, 255, 0.28);
+}
+
+.rsi-funding-chart-summary-now b {
+ color: #fff;
+ font-size: 1.35rem;
+ font-weight: 750;
+ line-height: 1;
+}
+
+.rsi-funding-chart-summary-delta {
+ border: 1px solid transparent;
+}
+
+.rsi-funding-chart-summary-delta b {
+ font-size: 1.15rem;
+ font-weight: 750;
+ line-height: 1;
+}
+
 .rsi-funding-chart-grid {
  stroke: rgba(95, 184, 255, 0.07);
  stroke-width: 1;
@@ -4244,6 +4353,32 @@ body.home-page-body .home-exec-hangar-section {
  font-size: 11px;
  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
  pointer-events: none;
+}
+
+.rsi-funding-chart-value,
+.rsi-funding-chart-pct {
+ font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+ font-size: 11px;
+ font-weight: 700;
+ pointer-events: none;
+ font-variant-numeric: tabular-nums;
+}
+
+.rsi-funding-chart-value {
+ fill: #f4fbff;
+}
+
+.rsi-funding-chart-pct {
+ font-size: 10px;
+ font-weight: 600;
+}
+
+.rsi-funding-chart-pct.is-up {
+ fill: #7ddea0;
+}
+
+.rsi-funding-chart-pct.is-down {
+ fill: #ff8f9a;
 }
 
 .rsi-funding-chart-empty {
@@ -9869,7 +10004,7 @@ a.community-author-avatar-link:focus-visible {
  --navbar-height: calc(var(--navbar-top-height) + var(--navbar-main-height));
  --navbar-logo-offset: 0;
  --home-content-pad-x: 5px;
- --home-section-block-gap: clamp(40px, 7vw, 56px);
+ --home-section-block-gap: clamp(32px, 5.6vw, 45px);
  --hero-progress-track-max: min(72px, 16vw);
  --hero-progress-btn-size: 28px;
  }
