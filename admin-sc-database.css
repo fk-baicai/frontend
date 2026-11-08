@@ -1,6 +1,6 @@
 :root {
-    --bg-deep: rgb(14, 41, 67);
-    --bg: rgb(14, 41, 67);
+    --bg-deep: #122d48;
+    --bg: #122d48;
     --card: rgb(14, 41, 67);
     --card-border: rgba(95, 184, 255, 0.22);
     --bd: rgba(95, 184, 255, 0.32);
@@ -26,10 +26,7 @@ body {
     line-height: 1.5;
     font-size: 14px;
     background-color: var(--bg-deep);
-    background-image:
-        radial-gradient(ellipse 100% 70% at 0% -5%, rgba(45, 95, 180, 0.38), transparent 42%),
-        radial-gradient(ellipse 80% 55% at 100% 5%, rgba(130, 70, 200, 0.22), transparent 38%);
-    background-attachment: fixed;
+    background-image: none;
 }
 
 .sc-source-row {
@@ -72,7 +69,7 @@ header {
     flex-wrap: wrap;
     gap: 0.75rem;
     border-bottom: 1px solid rgba(95, 184, 255, 0.2);
-    background: linear-gradient(180deg, rgba(10, 18, 36, 0.92) 0%, rgba(6, 12, 26, 0.88) 100%);
+    background: var(--card);
     backdrop-filter: blur(14px);
 }
 
@@ -208,7 +205,7 @@ code {
     overflow-x: auto;
     border: 1px solid rgba(95, 184, 255, 0.14);
     border-radius: 8px;
-    background: rgba(4, 10, 20, 0.45);
+    background: var(--bg);
 }
 
 .sc-manual-loc-table {
@@ -504,7 +501,7 @@ code {
     border-radius: 14px 14px 0 0;
     border: 1px solid rgba(95, 184, 255, 0.32);
     border-bottom: none;
-    background: linear-gradient(180deg, rgba(10, 22, 40, 0.97) 0%, rgba(6, 14, 28, 0.98) 100%);
+    background: var(--card);
     box-shadow:
         0 -8px 32px rgba(0, 0, 0, 0.45),
         0 0 24px rgba(95, 184, 255, 0.08);

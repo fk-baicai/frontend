@@ -3394,6 +3394,30 @@
         return false;
     }
 
+    function isGenericHardpointCatalogName(nameEn, slug) {
+        var en = String(nameEn || '').trim();
+        var sl = String(slug || '').trim().toLowerCase();
+        if (
+            /^(main[\s-]+)?(power\s*plant|powerplant|cooler|shield(\s+generator)?|quantum(\s+drive)?|jump(\s+drive)?|radar|computer)$/i.test(
+                en
+            )
+        ) {
+            return true;
+        }
+        if (/^(remote\s+)?turret$/i.test(en)) return true;
+        if (/^missile\s+rack$/i.test(en)) return true;
+        if (/^gimbal(\s+mount)?$/i.test(en)) return true;
+        if (/^(weapon|item)(\s+mount)?$/i.test(en)) return true;
+        if (/^(default|placeholder|unnamed|unknown)(\s|$)/i.test(en)) return true;
+        if (/^(main|remote)-(powerplant|power-plant|cooler|shield|quantum|turret|radar)(-\d+)?$/i.test(sl)) {
+            return true;
+        }
+        if (/^(missile-rack|turret|radar)(-\d+)?$/i.test(sl) && /^(missile rack|turret|radar)$/i.test(en)) {
+            return true;
+        }
+        return false;
+    }
+
     var DISPLAY_NAME_OVERRIDES_BY_SLUG = {
         'pink-quikflare': '粉色 快燃荧光棒',
         'red-quikflarepro': '红色 快燃荧光棒 Pro',
@@ -3524,6 +3548,7 @@
     }
 
     function isBrowsableItem(item) {
+        if (isGenericHardpointCatalogName(item && item.name_en, item && item.slug)) return false;
         return resolveItemDisplayNames(item).primary !== '—';
     }
 

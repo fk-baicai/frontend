@@ -73,11 +73,22 @@
         if (!z || z === e) return escapeHtml(e);
         return escapeHtml(z) + '<span class="st-bi-en">' + escapeHtml(e) + '</span>';
     }
+    var PLACE_ZH_FALLBACK = {
+        'Green Imperial Housing Exchange': '六角湾',
+        'Green Imperial': '六角湾',
+        'Grim HEX': '六角湾',
+        GrimHEX: '六角湾',
+    };
     function fieldZh(field, en) {
         var i;
+        var hit;
         for (i = 0; i < data.shops.length; i++) {
-            if (data.shops[i][field] === en) return data.shops[i][field + 'Zh'] || '';
+            if (data.shops[i][field] === en) {
+                hit = data.shops[i][field + 'Zh'] || '';
+                if (hit) return hit;
+            }
         }
+        if (field === 'place') return PLACE_ZH_FALLBACK[en] || '';
         return '';
     }
     var ICO = {

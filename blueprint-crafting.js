@@ -2536,7 +2536,11 @@
         if (el.componentLink) {
             if (bp.component_id) {
                 el.componentLink.href = buildComponentDetailHref(bp);
-                el.componentLink.textContent = fpsWeaponBp ? '配件详情 ↗' : '详情 ↗';
+                var linkLabel = fpsWeaponBp ? '配件详情' : '详情';
+                el.componentLink.setAttribute('aria-label', '打开' + linkLabel);
+                var linkText = el.componentLink.querySelector('.bp-hero__link-text');
+                if (linkText) linkText.textContent = linkLabel;
+                else el.componentLink.textContent = linkLabel;
                 if (el.componentLink.dataset.bpReturnBound !== '1') {
                     el.componentLink.dataset.bpReturnBound = '1';
                     el.componentLink.addEventListener('mousedown', stashBlueprintCraftReturnState);
