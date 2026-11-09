@@ -2033,6 +2033,11 @@
             'wiki_m_throughput',
             'wiki_m_slots',
             'wiki_ml_power_transfer',
+            'wiki_ml_instability',
+            'wiki_ml_window',
+            'wiki_ml_resist',
+            'wiki_ml_charge',
+            'wiki_ml_inert',
             'mfg',
             'price',
             'loc',
@@ -4655,7 +4660,7 @@
         var wiki = window.ShipComponentWiki;
         if (!wiki) return '';
         var tags = [];
-        if (item.type === 'mining_laser' || item.type === 'ship_module') {
+        if (item.type === 'ship_module') {
             if (typeof wiki.buildMiningModifierTags === 'function') {
                 tags = wiki.buildMiningModifierTags(item, item.type);
             }
@@ -4890,7 +4895,28 @@
         return tr;
     }
 
+    function purchaseLocationSortKey(loc) {
+        if (!loc) return '';
+        if (loc.star_system_zh) return String(loc.star_system_zh).trim();
+        var label = String(loc.location_label_zh || '').split(/\s*[·•]\s*/)[0];
+        return String(label || '').trim();
+    }
+
+    function sortPurchaseLocations(locs) {
+        return (locs || []).slice().sort(function (a, b) {
+            var system = purchaseLocationSortKey(a).localeCompare(purchaseLocationSortKey(b), 'zh-CN');
+            if (system) return system;
+            var fields = ['planet_zh', 'city_zh', 'moon_zh', 'outpost_zh', 'space_station_zh', 'terminal_name_zh'];
+            for (var i = 0; i < fields.length; i++) {
+                var diff = String((a && a[fields[i]]) || '').localeCompare(String((b && b[fields[i]]) || ''), 'zh-CN');
+                if (diff) return diff;
+            }
+            return 0;
+        });
+    }
+
     function renderAcquireLocationsHtml(locs) {
+        locs = sortPurchaseLocations(locs);
         if (!locs.length) {
             return '<p class="sc-acquire-empty">暂无购买地点数据</p>';
         }

@@ -2234,6 +2234,7 @@
         keys.forEach(function (key) {
             if (shouldSkipRawWikiKey(key, obj)) return;
             if (shouldSkipDuplicateWikiKey(key, obj)) return;
+            if (key === 'power_transfer' && Number(obj[key]) === 0) return;
             var row = buildRowForWikiField(obj, key, itemType, nestedKey);
             if (!row) return;
             if (seenLabels[row.label]) return;
@@ -2289,6 +2290,7 @@
         var meta = MINING_MODIFIER_META[key] || { label: wikiFieldLabel(key) };
         var num = Number(val);
         var displayNum = meta.displayInvert ? Math.abs(num) : num;
+        if (displayNum === 0) return null;
         var formatted = formatFixedDecimal2(displayNum);
         if (formatted == null) return null;
         var text =
@@ -2302,6 +2304,14 @@
                   : num === 0;
         var tone = num === 0 ? 'neutral' : isGood ? 'good' : 'bad';
         return { label: meta.label || wikiFieldLabel(key), text: text, tone: tone, raw: num };
+    }
+
+    function miningModifierCell(item, key) {
+        var map = getMiningLaserModifierMap(item);
+        if (!map || map[key] == null || map[key] === '') return null;
+        var tag = formatMiningModifierPercent(key, map[key]);
+        if (!tag || tag.tone === 'neutral') return null;
+        return { text: tag.text, tone: tag.tone };
     }
 
     function buildMiningModifierTags(item, typeKey) {
@@ -2878,7 +2888,48 @@
                 label: '功率传输',
                 get: function (item) {
                     var m = item.wiki_fields && item.wiki_fields.mining_laser;
-                    return m && m.power_transfer != null ? formatWikiFieldDisplay('power_transfer', m.power_transfer) : null;
+                    if (!m || m.power_transfer == null || Number(m.power_transfer) === 0) return null;
+                    return formatWikiFieldDisplay('power_transfer', m.power_transfer);
+                },
+            },
+            {
+                key: 'wiki_ml_instability',
+                label: '不稳定性',
+                get: function (item) {
+                    return miningModifierCell(item, 'laser_instability');
+                },
+            },
+            {
+                key: 'wiki_ml_window',
+                label: '最佳窗口',
+                get: function (item) {
+                    return miningModifierCell(item, 'optimal_charge_window_size');
+                },
+            },
+            {
+                key: 'wiki_ml_resist',
+                label: '抗性',
+                get: function (item) {
+                    return miningModifierCell(item, 'resistance');
+                },
+            },
+            {
+                key: 'wiki_ml_charge',
+                label: '充能速率',
+                get: function (item) {
+                    var map = getMiningLaserModifierMap(item);
+                    if (!map) return null;
+                    var key = map.all_charge_rates != null && map.all_charge_rates !== '' && Number(map.all_charge_rates) !== 0
+                        ? 'all_charge_rates'
+                        : 'optimal_charge_rate';
+                    return miningModifierCell(item, key);
+                },
+            },
+            {
+                key: 'wiki_ml_inert',
+                label: '惰性过滤',
+                get: function (item) {
+                    return miningModifierCell(item, 'inert_materials');
                 },
             },
         ],
@@ -3345,10 +3396,10 @@
         if (!map) return rows;
         (fieldOrder || MINING_LASER_MODIFIER_ORDER).forEach(function (key) {
             if (map[key] == null || map[key] === '') return;
-            if (key === 'all_charge_rates' && map.optimal_charge_rate != null) return;
+            if (key === 'all_charge_rates' && map.optimal_charge_rate != null && map.optimal_charge_rate !== '' && Number(map.optimal_charge_rate) !== 0) return;
             var tag = formatMiningModifierPercent(key, map[key]);
-            if (!tag) return;
-            rows.push({ label: tag.label, value: tag.text });
+            if (!tag || tag.tone === 'neutral') return;
+            rows.push({ label: tag.label, value: tag.text, tone: tag.tone });
         });
         return rows;
     }

@@ -716,7 +716,7 @@
             name.className = 'bp-list-item__name';
             btn.insertBefore(name, btn.firstChild);
         }
-        name.textContent = blueprintDisplayName(item);
+        name.innerHTML = blueprintNameHtml(item, null, true);
 
         var metaText = blueprintListMeta(item);
         var metaEl = btn.querySelector('.bp-list-item__meta');
@@ -1028,6 +1028,22 @@
         return humanizeBlueprintKey(item && item.key) || (item && item.key) || '未命名蓝图';
     }
 
+    function blueprintNameParts(item) {
+        item = overlayListItemLocalizedName(item);
+        var zh = blueprintDisplayName(item);
+        var en = String((item && item.name_en) || '').trim();
+        if (!en || en === zh || isPlaceholderBlueprintName(en)) en = '';
+        return { zh: zh, en: en };
+    }
+
+    function blueprintNameHtml(item, query, blockEn) {
+        var parts = blueprintNameParts(item);
+        var zhHtml = query ? highlightSearchMatch(parts.zh, query) : escapeHtml(parts.zh);
+        if (!parts.en) return zhHtml;
+        var enHtml = query ? highlightSearchMatch(parts.en, query) : escapeHtml(parts.en);
+        return zhHtml + '<span class="bp-name-en' + (blockEn ? ' bp-name-en--block' : '') + '">' + enHtml + '</span>';
+    }
+
     function blueprintLabel(item) {
         var parts = [blueprintDisplayName(item)];
         var usageGrade = formatUsageGrade(item);
@@ -1176,7 +1192,7 @@
             btn.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
             var name = document.createElement('span');
             name.className = 'bp-search-suggest__name';
-            name.innerHTML = highlightSearchMatch(blueprintDisplayName(item), query);
+            name.innerHTML = blueprintNameHtml(item, query, false);
             btn.appendChild(name);
             var meta = blueprintSuggestMeta(item);
             if (meta) {
@@ -2083,7 +2099,7 @@
         var idx = blueprintIndexById(id);
         var item = idx >= 0 ? state.items[idx] : null;
         if (!item) return;
-        if (el.outputName) el.outputName.textContent = blueprintDisplayName(item);
+        if (el.outputName) el.outputName.innerHTML = blueprintNameHtml(item);
         if (el.outputSub) {
             el.outputSub.textContent = blueprintOutputSubParts(item).join(' · ') || '—';
         }
@@ -2526,7 +2542,7 @@
         options = options || {};
         var bp = state.blueprint;
         if (!bp) return;
-        if (el.outputName) el.outputName.textContent = blueprintDisplayName(bp);
+        if (el.outputName) el.outputName.innerHTML = blueprintNameHtml(bp);
         if (el.outputSub) {
             el.outputSub.textContent = blueprintOutputSubParts(bp).join(' · ') || '—';
         }
@@ -3350,6 +3366,14 @@
         });
     }
 
+    function materialNameHtml(ing) {
+        var zh = (ing && ing.name_zh) || '';
+        var en = (ing && ing.name) || '';
+        if (!zh) return escapeHtml(en);
+        if (!en || en === zh) return escapeHtml(zh);
+        return escapeHtml(zh) + '<span class="bp-mat__name-en">' + escapeHtml(en) + '</span>';
+    }
+
     function buildMaterialRow(ing) {
         var val = state.qualities[ing.key] != null ? state.qualities[ing.key] : defaultQuality();
         var pct = Math.max(0, Math.min(100, val / 10));
@@ -3366,6 +3390,7 @@
                   ? '×' + ing.quantity
                   : '';
         var roleName = resolveRoleLabelZh(ing);
+        var nameHtml = materialNameHtml(ing);
         var hasMods = (ing.stat_modifiers || []).length > 0;
         var modsBlockHtml = hasMods
             ? '<div class="bp-mat__mods-wrap">' +
@@ -3385,7 +3410,7 @@
                 '<div class="bp-mat__material">' +
                 '<span class="bp-mat__mat-label">材料</span>' +
                 '<span class="bp-mat__name">' +
-                escapeHtml(ing.name_zh || ing.name) +
+                nameHtml +
                 '</span>' +
                 '<span class="bp-mat__qty">' +
                 escapeHtml(qty) +
@@ -3416,7 +3441,7 @@
             row.innerHTML =
                 '<div class="bp-mat__top">' +
                 '<span class="bp-mat__name">' +
-                escapeHtml(ing.name_zh || ing.name) +
+                nameHtml +
                 '</span>' +
                 '<span class="bp-mat__qty">' +
                 escapeHtml(qty) +
@@ -3502,7 +3527,7 @@
                   : '';
         var roleName = resolveRoleLabelZh(ing);
         var nameEl = row.querySelector('.bp-mat__name');
-        if (nameEl) nameEl.textContent = ing.name_zh || ing.name;
+        if (nameEl) nameEl.innerHTML = materialNameHtml(ing);
         var qtyEl = row.querySelector('.bp-mat__qty');
         if (qtyEl) qtyEl.textContent = qty;
         var roleNameEl = row.querySelector('.bp-mat__role-name');

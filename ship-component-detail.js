@@ -872,7 +872,7 @@
     function renderSpecSectionHtml(section, item) {
         if (
             section.title === '属性修正' &&
-            (item.type === 'mining_laser' || item.type === 'ship_module')
+            item.type === 'ship_module'
         ) {
             var tagsHtml = renderModifierTagsHtml(item);
             if (tagsHtml) {
@@ -1028,9 +1028,29 @@
         }
     }
 
+    function purchaseLocationSortKey(loc) {
+        if (!loc) return '';
+        if (loc.star_system_zh) return String(loc.star_system_zh).trim();
+        var label = String(loc.location_label_zh || '').split(/\s*[·•]\s*/)[0];
+        return String(label || '').trim();
+    }
+
+    function sortPurchaseLocations(locs) {
+        return (locs || []).slice().sort(function (a, b) {
+            var system = purchaseLocationSortKey(a).localeCompare(purchaseLocationSortKey(b), 'zh-CN');
+            if (system) return system;
+            var fields = ['planet_zh', 'city_zh', 'moon_zh', 'outpost_zh', 'space_station_zh', 'terminal_name_zh'];
+            for (var i = 0; i < fields.length; i++) {
+                var diff = String((a && a[fields[i]]) || '').localeCompare(String((b && b[fields[i]]) || ''), 'zh-CN');
+                if (diff) return diff;
+            }
+            return 0;
+        });
+    }
+
     function renderLocations(item) {
         if (!els.locations) return;
-        var locs = item.purchase_locations || [];
+        var locs = sortPurchaseLocations(item.purchase_locations || []);
         if (!locs.length) {
             els.locations.innerHTML = '<p class="sc-detail-empty">暂无购买地点数据</p>';
             return;

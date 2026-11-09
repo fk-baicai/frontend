@@ -10254,11 +10254,24 @@ a.community-author-avatar-link:focus-visible {
  grid-column: 1;
  grid-row: 3;
  }
+ #home-funding-section.home-exec-hangar-section {
+ padding-left: 0;
+ padding-right: 0;
+ }
+ #home-funding-section .rsi-funding-panel {
+ padding: 0.85rem 0.7rem 0.7rem;
+ border-radius: 0;
+ border-left: none;
+ border-right: none;
+ }
  .rsi-funding-chart-frame {
  grid-column: 1;
  grid-row: 4;
- min-height: 260px;
- padding: 8px 8px 2px 6px;
+ min-height: 0;
+ padding: 4px 0 2px;
+ }
+ .rsi-funding-chart-svg {
+ height: 300px;
  }
 
  .rsi-funding-page-body .rsi-funding-chart-frame {

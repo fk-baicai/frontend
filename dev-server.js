@@ -4,6 +4,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { URL } = require('url');
 
 const ROOT = __dirname;
@@ -120,10 +121,19 @@ function serveStatic(req, res) {
     }
 
     const ext = path.extname(filePath).toLowerCase();
-    res.writeHead(200, {
+    const stat = fs.statSync(filePath);
+    const etag = '"' + crypto.createHash('sha1').update(stat.mtimeMs + ':' + stat.size).digest('hex') + '"';
+    const headers = {
         'Content-Type': MIME[ext] || 'application/octet-stream',
-        'Cache-Control': 'no-store',
-    });
+        'Cache-Control': 'no-cache',
+        ETag: etag,
+    };
+    if (req.headers['if-none-match'] === etag) {
+        res.writeHead(304, headers);
+        res.end();
+        return;
+    }
+    res.writeHead(200, headers);
     fs.createReadStream(filePath).pipe(res);
 }
 

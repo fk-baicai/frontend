@@ -247,10 +247,10 @@
         var compact =
             typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches;
         var width = 760;
-        var height = compact ? (mobile ? 230 : 250) : 260;
-        var padL = mobile ? 14 : 18;
-        var padR = mobile ? 12 : 16;
-        var padT = mobile ? 42 : 46;
+        var height = compact ? (mobile ? 300 : 250) : 260;
+        var padL = mobile ? 8 : 18;
+        var padR = mobile ? 8 : 16;
+        var padT = mobile ? 36 : 46;
         var padB = mobile ? 26 : 32;
         var axisOffset = mobile ? 12 : 10;
         var axisFont = mobile ? 14 : compact ? 12 : 11;
@@ -342,33 +342,65 @@
                 '" class="rsi-funding-chart-grid"/>';
         }
 
+        var pointGap = list.length > 1 ? innerW / (list.length - 1) : innerW;
+        var maxIndex = 0;
+        list.forEach(function (p, i) {
+            if ((Number(p.raised) || 0) > (Number(list[maxIndex].raised) || 0)) maxIndex = i;
+        });
+        var shownLabels = Object.create(null);
+        function labelY(i) {
+            return yAt(Number(list[i].raised) || 0);
+        }
+        function labelConflicts(i) {
+            var x = xAt(i);
+            var y = labelY(i);
+            var keys = Object.keys(shownLabels);
+            for (var k = 0; k < keys.length; k++) {
+                var other = Number(keys[k]);
+                if (Math.abs(xAt(other) - x) < 58 && Math.abs(labelY(other) - y) < 18) return true;
+            }
+            return false;
+        }
+        function keepLabel(i, force) {
+            if (shownLabels[i]) return;
+            if (!force && labelConflicts(i)) return;
+            shownLabels[i] = true;
+        }
+        keepLabel(maxIndex, true);
+        keepLabel(0, false);
+        keepLabel(list.length - 1, false);
+        for (var li = 0; li < list.length; li++) keepLabel(li, false);
         var dots = list
             .map(function (p, i) {
                 var x = xAt(i);
                 var y = yAt(Number(p.raised) || 0);
                 var label = formatAxisLabel(p, period);
+                var showValue = !!shownLabels[i];
                 var deltaLabel = '';
-                if (p.diff != null) {
+                var valueLabel = '';
+                if (showValue && p.diff != null && pointGap >= 96) {
                     var deltaClass = p.diff > 0 ? 'is-up' : p.diff < 0 ? 'is-down' : '';
                     deltaLabel =
                         '<text x="' +
                         x +
                         '" y="' +
-                        (y - 24) +
+                        (y - 22) +
                         '" class="rsi-funding-chart-pct ' +
                         deltaClass +
                         '" text-anchor="middle">' +
-                        formatUsdSigned(p.diff) +
+                        formatUsdCompact(p.diff) +
                         '</text>';
                 }
-                var valueLabel =
-                    '<text x="' +
-                    x +
-                    '" y="' +
-                    (y - 10) +
-                    '" class="rsi-funding-chart-value" text-anchor="middle">' +
-                    formatUsdCompact(p.raised) +
-                    '</text>';
+                if (showValue) {
+                    valueLabel =
+                        '<text x="' +
+                        x +
+                        '" y="' +
+                        (y - 8) +
+                        '" class="rsi-funding-chart-value" text-anchor="middle">' +
+                        formatUsdCompact(p.raised) +
+                        '</text>';
+                }
                 var anchor = 'middle';
                 var labelX = x;
                 if (i === 0) {
