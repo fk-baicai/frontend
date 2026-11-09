@@ -32,7 +32,10 @@
 
     function formatDisplayVolumeScuFromRaw(v) {
         if (v == null || !Number.isFinite(Number(v))) return '—';
-        return formatDisplayNumber(Number(v) / 1000000, ' SCU');
+        var raw = Number(v);
+        var scu = raw / 1000000;
+        if (raw !== 0 && Math.abs(scu) < 0.01) return formatDisplayNumber(raw, ' µSCU');
+        return formatDisplayNumber(scu, ' SCU');
     }
 
     function formatDisplayScu(v) {

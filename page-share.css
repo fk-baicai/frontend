@@ -38,6 +38,46 @@
     cursor: progress;
 }
 
+.uss-share-btn.uss-share-btn--float {
+    position: fixed;
+    top: auto;
+    right: 18px;
+    bottom: 18px;
+    z-index: 40;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid rgba(142, 224, 255, 0.35);
+    background: rgba(14, 41, 67, 0.38);
+    box-shadow: none;
+    color: rgba(232, 244, 255, 0.88);
+    opacity: 0.72;
+}
+
+.uss-share-btn.uss-share-btn--float:hover {
+    opacity: 1;
+    background: rgba(14, 41, 67, 0.72);
+    border-color: rgba(142, 224, 255, 0.7);
+}
+
+.bp-hero__actions > .uss-share-btn {
+    position: static;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: #5ee9ff;
+}
+
+.bp-hero__actions > .uss-share-btn svg {
+    width: 1.05rem;
+    height: 1.05rem;
+}
+
 .sc-detail-page .sc-detail-back > .uss-share-btn--nav {
     position: static;
     width: 1.55rem;

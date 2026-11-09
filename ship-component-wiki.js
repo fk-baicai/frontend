@@ -2070,30 +2070,25 @@
         return rows;
     }
 
+    function pushBarrelEffect(rows, label, mult, beneficialWhen) {
+        var text = barrelSignedPercent(mult);
+        if (!text) return;
+        rows.push({ label: label, value: text, tone: barrelEffectTone(mult, beneficialWhen) });
+    }
+
     function rowsFromBarrelAttachment(item) {
         var rows = [];
-        var stab = getBarrelStabilizer(item);
-        if (stab) {
-            rows = rows.concat(
-                rowsFromWikiObject(
-                    stab,
-                    [
-                        'spread',
-                        'spread_change',
-                        'aim_recoil',
-                        'aim_recoil_change',
-                        'projectile_speed',
-                        'projectile_speed_change',
-                        'visual_recoil',
-                        'visual_recoil_change',
-                    ],
-                    'attachment_barrel'
-                )
-            );
-        }
-        var wm = item.wiki_fields && item.wiki_fields.weapon_modifier;
-        rows = appendBarrelModifierRows(rows, wm);
-        return dedupeWikiDetailRows(rows);
+        var base = getWeaponModifierBase(item) || {};
+        var wm = getBarrelWeaponModifier(item);
+        pushBarrelEffect(rows, '伤害', getBarrelDamageMultiplier(item), 'higher');
+        pushBarrelEffect(rows, '射速', getBarrelFireRateMultiplier(item), 'higher');
+        pushBarrelEffect(rows, '后坐力', getBarrelRecoilMultiplier(item), 'lower');
+        if (wm && wm.recoil) pushBarrelEffect(rows, '后坐力恢复', wm.recoil.decay_multiplier, 'higher');
+        pushBarrelEffect(rows, '散布', getBarrelSpreadMultiplier(item), 'lower');
+        pushBarrelEffect(rows, '声响范围', getBarrelSoundMultiplier(item), 'lower');
+        pushBarrelEffect(rows, '枪口焰', base.muzzle_flash_multiplier, 'lower');
+        pushBarrelEffect(rows, '弹速', base.projectile_speed_multiplier, 'higher');
+        return rows;
     }
 
     function rowsFromBottomAttachment(item) {
@@ -2332,32 +2327,37 @@
         return tags;
     }
 
+    function barrelSignedPercent(mult) {
+        if (mult == null || mult === '') return null;
+        var n = Number(mult);
+        if (!Number.isFinite(n) || Math.abs(n - 1) < 0.0005) return null;
+        var pct = Math.round((n - 1) * 1000) / 10;
+        var body = pct % 1 === 0 ? String(pct) : pct.toFixed(1);
+        return (pct > 0 ? '+' : '') + body + '%';
+    }
+
+    function barrelEffectTone(mult, beneficialWhen) {
+        var n = Number(mult);
+        if (!Number.isFinite(n) || n === 1) return 'neutral';
+        if (beneficialWhen === 'lower') return n < 1 ? 'good' : 'bad';
+        return n > 1 ? 'good' : 'bad';
+    }
+
     function formatBarrelStatTag(label, num, beneficialWhen) {
         if (num == null || num === '' || !Number.isFinite(Number(num))) return null;
-        var n = Number(num);
-        if (n === 1) return null;
-        var text = formatWikiScalar(n);
-        if (text == null) return null;
-        var tone = 'neutral';
-        if (beneficialWhen === 'lower') tone = n < 1 ? 'good' : 'bad';
-        else if (beneficialWhen === 'higher') tone = n > 1 ? 'good' : 'bad';
-        return { label: label, text: text, tone: tone, raw: n };
+        var text = barrelSignedPercent(num);
+        if (!text) return null;
+        return { label: label, text: text, tone: barrelEffectTone(num, beneficialWhen), raw: Number(num) };
     }
 
     function formatBarrelDamageTag(item) {
         var base = getWeaponModifierBase(item);
         if (base) {
             if (base.damage_change != null && base.damage_change !== 0) {
-                var change = Number(base.damage_change);
-                return {
-                    label: '伤害修正',
-                    text: formatWikiFieldDisplay('damage_change', change),
-                    tone: change > 0 ? 'good' : 'bad',
-                    raw: change,
-                };
+                return formatBarrelStatTag('伤害', 1 + Number(base.damage_change), 'higher');
             }
             if (base.damage_multiplier != null && base.damage_multiplier !== 1) {
-                return formatBarrelStatTag('伤害修正', base.damage_multiplier, 'higher');
+                return formatBarrelStatTag('伤害', base.damage_multiplier, 'higher');
             }
         }
         return null;
@@ -2367,16 +2367,10 @@
         var base = getWeaponModifierBase(item);
         if (base) {
             if (base.fire_rate_change != null && base.fire_rate_change !== 0) {
-                var change = Number(base.fire_rate_change);
-                return {
-                    label: '射速修正',
-                    text: formatWikiFieldDisplay('fire_rate_change', change),
-                    tone: change > 0 ? 'good' : 'bad',
-                    raw: change,
-                };
+                return formatBarrelStatTag('射速', 1 + Number(base.fire_rate_change), 'higher');
             }
             if (base.fire_rate_multiplier != null && base.fire_rate_multiplier !== 1) {
-                return formatBarrelStatTag('射速系数', base.fire_rate_multiplier, 'higher');
+                return formatBarrelStatTag('射速', base.fire_rate_multiplier, 'higher');
             }
         }
         return null;
@@ -2422,7 +2416,10 @@
 
         var base = getWeaponModifierBase(item);
         if (base && base.sound_radius_multiplier != null && base.sound_radius_multiplier !== 1) {
-            pushTag(formatBarrelStatTag('声响系数', base.sound_radius_multiplier, 'lower'));
+            pushTag(formatBarrelStatTag('声响', base.sound_radius_multiplier, 'lower'));
+        }
+        if (base && base.muzzle_flash_multiplier != null && base.muzzle_flash_multiplier !== 1) {
+            pushTag(formatBarrelStatTag('枪口焰', base.muzzle_flash_multiplier, 'lower'));
         }
 
         return tags;
@@ -3229,42 +3226,47 @@
         attachment_barrel: [
             {
                 key: 'wiki_att_damage',
-                label: '伤害系数',
+                label: '伤害',
                 get: function (item) {
                     var val = getBarrelDamageMultiplier(item);
-                    return val != null ? formatWikiScalar(val) : null;
+                    var text = barrelSignedPercent(val);
+                    return text ? { text: text, tone: barrelEffectTone(val, 'higher') } : null;
                 },
             },
             {
                 key: 'wiki_att_fire_rate',
-                label: '射速系数',
+                label: '射速',
                 get: function (item) {
                     var val = getBarrelFireRateMultiplier(item);
-                    return val != null ? formatWikiScalar(val) : null;
+                    var text = barrelSignedPercent(val);
+                    return text ? { text: text, tone: barrelEffectTone(val, 'higher') } : null;
                 },
             },
             {
                 key: 'wiki_att_sound',
-                label: '声响系数',
+                label: '声响',
                 get: function (item) {
                     var val = getBarrelSoundMultiplier(item);
-                    return val != null ? formatWikiScalar(val) : null;
+                    var text = barrelSignedPercent(val);
+                    return text ? { text: text, tone: barrelEffectTone(val, 'lower') } : null;
                 },
             },
             {
                 key: 'wiki_att_recoil',
-                label: '后坐力系数',
+                label: '后坐力',
                 get: function (item) {
                     var val = getBarrelRecoilMultiplier(item);
-                    return val != null ? formatWikiScalar(val) : null;
+                    var text = barrelSignedPercent(val);
+                    return text ? { text: text, tone: barrelEffectTone(val, 'lower') } : null;
                 },
             },
             {
                 key: 'wiki_att_spread',
-                label: '散布系数',
+                label: '散布',
                 get: function (item) {
                     var val = getBarrelSpreadMultiplier(item);
-                    return val != null ? formatWikiScalar(val) : null;
+                    var text = barrelSignedPercent(val);
+                    return text ? { text: text, tone: barrelEffectTone(val, 'lower') } : null;
                 },
             },
             {
@@ -3286,7 +3288,8 @@
                 get: function (item) {
                     var base = getWeaponModifierBase(item);
                     if (!base || base.muzzle_flash_multiplier == null || base.muzzle_flash_multiplier === 1) return null;
-                    return formatWikiScalar(base.muzzle_flash_multiplier);
+                    var text = barrelSignedPercent(base.muzzle_flash_multiplier);
+                    return text ? { text: text, tone: barrelEffectTone(base.muzzle_flash_multiplier, 'lower') } : null;
                 },
             },
         ],

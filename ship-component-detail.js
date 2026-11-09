@@ -508,13 +508,18 @@
         return String(text == null ? '' : text).replace(/\.00(?!\d)/g, '');
     }
 
-    function renderFieldCell(label, value, emphasis) {
+    function renderFieldCell(label, value, emphasis, tone) {
+        var valueClass = 'sc-mission-field-value';
+        if (tone === 'good') valueClass += ' is-mod-good';
+        if (tone === 'bad') valueClass += ' is-mod-bad';
         return (
             '<div class="sc-mission-field' +
             (emphasis ? ' sc-mission-field--emphasis' : '') +
             '"><span class="sc-mission-field-label">' +
             escapeHtml(label) +
-            '</span><span class="sc-mission-field-value">' +
+            '</span><span class="' +
+            valueClass +
+            '">' +
             escapeHtml(trimTrailingDotZeroZero(value)) +
             '</span></div>'
         );
@@ -523,7 +528,7 @@
     function renderFieldGridHtml(rows) {
         return (rows || [])
             .map(function (row) {
-                return renderFieldCell(row.label, row.value, !!row.emphasis);
+                return renderFieldCell(row.label, row.value, !!row.emphasis, row.tone);
             })
             .join('');
     }

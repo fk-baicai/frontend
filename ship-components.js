@@ -12,7 +12,7 @@
         ''
     ).replace(/\/$/, '');
     var PAGE_SIZE = 20;
-    var ARMOR_PAGE_SIZE = 100;
+    var ARMOR_PAGE_SIZE = 1000;
     var LOAD_MORE_ROOT_MARGIN = 240;
     var GROUP_META = IS_EQUIPMENT_PAGE
         ? {
@@ -29,7 +29,7 @@
               fps_magazine: {
                   label_zh: '武器配件',
                   kicker: 'ATTACHMENTS',
-                  lead: ['弹匣', '瞄具', '枪口', '下挂', '实用配件', '发射器导弹', '其他配件'],
+                  lead: ['弹匣', '瞄具', '枪口', '下挂', '实用配件', '其他配件'],
               },
           }
         : {
@@ -104,7 +104,6 @@
                   'attachment_barrel',
                   'attachment_bottom',
                   'attachment_utility',
-                  'attachment_missile',
                   'attachment_other',
               ],
           }
@@ -165,7 +164,9 @@
     };
 
     function isBrowsableTypeKey(typeKey) {
-        return !LEGACY_AGGREGATE_TYPES[typeKey];
+        if (LEGACY_AGGREGATE_TYPES[typeKey]) return false;
+        if (IS_EQUIPMENT_PAGE && typeKey === 'attachment_missile') return false;
+        return true;
     }
 
     function isFpsGroupKey(groupKey) {
@@ -2173,11 +2174,9 @@
             'name',
             'type',
             'wiki_att_damage',
-            'wiki_att_fire_rate',
-            'wiki_att_sound',
             'wiki_att_recoil',
             'wiki_att_spread',
-            'wiki_att_proj_speed',
+            'wiki_att_sound',
             'wiki_att_muzzle',
             'mfg',
             'price',
@@ -2332,7 +2331,9 @@
     }
 
     function getPageSize() {
-        if (IS_EQUIPMENT_PAGE && state.group === 'fps_armor') return ARMOR_PAGE_SIZE;
+        if (IS_EQUIPMENT_PAGE && (state.group === 'fps_armor' || state.group === 'fps_weapon' || state.group === 'fps_magazine')) {
+            return ARMOR_PAGE_SIZE;
+        }
         return PAGE_SIZE;
     }
 
@@ -2809,7 +2810,9 @@
         if (!wcol) return null;
         if (typeof wcol.sortGet === 'function') return wcol.sortGet;
         return function (item) {
-            return parseWikiSortValue(wcol.get(item));
+            var val = wcol.get(item);
+            if (val && typeof val === 'object') val = val.text;
+            return parseWikiSortValue(val);
         };
     }
 
@@ -3806,53 +3809,52 @@
 
     function getVariantNameParts(name) {
         var s = String(name || '').trim();
-        if (!s) return { base: '', suffix: '' };
+        if (!s) return { base: '', suffix: '', explicit: false, speculative: '' };
         var paren = s.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
-        if (paren) return { base: paren[1].trim(), suffix: paren[2].trim() };
+        if (paren) return { base: paren[1].trim(), suffix: paren[2].trim(), explicit: true, speculative: '' };
         var edition = s.match(/^(.+?)\s+(.+)\s+Edition$/i);
-        if (edition) return { base: edition[1].trim(), suffix: edition[2].trim() + ' Edition' };
+        if (edition) return { base: edition[1].trim(), suffix: edition[2].trim() + ' Edition', explicit: true, speculative: '' };
         var camo = s.match(/^(.+?)\s+(.+)\s+Camo$/i);
-        if (camo) return { base: camo[1].trim(), suffix: camo[2].trim() + ' Camo' };
+        if (camo) return { base: camo[1].trim(), suffix: camo[2].trim() + ' Camo', explicit: true, speculative: '' };
         var zhQuoted = s.match(/^(.+?)\s+[“"](.+?)[”"]\s*$/);
-        if (zhQuoted) return { base: zhQuoted[1].trim(), suffix: zhQuoted[2].trim() };
+        if (zhQuoted) return { base: zhQuoted[1].trim(), suffix: zhQuoted[2].trim(), explicit: true, speculative: '' };
         var enQuoted = s.match(/^(.+?)\s+"(.+?)"\s+(\S+)$/i);
-        if (enQuoted) return { base: enQuoted[1].trim() + ' ' + enQuoted[3].trim(), suffix: enQuoted[2].trim() };
+        if (enQuoted) return { base: enQuoted[1].trim() + ' ' + enQuoted[3].trim(), suffix: enQuoted[2].trim(), explicit: true, speculative: '' };
         var zhTypeTail = s.match(new RegExp('^(.+?)\\s+(.+)\\s+(' + WEAPON_TYPE_ZH_FOR_NAME + ')\\s*$'));
-        if (zhTypeTail) {
-            return { base: zhTypeTail[1].trim() + ' ' + zhTypeTail[3].trim(), suffix: zhTypeTail[2].trim() };
-        }
         var enTypeTail = s.match(new RegExp('^(.+?)\\s+(.+)\\s+(' + WEAPON_TYPE_EN_FOR_NAME + ')\\s*$', 'i'));
-        if (enTypeTail) {
-            return { base: enTypeTail[1].trim() + ' ' + enTypeTail[3].trim(), suffix: enTypeTail[2].trim() };
-        }
+        var speculative = '';
+        if (zhTypeTail) speculative = zhTypeTail[1].trim() + ' ' + zhTypeTail[3].trim();
+        else if (enTypeTail) speculative = enTypeTail[1].trim() + ' ' + enTypeTail[3].trim();
         var zhArmor = s.match(/^(.+?\s+(?:头盔|胸甲|腿甲|臂甲|护甲|背包))\s+(.+)$/);
-        if (zhArmor) return { base: zhArmor[1].trim(), suffix: zhArmor[2].trim() };
+        if (zhArmor) return { base: zhArmor[1].trim(), suffix: zhArmor[2].trim(), explicit: true, speculative: speculative };
         var zhFlightSuit = s.match(/^(.+?\s+飞行服)\s+(.+)$/);
-        if (zhFlightSuit) return { base: zhFlightSuit[1].trim(), suffix: zhFlightSuit[2].trim() };
+        if (zhFlightSuit) return { base: zhFlightSuit[1].trim(), suffix: zhFlightSuit[2].trim(), explicit: true, speculative: speculative };
         var zhWeapon = s.match(
             new RegExp('^(.+?\\s+(?:' + WEAPON_TYPE_ZH_FOR_NAME + '))\\s+(.+)$')
         );
-        if (zhWeapon) return { base: zhWeapon[1].trim(), suffix: zhWeapon[2].trim() };
+        if (zhWeapon) return { base: zhWeapon[1].trim(), suffix: zhWeapon[2].trim(), explicit: true, speculative: speculative };
         var zhArmorVariant = s.match(/^(.+?\s+(?:头盔|胸甲|腿甲|臂甲|护甲|背包))(?:\s+(.+))?$/);
-        if (zhArmorVariant && zhArmorVariant[2]) return { base: zhArmorVariant[1].trim(), suffix: zhArmorVariant[2].trim() };
+        if (zhArmorVariant && zhArmorVariant[2]) return { base: zhArmorVariant[1].trim(), suffix: zhArmorVariant[2].trim(), explicit: true, speculative: speculative };
         var zhShotgun = s.match(/^(.+?霰弹枪)\s+(.+)$/);
-        if (zhShotgun) return { base: zhShotgun[1].trim(), suffix: zhShotgun[2].trim() };
+        if (zhShotgun) return { base: zhShotgun[1].trim(), suffix: zhShotgun[2].trim(), explicit: true, speculative: speculative };
         var enArmor = s.match(/^(.+\s+(?:Helmet|Backpack|Torso|Legs|Arms|Core|Vest|Undersuit))(?:\s+(.+))?$/i);
-        if (enArmor && enArmor[2]) return { base: enArmor[1].trim(), suffix: enArmor[2].trim() };
+        if (enArmor && enArmor[2]) return { base: enArmor[1].trim(), suffix: enArmor[2].trim(), explicit: true, speculative: speculative };
         var enFlightSuit = s.match(/^(.+\s+Flight\s+Suit)\s+(.+)$/i);
-        if (enFlightSuit) return { base: enFlightSuit[1].trim(), suffix: enFlightSuit[2].trim() };
+        if (enFlightSuit) return { base: enFlightSuit[1].trim(), suffix: enFlightSuit[2].trim(), explicit: true, speculative: speculative };
         var enWeapon = s.match(
             new RegExp(
                 '^(.+\\s+(?:' + WEAPON_TYPE_EN_FOR_NAME + '))\\s+(.+)$',
                 'i'
             )
         );
-        if (enWeapon) return { base: enWeapon[1].trim(), suffix: enWeapon[2].trim() };
+        if (enWeapon) return { base: enWeapon[1].trim(), suffix: enWeapon[2].trim(), explicit: true, speculative: speculative };
         var parts = s.split(/\s+/);
-        if (parts.length < 3) return { base: s, suffix: '' };
+        if (parts.length < 3) return { base: s, suffix: '', explicit: false, speculative: speculative };
         return {
             base: parts.slice(0, -1).join(' '),
             suffix: parts[parts.length - 1],
+            explicit: false,
+            speculative: speculative,
         };
     }
 
@@ -3864,14 +3866,133 @@
         return new RegExp('(?:' + alts + ')\\s*$', flags).test(s);
     }
 
-    function armorVariantGroupKey(item, slugCatalog, brandAnchorCounts) {
+    function armorLineBase(name) {
+        var s = String(name || '').trim();
+        if (!s) return '';
+        var re = /(?:头盔|胸甲|腿甲|臂甲|护甲|背包|飞行服)/g;
+        var last = null;
+        var match;
+        while ((match = re.exec(s))) last = match;
+        if (!last) return '';
+        return s.slice(0, last.index + last[0].length).trim();
+    }
+
+    function variantTypeWords() {
+        return (WEAPON_TYPE_ZH_FOR_NAME + '|步枪|匕首|工具|测距仪|医疗设备|牵引光束|发射器')
+            .split('|')
+            .filter(Boolean)
+            .sort(function (a, b) {
+                return b.length - a.length;
+            });
+    }
+
+    function normalizeVariantLabel(name) {
+        var s = String(name || '')
+            .trim()
+            .replace(/[“”"「」]/g, ' ')
+            .replace(/[()（）]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        variantTypeWords().forEach(function (word) {
+            s = s.replace(new RegExp('([^\\s])(' + word + ')', 'g'), '$1 $2');
+        });
+        return s.replace(/\s+/g, ' ').trim();
+    }
+
+    function stripVariantQuotes(name) {
+        return String(name || '')
+            .replace(/\s*[“"「『][^”"」』]+[”"」』]\s*/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function variantEnGroup(nameEn, skins) {
+        var exact = String(nameEn || '').trim();
+        if (!exact || !skins) return '';
+        var stripped = stripVariantQuotes(exact);
+        if (stripped && skins[stripped] && stripped !== exact) return stripped;
+        if (skins[exact]) return exact;
+        return '';
+    }
+
+    function variantLabelGroup(name, labels) {
+        var normalized = normalizeVariantLabel(name);
+        if (!normalized || !labels) return '';
+        var best = '';
+        Object.keys(labels).forEach(function (label) {
+            if (!label || label.length >= normalized.length || label.length <= best.length) return;
+            if (normalized.indexOf(label + ' ') === 0) best = label;
+        });
+        if (best) return best;
+        var prefix = normalized + ' ';
+        var extended = Object.keys(labels).some(function (label) {
+            return label.indexOf(prefix) === 0;
+        });
+        return extended ? normalized : '';
+    }
+
+    function collectVariantNameBases(items) {
+        var bases = { zh: Object.create(null), en: Object.create(null), labels: Object.create(null), enSkins: Object.create(null) };
+        var fullZh = Object.create(null);
+        var fullEn = Object.create(null);
+        (items || []).forEach(function (item) {
+            var zhName = String((item && item.name_zh) || '').trim();
+            var enName = String((item && item.name_en) || '').trim();
+            if (zhName) fullZh[zhName] = true;
+            if (enName) fullEn[enName] = true;
+            var label = normalizeVariantLabel(zhName);
+            if (label) bases.labels[label] = true;
+        });
+        (items || []).forEach(function (item) {
+            var zh = getVariantNameParts(item && item.name_zh);
+            var en = getVariantNameParts(item && item.name_en);
+            var line = armorLineBase(item && item.name_zh);
+            if (line) bases.zh[line] = true;
+            if (zh.explicit && zh.suffix && zh.base) bases.zh[zh.base] = true;
+            if (en.explicit && en.suffix && en.base) bases.en[en.base] = true;
+            if (zh.speculative && fullZh[zh.speculative]) bases.zh[zh.speculative] = true;
+            if (en.speculative && fullEn[en.speculative]) bases.en[en.speculative] = true;
+            var enName = String((item && item.name_en) || '').trim();
+            var strippedEn = stripVariantQuotes(enName);
+            if (strippedEn && enName && strippedEn !== enName && fullEn[strippedEn]) bases.enSkins[strippedEn] = true;
+        });
+        return bases;
+    }
+
+    function armorVariantGroupKey(item, slugCatalog, brandAnchorCounts, nameBases) {
         if (!item) return '';
+        var line = armorLineBase(item && item.name_zh);
+        if (line) return String(item.type || '') + '\0zh\0' + line;
+        var labelGroup = variantLabelGroup(item && item.name_zh, nameBases && nameBases.labels);
+        if (labelGroup) return String(item.type || '') + '\0label\0' + labelGroup;
+        var enGroup = variantEnGroup(item && item.name_en, nameBases && nameBases.enSkins);
+        if (enGroup) return String(item.type || '') + '\0enlabel\0' + enGroup;
+        var zhParts = getVariantNameParts(item && item.name_zh);
+        var enParts = getVariantNameParts(item && item.name_en);
+        var zhName = String((item && item.name_zh) || '').trim();
+        var enName = String((item && item.name_en) || '').trim();
+        if (zhParts.explicit && zhParts.suffix && zhParts.base) {
+            return String(item.type || '') + '\0zh\0' + zhParts.base;
+        }
+        if (nameBases && zhName && nameBases.zh[zhName]) {
+            return String(item.type || '') + '\0zh\0' + zhName;
+        }
+        if (nameBases && zhParts.speculative && nameBases.zh[zhParts.speculative]) {
+            return String(item.type || '') + '\0zh\0' + zhParts.speculative;
+        }
+        if (enParts.explicit && enParts.suffix && enParts.base) {
+            return String(item.type || '') + '\0en\0' + enParts.base;
+        }
+        if (nameBases && enName && nameBases.en[enName]) {
+            return String(item.type || '') + '\0en\0' + enName;
+        }
+        if (nameBases && enParts.speculative && nameBases.en[enParts.speculative]) {
+            return String(item.type || '') + '\0en\0' + enParts.speculative;
+        }
         var familyKey = resolveArmorSlugFamilyKey(item.slug, slugCatalog, brandAnchorCounts);
         if (familyKey) {
             return String(item.type || '') + '\0slug\0' + familyKey;
         }
-        var zhParts = getVariantNameParts(item && item.name_zh);
-        var enParts = getVariantNameParts(item && item.name_en);
         var zhBase = zhParts.suffix ? zhParts.base : isBareWeaponLineName(item.name_zh, 'zh') ? String(item.name_zh || '').trim() : '';
         var enBase = enParts.suffix ? enParts.base : isBareWeaponLineName(item.name_en, 'en') ? String(item.name_en || '').trim() : '';
         if (!zhParts.suffix && !enParts.suffix && !zhBase && !enBase) return '';
@@ -3879,8 +4000,17 @@
         return String((item && item.type) || '') + '\0name\0' + zhBase + '\0' + enBase;
     }
 
-    function pickArmorVariantLeader(members, slugCatalog, brandAnchorCounts) {
+    function pickArmorVariantLeader(members, slugCatalog, brandAnchorCounts, groupKey) {
         if (!members || !members.length) return null;
+        var keyParts = String(groupKey || '').split('\0');
+        var baseName = keyParts.length >= 3 ? keyParts[2] : '';
+        if (baseName && (keyParts[1] === 'zh' || keyParts[1] === 'en' || keyParts[1] === 'label' || keyParts[1] === 'enlabel')) {
+            for (var n = 0; n < members.length; n++) {
+                var shown = String(keyParts[1] === 'en' || keyParts[1] === 'enlabel' ? members[n].name_en : members[n].name_zh || '').trim();
+                var shownKey = keyParts[1] === 'label' ? normalizeVariantLabel(shown) : shown;
+                if (shownKey === baseName) return members[n];
+            }
+        }
         var familyKey = resolveArmorSlugFamilyKey(members[0] && members[0].slug, slugCatalog, brandAnchorCounts);
         var prefixLeader = null;
         var prefixSlugLen = Infinity;
@@ -3908,9 +4038,10 @@
         if (!isArmorVariantGroupingEnabled()) return;
         var slugCatalog = buildArmorSlugCatalog(items);
         var brandAnchorCounts = buildArmorBrandAnchorCounts(items);
+        var nameBases = collectVariantNameBases(items);
         var groups = Object.create(null);
         (items || []).forEach(function (item) {
-            var key = armorVariantGroupKey(item, slugCatalog, brandAnchorCounts);
+            var key = armorVariantGroupKey(item, slugCatalog, brandAnchorCounts, nameBases);
             if (!key) return;
             if (!groups[key]) groups[key] = [];
             groups[key].push(item);
@@ -3920,7 +4051,7 @@
         Object.keys(groups).forEach(function (key) {
             var members = groups[key];
             if (members.length < 2) return;
-            var leader = pickArmorVariantLeader(members, slugCatalog, brandAnchorCounts);
+            var leader = pickArmorVariantLeader(members, slugCatalog, brandAnchorCounts, key);
             if (!leader) return;
             var leaderId = normalizeItemId(leader.id_item);
             var childCount = 0;
@@ -4529,9 +4660,7 @@
                 tags = wiki.buildMiningModifierTags(item, item.type);
             }
         } else if (item.type === 'attachment_barrel') {
-            if (typeof wiki.buildBarrelModifierTags === 'function') {
-                tags = wiki.buildBarrelModifierTags(item);
-            }
+            tags = [];
         }
         if (!tags.length) return '';
         if (typeof wiki.renderMiningModifierTagsMarkup === 'function') {
@@ -4674,7 +4803,12 @@
                 fillPersonalWeaponDamageCell(td, item);
             } else {
                 var wcol = findWikiColumn(key);
-                td.textContent = wcol ? wcol.get(item) || '—' : '—';
+                var shown = wcol ? wcol.get(item) : null;
+                var tone = shown && typeof shown === 'object' ? shown.tone : '';
+                if (shown && typeof shown === 'object') shown = shown.text;
+                td.textContent = shown || '—';
+                td.classList.toggle('sc-mod-good', tone === 'good');
+                td.classList.toggle('sc-mod-bad', tone === 'bad');
             }
         } else if (key === 'price') {
             td.classList.add('sc-price');
@@ -5137,6 +5271,22 @@
             state.items = mergeItems([], data.items || []);
             state.total = data.total || 0;
             state.hasMore = state.items.length < state.total;
+            var extraPages = 0;
+            while (isArmorVariantGroupingEnabled() && state.hasMore && extraPages < 20) {
+                extraPages += 1;
+                state.page += 1;
+                var moreFetched = await fetchJsonWithRetry(apiUrl('/api/sc/components?' + buildQuery(state.page)), { signal: signal }, {
+                    loadingMessage: '配件索引加载中，请稍候',
+                });
+                var moreItems = (moreFetched.data && moreFetched.data.items) || [];
+                if (!moreItems.length) {
+                    state.hasMore = false;
+                    break;
+                }
+                state.items = mergeItems(state.items, moreItems);
+                if (moreFetched.data && moreFetched.data.total) state.total = moreFetched.data.total;
+                state.hasMore = state.items.length < state.total;
+            }
             syncBodyMode();
             updateSortHeaders();
             if (pendingRestore) applyArmorVariantRestore(readPendingArmorVariantRestoreKeys());
