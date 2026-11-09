@@ -38,6 +38,30 @@
     cursor: progress;
 }
 
+.cg-view-icons > .uss-share-btn {
+    position: static;
+    top: auto;
+    right: auto;
+    z-index: auto;
+    width: 1.85rem;
+    height: 1.85rem;
+    border-radius: 6px;
+    border: 1px solid rgba(95, 184, 255, 0.35);
+    background: rgba(52, 98, 138, 0.94);
+    box-shadow: none;
+    color: #e8f4ff;
+}
+
+.cg-view-icons > .uss-share-btn svg {
+    width: 1.05rem;
+    height: 1.05rem;
+}
+
+.cg-view-icons > .uss-share-btn:hover {
+    border-color: #8ee0ff;
+    color: #fff;
+}
+
 .uss-share-btn.uss-share-btn--float {
     position: fixed;
     top: auto;

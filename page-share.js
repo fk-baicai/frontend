@@ -1004,6 +1004,14 @@
             else host.appendChild(btn);
             return;
         }
+        if (host.classList && host.classList.contains('cg-view')) {
+            var icons = host.querySelector('.cg-view-icons');
+            btn._shareHost = host;
+            btn.classList.add('cg-view-icon');
+            if (icons) icons.appendChild(btn);
+            else host.appendChild(btn);
+            return;
+        }
         if (host.classList && host.classList.contains('sc-view-toggle')) {
             var workspace = document.querySelector('.sc-workspace');
             btn._shareHost = workspace || host;
