@@ -281,7 +281,7 @@
     function detailHref(item) {
         var id = item && item[4] ? String(item[4]).trim() : '';
         if (!id) return '';
-        return 'ship-component-detail?id=' + encodeURIComponent(id);
+        return 'ship-component-detail?id=' + encodeURIComponent(id) + '&from=' + encodeURIComponent(location.pathname + location.search);
     }
     function catButton(key, name, count, extra, toggleId, open) {
         var on = key ? state.cat === key : !state.cat;
@@ -307,6 +307,13 @@
         var jump = href
             ? '<a class="st-detail-jump" href="' + escapeHtml(href) + '" aria-label="打开详细页" title="打开详细页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>'
             : '';
+        var photo = '';
+        var imageId = item[4] ? String(item[4]).trim() : '';
+        if (imageId && item[2] !== 102 && item[2] !== 9001) {
+            photo = '<button type="button" class="st-detail-photo-btn" data-full="' + escapeHtml(apiUrl('/api/sc/components/image/' + encodeURIComponent(imageId) + '?layer=wiki')) + '">' +
+                '<img class="st-detail-photo" src="' + escapeHtml(apiUrl('/api/sc/components/image/' + encodeURIComponent(imageId) + '?layer=wiki&size=thumb')) + '" alt="" onerror="this.parentElement.remove()">' +
+                '</button>';
+        }
         els.detail.innerHTML =
             jump +
             '<p class="st-detail-kicker">QUOTE</p>' +
@@ -314,7 +321,8 @@
             '<div class="st-detail-row"><span>分类</span><strong>' + escapeHtml(cat.sectionZh + ' · ' + cat.nameZh) + '</strong></div>' +
             '<div class="st-detail-row"><span>买入价</span><strong class="st-detail-price">' + money(item[1]) + '</strong></div>' +
             '<div class="st-detail-row"><span>终端</span><strong>' + biHtml(shop.nameZh, shop.name) + '</strong></div>' +
-            '<div class="st-detail-loc"><span class="st-detail-loc-label">位置</span>' + locationLines(shop) + '</div>';
+            '<div class="st-detail-loc"><span class="st-detail-loc-label">位置</span>' + locationLines(shop) + '</div>' +
+            photo;
     }
     function renderKiosk() {
         var shop = shopByCode(state.shop);
@@ -358,12 +366,14 @@
                 var cat = catById[item[2]];
                 return cat && cat.section === section.section;
             }).length;
-            catHtml += catButton(sectionKey, section.sectionZh, sectionCount, '', section.section, open);
+            catHtml += catButton(sectionKey, section.sectionZh, sectionCount, 'st-cat-parent' + (open ? ' is-open' : ''), section.section, open);
             if (!open) return;
+            catHtml += '<div class="st-cat-kids">';
             section.cats.forEach(function (cat) {
                 var count = shop.items.filter(function (item) { return item[2] === cat.id; }).length;
                 catHtml += catButton('c:' + cat.id, cat.nameZh, count, 'st-cat-sub', '', false);
             });
+            catHtml += '</div>';
         });
         els.cats.innerHTML = catHtml;
         if (!rows.length) {
@@ -590,6 +600,17 @@
     }
     bindScrollLock(document.querySelector('.st-kiosk'));
     bindScrollLock(document.querySelector('.st-super'));
+    if (els.detail) {
+        els.detail.addEventListener('click', function (event) {
+            var btn = event.target.closest('.st-detail-photo-btn');
+            if (!btn) return;
+            var src = btn.getAttribute('data-full') || '';
+            if (!src) return;
+            var lb = window.UssCommunityImageLightbox;
+            if (lb && typeof lb.open === 'function') lb.open(src, { by: '' });
+            else window.open(src, '_blank', 'noopener,noreferrer');
+        });
+    }
     els.list.addEventListener('click', function (event) {
         var row = event.target.closest('[data-key]');
         if (!row) return;
@@ -628,7 +649,7 @@
             if (data) renderKiosk();
         })
         .catch(function () {});
-    fetchJson(apiUrl('/api/sc/sales-terminals'), 'sales-terminals-data.json?v=27')
+    fetchJson(apiUrl('/api/sc/sales-terminals'), 'sales-terminals-data.json?v=28')
         .then(function (json) {
             data = json;
             renderSource();

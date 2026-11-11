@@ -187,15 +187,15 @@
             if (prev && prev.status === 'pending' && p.status === 'approved') {
                 alerts.push({
                     kind: 'buyer',
-                    title: '卖家已确认交易',
-                    body: primaryItemName(p.order) + ' 已进入待线下交易',
+                    title: '交易已开始',
+                    body: primaryItemName(p.order) + ' 可以联系卖家了',
                     url: tradesUrl('purchases', p.id),
                 });
             }
             if (prev && prev.status === 'pending' && p.status === 'cancelled' && p.cancelledBy === 'seller') {
                 alerts.push({
                     kind: 'buyer',
-                    title: '卖家拒绝本次提交购买',
+                    title: '卖家已取消这笔交易',
                     body: primaryItemName(p.order) + ' 的购买请求已被拒绝',
                     url: tradesUrl('purchases', p.id),
                 });
@@ -531,8 +531,8 @@
         later(function () {
             push({
                 kind: 'buyer',
-                title: '卖家已确认交易',
-                body: '示例配件 已进入待线下交易',
+                title: '交易已开始',
+                body: '示例配件 可以联系卖家了',
                 url: 'market-trades.html?tab=purchases',
             });
         }, 450);

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卖家主页 · 星巢贸易</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="market.css?v=121">
+    <link rel="icon" href="/favicon.ico">
+    <script src="auth-config.js"></script>
+</head>
+<body class="market-body market-seller-body">
+    <main class="market-main market-seller-main">
+        <div id="sellerPage">
+            <header class="market-seller-head">
+                <a class="market-seller-head__back" href="market.html">返回星巢贸易</a>
+            </header>
+            <div id="sellerProfile" class="market-seller-profile"></div>
+            <div class="market-grid" id="sellerList"></div>
+            <p class="market-empty" id="sellerEmpty" hidden>这位卖家当前没有在售商品。</p>
+        </div>
+    </main>
+    <button type="button" class="uss-share-btn market-page-share" id="sellerShareBtn" aria-label="分享" title="分享">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="6" cy="12" r="2.2"/><circle cx="17" cy="7" r="2.2"/><circle cx="17" cy="17" r="2.2"/><path d="M8 11.2 14.8 8M8 12.8 14.8 16"/></svg>
+    </button>
+    <script src="page-share.js?v=52" defer></script>
+    <script src="market.js?v=103" defer></script>
+    <script src="market-seller.js?v=5" defer></script>
+</body>
+</html>

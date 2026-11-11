@@ -1071,7 +1071,7 @@
 
     function shortSourceLabel(meta) {
         if (!meta) return '—';
-        if (meta.data_source === 'wiki') return 'WIKI百科';
+        if (meta.data_source === 'wiki') return 'Star Citizen Wiki';
         if (meta.data_source === 'uex') return 'UEX';
         if (meta.data_source_label_zh) return meta.data_source_label_zh;
         return '—';
@@ -2029,6 +2029,18 @@
         }
     }
 
+    function safeSameOriginReturn(raw) {
+        if (!raw) return '';
+        try {
+            var url = new URL(String(raw), window.location.href);
+            if (url.origin !== window.location.origin) return '';
+            if (/ship-component-detail/i.test(url.pathname)) return '';
+            return url.pathname + url.search + url.hash;
+        } catch (e) {
+            return '';
+        }
+    }
+
     function resolveListReturnHref(item) {
         var params = new URLSearchParams(window.location.search || '');
         if (isReturningFromBlueprintCrafting(params)) {
@@ -2037,6 +2049,17 @@
             var storedBpCraftHref = readStoredBlueprintCraftReturnHref();
             if (storedBpCraftHref) return storedBpCraftHref;
             return 'blueprint-crafting.html';
+        }
+
+        var fromHref = safeSameOriginReturn(params.get('from'));
+        if (fromHref) return fromHref;
+        var refHref = safeSameOriginReturn(document.referrer);
+        if (refHref) {
+            try {
+                if (!isCatalogListPath(new URL(refHref, window.location.href).pathname)) return refHref;
+            } catch (e2) {
+                return refHref;
+            }
         }
 
         var fromUrl = {
@@ -2116,6 +2139,13 @@
         if (!link || link.dataset.restoreBound === '1') return;
         link.dataset.restoreBound = '1';
         link.addEventListener('click', function (event) {
+            var target = link.getAttribute('href') || '';
+            var refHref = safeSameOriginReturn(document.referrer);
+            if (refHref && target && refHref === target && window.history.length > 1 && !isReturningFromBlueprintCrafting()) {
+                event.preventDefault();
+                history.back();
+                return;
+            }
             if (referrerIsCatalogList() && !isReturningFromBlueprintCrafting()) {
                 event.preventDefault();
                 history.back();
@@ -2136,13 +2166,20 @@
         });
     }
 
+    function backLinkLabel(href) {
+        if (isReturningFromBlueprintCrafting()) return '← 返回制造蓝图';
+        var path = '';
+        try { path = new URL(href || '', window.location.href).pathname; } catch (e) { path = String(href || ''); }
+        if (/sales-terminals/i.test(path)) return '← 返回终端';
+        if (path && !isCatalogListPath(path)) return '← 返回上一页';
+        return '← 返回列表';
+    }
+
     function updateBackLink(item) {
         var link = document.getElementById('scDetailBackLink');
         if (!link) return;
         link.href = resolveListReturnHref(item);
-        link.textContent = isReturningFromBlueprintCrafting()
-            ? '← 返回制造蓝图'
-            : '← 返回列表';
+        link.textContent = backLinkLabel(link.href);
         bindBackLinkRestore();
     }
 
@@ -2150,9 +2187,7 @@
         var link = document.getElementById('scDetailBackLink');
         if (!link) return;
         link.href = resolveListReturnHref(null);
-        link.textContent = isReturningFromBlueprintCrafting()
-            ? '← 返回制造蓝图'
-            : '← 返回列表';
+        link.textContent = backLinkLabel(link.href);
         bindBackLinkRestore();
     }
 

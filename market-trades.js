@@ -9,8 +9,8 @@
     var MAX_PROOF_IMAGE_BYTES = 1024 * 1024;
 
     var PURCHASE_STATUS_LABEL = {
-        pending: '待卖家确认交易',
-        approved: '待线下交易',
+        pending: '进行中',
+        approved: '进行中',
         completed: '已完成',
         cancelled: '已取消',
     };
@@ -27,6 +27,7 @@
         completingPurchaseId: null,
         completeRating: 0,
         highlightPurchaseId: '',
+        closing: {},
     };
 
     var el = {};
@@ -422,36 +423,19 @@
 
     function buildPurchaseActions(p, role) {
         var actions = '';
-        if (p.status === 'pending') {
-            if (role === 'seller') {
-                actions = '<button type="button" class="market-btn market-btn--accent market-trades-btn-approve" data-purchase-id="' + escapeHtml(p.id) + '">确认交易</button>' +
-                    '<button type="button" class="market-btn market-trades-btn-cancel-purchase" data-purchase-id="' + escapeHtml(p.id) + '">拒绝</button>';
-            } else {
-                actions = '<span class="market-trades-wait-hint">等待卖家确认交易</span>' +
-                    '<button type="button" class="market-btn market-trades-btn-cancel-purchase" data-purchase-id="' + escapeHtml(p.id) + '">取消购买</button>';
-            }
-        } else if (p.status === 'approved') {
+        if (p.status === 'pending' || p.status === 'approved') {
             if (role === 'buyer') {
-                var sellerProofHint = p.sellerProofImageUrl
-                    ? '<span class="market-trades-proof-done">卖家交易凭证已上传</span>'
-                    : '<span class="market-trades-wait-hint">等待卖家上传交易凭证…</span>';
-                actions =
-                    proofUploadBtnHtml(p.id, 'transfer', p.buyerTransferProofUrl, '上传转账截图') +
-                    sellerProofHint +
-                    '<button type="button" class="market-btn market-btn--accent market-trades-btn-complete-open" data-purchase-id="' + escapeHtml(p.id) + '">完成交易</button>';
-                if (canCancelPurchase(p, 'buyer')) {
-                    actions += cancelPurchaseBtnHtml(p.id, '取消订单');
+                if (state.closing[p.id] === 'rate') {
+                    actions = finishReviewHtml(p.id);
+                } else {
+                    actions =
+                        '<button type="button" class="market-btn market-trades-btn-chat" data-purchase-id="' + escapeHtml(p.id) + '">联系卖家</button>' +
+                        '<button type="button" class="market-btn market-trades-btn-cancel-purchase" data-purchase-id="' + escapeHtml(p.id) + '">结束交易</button>' +
+                        '<button type="button" class="market-btn market-btn--accent market-trades-btn-finish" data-purchase-id="' + escapeHtml(p.id) + '">完成交易</button>';
                 }
             } else {
-                var autoHint = p.autoCompleteAt
-                    ? '等待买家确认完成（到期将自动成交）'
-                    : '等待买家确认完成（3 天未操作将自动完成）';
-                actions =
-                    proofUploadBtnHtml(p.id, 'seller', p.sellerProofImageUrl, '上传交易凭证') +
-                    '<span class="market-trades-wait-hint">' + autoHint + '</span>';
-                if (canCancelPurchase(p, 'seller')) {
-                    actions += cancelPurchaseBtnHtml(p.id, '取消订单');
-                }
+                actions = '<span class="market-trades-wait-hint">买家已确认购买，可直接沟通。结束与评价由买家操作。</span>' +
+                    '<button type="button" class="market-btn market-trades-btn-chat" data-purchase-id="' + escapeHtml(p.id) + '">联系买家</button>';
             }
         } else if (p.status === 'completed') {
             if (p.completedBy === 'auto') {
@@ -470,12 +454,37 @@
         return actions;
     }
 
+    function starPickerHtml(value) {
+        var n = Math.max(1, Math.min(5, Math.round(Number(value) || 5)));
+        var html = '<div class="market-trades-stars" data-rating="' + n + '" role="slider" aria-valuemin="1" aria-valuemax="5" aria-valuenow="' + n + '" aria-label="星级，可拖动">';
+        html += '<input type="hidden" name="rating" value="' + n + '">';
+        var i;
+        for (i = 1; i <= 5; i++) {
+            html += '<button type="button" data-star="' + i + '"' + (i <= n ? ' class="is-on"' : '') + ' aria-label="' + i + ' 星">★</button>';
+        }
+        return html + '</div>';
+    }
+
+    function finishReviewHtml(purchaseId) {
+        var presets = ['交易顺利，卖家守时', '物品与描述一致', '沟通及时，推荐', '价格合理，交付很快'];
+        return (
+            '<form class="market-trades-review-form" data-purchase-id="' + escapeHtml(purchaseId) + '" data-review-role="buyer" data-finish="1">' +
+            starPickerHtml(5) +
+            '<div class="market-trades-presets">' +
+            presets.map(function (text) {
+                return '<button type="button" class="market-btn market-trades-preset" data-preset="' + escapeHtml(text) + '">' + escapeHtml(text) + '</button>';
+            }).join('') +
+            '</div>' +
+            '<input type="text" name="text" maxlength="200" placeholder="评语，可点上面的默认评语">' +
+            '<button type="submit" class="market-btn market-btn--accent">提交评价并完成</button>' +
+            '</form>'
+        );
+    }
+
     function reviewFormHtml(purchaseId, role) {
         return (
             '<form class="market-trades-review-form" data-purchase-id="' + escapeHtml(purchaseId) + '" data-review-role="' + escapeHtml(role) + '">' +
-            '<label>评分 <select name="rating">' +
-            '<option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>' +
-            '</select></label>' +
+            starPickerHtml(5) +
             '<input type="text" name="text" maxlength="200" placeholder="评价（选填）">' +
             '<button type="submit" class="market-btn market-btn--accent">提交评价</button>' +
             '</form>'
@@ -628,13 +637,9 @@
         var html = '<div class="market-trades-proof-thumbs">';
         if (p.buyerTransferProofUrl) {
             html += proofThumbHtml(p.buyerTransferProofUrl, '买家凭证', p.buyerTransferProofAt);
-        } else {
-            html += '<span class="market-trades-wait-hint">买家凭证未传</span>';
         }
         if (p.sellerProofImageUrl) {
             html += proofThumbHtml(p.sellerProofImageUrl, '卖家凭证', p.sellerProofAt);
-        } else {
-            html += '<span class="market-trades-wait-hint">卖家凭证未传</span>';
         }
         html += '</div>';
         return html;
@@ -666,15 +671,8 @@
         return '购买数量 ×' + escapeHtml(String(qty));
     }
 
-    function purchaseProofSummaryHtml(p, role) {
-        var parts = [];
-        if (role === 'buyer') {
-            parts.push(p.buyerTransferProofUrl ? '转账截图已传' : '转账截图未传');
-            parts.push(p.sellerProofImageUrl ? '卖家凭证已传' : '卖家凭证未传');
-        } else {
-            parts.push(p.sellerProofImageUrl ? '交易凭证已传' : '交易凭证未传');
-        }
-        return '<p class="market-card__purchase-proof">' + escapeHtml(parts.join(' · ')) + '</p>';
+    function purchaseProofSummaryHtml() {
+        return '';
     }
 
     function purchaseCardHtml(p, role) {
@@ -866,24 +864,6 @@
     function openCompleteModal(purchaseId) {
         var purchase = findPurchase(purchaseId);
         if (!purchase) return;
-        if (!purchase.sellerProofImageUrl) {
-            askConfirm({
-                title: '完成交易',
-                message: '须卖家上传交易凭证后才能完成交易',
-                confirmText: '知道了',
-                notice: true,
-            });
-            return;
-        }
-        if (!purchase.buyerTransferProofUrl) {
-            askConfirm({
-                title: '完成交易',
-                message: '请先上传转账截图',
-                confirmText: '知道了',
-                notice: true,
-            });
-            return;
-        }
         state.completingPurchaseId = purchaseId;
         state.completeRating = 0;
         if (el.completeError) el.completeError.hidden = true;
@@ -1013,6 +993,41 @@
                 };
                 reader.readAsDataURL(file);
             });
+            el.panel.addEventListener('pointerdown', function (ev) {
+                var box = ev.target.closest && ev.target.closest('.market-trades-stars');
+                if (!box) return;
+                ev.preventDefault();
+                function ratingAt(event) {
+                    var buttons = box.querySelectorAll('[data-star]');
+                    var n = 1;
+                    var i;
+                    for (i = 0; i < buttons.length; i++) {
+                        if (event.clientX >= buttons[i].getBoundingClientRect().left) n = i + 1;
+                    }
+                    return n;
+                }
+                function paint(n) {
+                    box.setAttribute('aria-valuenow', String(n));
+                    var input = box.querySelector('[name="rating"]');
+                    if (input) input.value = String(n);
+                    var buttons = box.querySelectorAll('[data-star]');
+                    var i;
+                    for (i = 0; i < buttons.length; i++) buttons[i].classList.toggle('is-on', i < n);
+                }
+                paint(ratingAt(ev));
+                if (box.setPointerCapture && ev.pointerId != null) {
+                    try { box.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+                }
+                function move(event) { paint(ratingAt(event)); }
+                function up() {
+                    box.removeEventListener('pointermove', move);
+                    box.removeEventListener('pointerup', up);
+                    box.removeEventListener('pointercancel', up);
+                }
+                box.addEventListener('pointermove', move);
+                box.addEventListener('pointerup', up);
+                box.addEventListener('pointercancel', up);
+            });
             el.panel.addEventListener('submit', function (ev) {
                 var form = ev.target.closest('.market-trades-review-form');
                 if (!form) return;
@@ -1023,9 +1038,11 @@
                 var textEl = form.querySelector('[name="text"]');
                 var rating = Number(ratingEl && ratingEl.value);
                 var text = textEl ? String(textEl.value || '').trim() : '';
-                var body = role === 'seller'
-                    ? { sellerReviewRating: rating, sellerReviewText: text }
-                    : { reviewRating: rating, reviewText: text };
+                var body = form.getAttribute('data-finish') === '1'
+                    ? { status: 'completed', reviewRating: rating, reviewText: text }
+                    : (role === 'seller'
+                        ? { sellerReviewRating: rating, sellerReviewText: text }
+                        : { reviewRating: rating, reviewText: text });
                 patchPurchase(pid, body).then(loadTabData).catch(function (e) {
                     window.alert((e && e.message) || '评价失败');
                 });
@@ -1112,6 +1129,43 @@
                     });
                     return;
                 }
+                var endBtn = ev.target.closest('.market-trades-btn-end');
+                if (endBtn) {
+                    var endId = endBtn.getAttribute('data-purchase-id');
+                    if (endId) state.closing[endId] = 'choose';
+                    renderPanel();
+                    return;
+                }
+                var finishBtn = ev.target.closest('.market-trades-btn-finish');
+                if (finishBtn) {
+                    var finId = finishBtn.getAttribute('data-purchase-id');
+                    if (finId) state.closing[finId] = 'rate';
+                    renderPanel();
+                    return;
+                }
+                var chatBtn = ev.target.closest('.market-trades-btn-chat');
+                if (chatBtn) {
+                    var chatId = chatBtn.getAttribute('data-purchase-id');
+                    var chatPurchase = findPurchase(chatId);
+                    if (window.UssMarketChat && chatPurchase) {
+                        var chatOrder = chatPurchase.order || {};
+                        var chatItem = (chatOrder.items && chatOrder.items[0]) || {};
+                        window.UssMarketChat.open({
+                            purchaseId: chatId,
+                            itemName: chatItem.nameZh || chatItem.name || '交易沟通',
+                            peerName: state.tab === 'incoming' ? (chatPurchase.buyerDisplayName || '') : (chatPurchase.sellerDisplayName || ''),
+                            myRole: state.tab === 'incoming' ? 'seller' : 'buyer',
+                        });
+                    }
+                    return;
+                }
+                var presetBtn = ev.target.closest('.market-trades-preset');
+                if (presetBtn) {
+                    var presetForm = presetBtn.closest('form');
+                    var presetInput = presetForm && presetForm.querySelector('[name="text"]');
+                    if (presetInput) presetInput.value = presetBtn.getAttribute('data-preset') || '';
+                    return;
+                }
                 var approveBtn = ev.target.closest('.market-trades-btn-approve');
                 if (approveBtn) {
                     var pidA = approveBtn.getAttribute('data-purchase-id');
@@ -1141,9 +1195,7 @@
                     var isReject = actionLabel === '拒绝';
                     askConfirm({
                         title: isReject ? '拒绝交易' : '取消订单',
-                        message: isReject
-                            ? '确认拒绝该买家的交易请求？'
-                            : '确认取消该订单？提交凭证后将不可取消。',
+                        message: '确认结束这笔交易？结束后会计为未完成。',
                         confirmText: isReject ? '确认拒绝' : '确认取消',
                     }).then(function (ok) {
                         if (!ok) return;

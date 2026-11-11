@@ -965,7 +965,22 @@
             state.loading = false;
             state.page = 1;
             renderGrid();
+            openOrderFromQuery();
         }
+    }
+
+    var openedOrderQuery = false;
+    function openOrderFromQuery() {
+        if (openedOrderQuery) return;
+        var id = '';
+        try { id = new URLSearchParams(location.search).get('order') || ''; } catch (e) { id = ''; }
+        if (!id) return;
+        var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+        if (nav && nav.type === 'reload') return;
+        var order = state.orders.find(function (o) { return o && String(o.id) === id; });
+        if (!order) return;
+        openedOrderQuery = true;
+        openListingDetail(order);
     }
 
     function readPageSize() {
@@ -1500,34 +1515,36 @@
         }
         if (el.gridEmpty) el.gridEmpty.hidden = true;
         var visible = pagedOrders();
-        el.grid.innerHTML = visible.map(function (o) {
-            var priceClass = o.tradeType === 'barter' ? ' market-card__price--barter' : '';
-            var avatar = absMediaUrl(o.avatarUrl) || defaultAvatar();
-            var seller = getSeller(o);
-            var extra = formatQualityBrief(o);
-            var catLine = escapeHtml(primaryCategory(o)) + ' · ' + escapeHtml(extra);
-            var typeMeta = listingTypeMeta(o);
-            return (
-                '<article class="market-card" data-order-id="' + escapeHtml(o.id) + '" role="listitem" data-listing-type="' + typeMeta.text + '">' +
-                '<div class="market-card__media">' +
-                cardMediaHtml(o) +
-                listingTypeBadgeHtml(o) +
-                '</div>' +
-                '<div class="market-card__info">' +
-                '<div class="market-card__text">' +
-                '<span class="market-card__cat">' + catLine + '</span>' +
-                '<h2 class="market-card__title">' + escapeHtml(listingHeadline(o)) +
-                (o.tradeType !== 'barter' && o.items.length > 1 ? ' 等' + o.items.length + '件' : '') + '</h2>' +
-                '<p class="market-card__price' + priceClass + '">' + escapeHtml(formatPrice(o)) + '</p>' +
-                '</div>' +
-                '<button type="button" class="market-card__cta" aria-label="购买">' + CART_SVG + '</button>' +
-                '</div>' +
-                '<div class="market-card__times">' + timeLineHtml('上架时间', o.createdAt) + '</div>' +
-                renderCardFooterHtml(o, seller, avatar) +
-                '</article>'
-            );
-        }).join('');
+        el.grid.innerHTML = visible.map(renderListingCardHtml).join('');
         renderPager();
+    }
+
+    function renderListingCardHtml(o) {
+        var priceClass = o.tradeType === 'barter' ? ' market-card__price--barter' : '';
+        var avatar = absMediaUrl(o.avatarUrl) || defaultAvatar();
+        var seller = getSeller(o);
+        var extra = formatQualityBrief(o);
+        var catLine = escapeHtml(primaryCategory(o)) + ' · ' + escapeHtml(extra);
+        var typeMeta = listingTypeMeta(o);
+        return (
+            '<article class="market-card" data-order-id="' + escapeHtml(o.id) + '" role="listitem" data-listing-type="' + typeMeta.text + '">' +
+            '<div class="market-card__media">' +
+            cardMediaHtml(o) +
+            listingTypeBadgeHtml(o) +
+            '</div>' +
+            '<div class="market-card__info">' +
+            '<div class="market-card__text">' +
+            '<span class="market-card__cat">' + catLine + '</span>' +
+            '<h2 class="market-card__title">' + escapeHtml(listingHeadline(o)) +
+            (o.tradeType !== 'barter' && o.items.length > 1 ? ' 等' + o.items.length + '件' : '') + '</h2>' +
+            '<p class="market-card__price' + priceClass + '">' + escapeHtml(formatPrice(o)) + '</p>' +
+            '</div>' +
+            '<button type="button" class="market-card__cta" aria-label="购买">' + CART_SVG + '</button>' +
+            '</div>' +
+            '<div class="market-card__times">' + timeLineHtml('上架时间', o.createdAt) + '</div>' +
+            renderCardFooterHtml(o, seller, avatar) +
+            '</article>'
+        );
     }
 
     function renderManageOrderCardHtml(o) {
@@ -1671,7 +1688,7 @@
                 '</span>' +
                 '</div>';
             if (!revealed) {
-                contactHtml += '<p class="market-seller-card__contact-hint">提交购买后显示完整联系方式</p>';
+                contactHtml += '<p class="market-seller-card__contact-hint">确认购买后显示完整联系方式</p>';
             }
         } else {
             contactHtml = '<p class="market-detail__note">发布者未公开联系方式</p>';
@@ -1685,7 +1702,9 @@
             '<img class="market-seller-card__avatar" src="' + escapeHtml(avatar) + '" alt="">' +
             '<div class="market-seller-card__identity">' +
             '<div class="market-seller-card__name-row">' +
-            '<span class="market-seller-card__name">' + escapeHtml(displayName) + '</span>' +
+            (seller.shopKey
+                ? '<a class="market-seller-card__name" href="market-seller.html?seller=' + encodeURIComponent(seller.shopKey) + '">' + escapeHtml(displayName) + '</a>'
+                : '<span class="market-seller-card__name">' + escapeHtml(displayName) + '</span>') +
             '<div class="market-seller-card__badges">' + tradeHtml + fleetBadge + '</div>' +
             '</div>' +
             subLine +
@@ -1915,7 +1934,7 @@
             body: JSON.stringify(body),
         });
         var data = await r.json().catch(function () { return {}; });
-        if (!r.ok) throw new Error((data && data.message) || '提交购买失败');
+        if (!r.ok) throw new Error((data && data.message) || '确认购买失败');
         return data;
     }
 
@@ -1967,7 +1986,7 @@
         purchaseBtn.classList.remove('market-btn--accent');
         purchaseBtn.classList.add('is-done');
         purchaseBtn.setAttribute('aria-disabled', 'true');
-        purchaseBtn.textContent = order.tradeType === 'barter' ? '已提交意向' : '已提交购买';
+        purchaseBtn.textContent = order.tradeType === 'barter' ? '已确认互换' : '已确认购买';
     }
 
     function joinLottery(order, btn) {
@@ -2124,12 +2143,13 @@
                     : '') +
                 (canPurchase
                     ? (
-                        '<p class="market-detail__hint" id="marketDetailPurchaseHint"' + (showPurchaseHint ? '' : ' hidden') + '>请等待卖家确认交易，或点击「联系」与卖家沟通。</p>' +
+                        '<p class="market-detail__hint" id="marketDetailPurchaseHint"' + (showPurchaseHint ? '' : ' hidden') + '>确认购买后可直接联系卖家。</p>' +
                         '<button type="button" class="market-btn market-detail__nudge" id="marketDetailContactBtn" data-order-id="' + escapeHtml(order.id) + '"' +
                         (options.purchaseId ? ' data-purchase-id="' + escapeHtml(options.purchaseId) + '"' : '') +
-                        (showPurchaseHint ? '' : ' hidden') + '>联系</button>' +
+                        (showPurchaseHint ? '' : ' hidden') + '>联系卖家</button>' +
+                        '<button type="button" class="market-btn" id="marketDetailShareBtn" data-order-id="' + escapeHtml(order.id) + '">分享</button>' +
                         '<button type="button" class="market-btn market-btn--accent" id="marketDetailPurchaseBtn" data-order-id="' + escapeHtml(order.id) + '">' +
-                        (order.tradeType === 'barter' ? '确认互换意向' : '提交购买') +
+                        (order.tradeType === 'barter' ? '确认互换' : '确认购买') +
                         '</button>'
                     )
                     : '') +
@@ -2282,6 +2302,17 @@
                 });
             });
         }
+        var shareBtn = document.getElementById('marketDetailShareBtn');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                var host = document.getElementById('marketDetailBody');
+                if (!host || !window.UssPageShare) return;
+                var url = location.origin + location.pathname + '?order=' + encodeURIComponent(order.id);
+                host.setAttribute('data-share-url', url);
+                window.UssPageShare.share(host, shareBtn);
+            });
+        }
         var purchaseBtn = document.getElementById('marketDetailPurchaseBtn');
         var lotteryJoinBtn = document.getElementById('marketDetailLotteryBtn');
         if (lotteryJoinBtn && !lotteryJoinBtn.disabled) {
@@ -2378,7 +2409,7 @@
                             window.UssMarketNotify.push({
                                 kind: 'buyer',
                                 title: '购买已提交',
-                                body: '请等待卖家确认交易，可在商城管理中查看进度。',
+                                body: '可在商城管理里联系卖家，结束后由你选择完成并评价。',
                                 url: 'market-trades.html?tab=purchases',
                             });
                         }
@@ -3758,6 +3789,30 @@
     }
 
     function wireEvents() {
+        var pageShareBtn = document.getElementById('marketPageShareBtn');
+        if (pageShareBtn) {
+            pageShareBtn.addEventListener('click', function () {
+                var host = document.getElementById('marketContent');
+                var hero = host && host.querySelector('.market-hero');
+                if (!host || !window.UssPageShare) return;
+                var shot = null;
+                if (hero) {
+                    shot = document.createElement('img');
+                    shot.className = 'market-hero-share-bg';
+                    shot.alt = '';
+                    shot.src = 'images/hero/B2.webp';
+                    hero.classList.add('is-share-capture');
+                    hero.insertBefore(shot, hero.firstChild);
+                }
+                host.setAttribute('data-share-url', location.origin + location.pathname);
+                host.setAttribute('data-share-clip', 'page');
+                var done = window.UssPageShare.share(host, pageShareBtn);
+                Promise.resolve(done).then(function () {
+                    if (shot) shot.remove();
+                    if (hero) hero.classList.remove('is-share-capture');
+                });
+            });
+        }
         if (el.searchInput) {
             el.searchInput.addEventListener('input', function () {
                 clearTimeout(searchTimer);
@@ -4446,6 +4501,8 @@
         window.UssMarket = {
             openEditModal: openEditModal,
             renderManageOrderCardHtml: renderManageOrderCardHtml,
+            renderListingCardHtml: renderListingCardHtml,
+            renderSellerProfileHtml: renderSellerProfileHtml,
             openListingDetail: openListingDetail,
             cardMediaHtml: cardMediaHtml,
             primaryCategory: primaryCategory,
@@ -4458,7 +4515,7 @@
             dateTimeHtml: dateTimeHtml,
             timeLineHtml: timeLineHtml,
         };
-        if (document.body.classList.contains('market-trades-body')) {
+        if (document.body.classList.contains('market-trades-body') || document.body.classList.contains('market-seller-body')) {
             return;
         }
         refreshNavLoginState();

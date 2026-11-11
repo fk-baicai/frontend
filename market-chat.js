@@ -233,7 +233,7 @@
         opts = opts || {};
         var purchaseId = String(opts.purchaseId || '').trim();
         if (!purchaseId) {
-            window.alert('暂无进行中的交易，提交购买后即可联系对方。');
+            window.alert('确认购买后即可联系卖家。');
             return;
         }
         var sess = loadSession();

@@ -78,6 +78,21 @@
     opacity: 0.72;
 }
 
+.uss-share-btn.uss-share-btn--st {
+    position: fixed;
+    top: auto;
+    right: 18px;
+    bottom: 18px;
+    z-index: 40;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid rgba(142, 224, 255, 0.35);
+    background: rgba(14, 41, 67, 0.72);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+    color: rgba(232, 244, 255, 0.92);
+}
+
 .uss-share-btn.uss-share-btn--float:hover {
     opacity: 1;
     background: rgba(14, 41, 67, 0.72);
@@ -140,7 +155,7 @@
     left: 50%;
     bottom: 28px;
     transform: translateX(-50%);
-    z-index: 80;
+    z-index: 20000;
     margin: 0;
     padding: 0.45rem 0.85rem;
     border-radius: 8px;

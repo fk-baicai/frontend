@@ -1,9 +1,9 @@
 (function () {
     var HOSTS = [
         { page: 'blueprint', sel: '.bp-detail' },
-        { page: 'cargo', sel: '.cg-view' },
         { page: 'detail', sel: '#scDetailArticle' },
-        { page: 'catalog', sel: '.sc-view-toggle' }
+        { page: 'catalog', sel: '.sc-view-toggle' },
+        { page: 'terminals', sel: '.st-kiosk' }
     ];
 
     var ALIGN = {
@@ -334,14 +334,59 @@
         return full * px;
     }
 
+    function ensureShareToastStyle() {
+        if (document.getElementById('uss-share-toast-style')) return;
+        var style = document.createElement('style');
+        style.id = 'uss-share-toast-style';
+        style.textContent =
+            '.uss-share-toast{position:fixed;right:1.25rem;bottom:1.25rem;z-index:20020;display:grid;grid-template-columns:3px minmax(0,1fr) 44px;width:min(22.5rem,calc(100vw - 1.5rem));overflow:hidden;background:rgba(14,41,67,.94);border:1px solid rgba(95,184,255,.18);border-radius:8px;box-shadow:0 16px 40px rgba(0,0,0,.45);backdrop-filter:blur(14px);color:#e8f4ff}' +
+            '.uss-share-toast[hidden]{display:none}' +
+            '.uss-share-toast__bar{background:#39ff9a}' +
+            '.uss-share-toast__body{padding:.85rem .2rem .95rem .9rem;min-width:0}' +
+            '.uss-share-toast__kicker{margin:0 0 .12rem;font-size:.625rem;font-weight:700;letter-spacing:.16em;color:rgba(57,255,154,.88)}' +
+            '.uss-share-toast__title{margin:0;font-size:.9375rem;font-weight:700;color:#fff;line-height:1.3}' +
+            '.uss-share-toast__text{margin:.35rem 0 0;font-size:.8125rem;line-height:1.45;color:rgba(200,220,235,.78)}' +
+            '.uss-share-toast__close{appearance:none;border:none;background:transparent;color:rgba(200,220,235,.55);font-size:1.35rem;line-height:1;width:44px;height:44px;margin-top:.15rem;cursor:pointer}' +
+            '.uss-share-toast__close:hover,.uss-share-toast__close:focus-visible{color:#fff;outline:none}' +
+            '.uss-share-toast__timer{position:absolute;left:0;right:0;bottom:0;height:2px;background:rgba(57,255,154,.5);transform-origin:left center;animation:uss-share-toast-timer 2.2s linear forwards}' +
+            '@keyframes uss-share-toast-timer{to{transform:scaleX(0)}}' +
+            '@media (max-width:640px){.uss-share-toast{right:.75rem;bottom:.75rem;width:calc(100vw - 1.5rem)}}';
+        document.head.appendChild(style);
+    }
+
     function toast(text) {
+        ensureShareToastStyle();
         var el = document.querySelector('.uss-share-toast');
         if (!el) {
-            el = document.createElement('p');
+            el = document.createElement('aside');
             el.className = 'uss-share-toast';
+            el.setAttribute('role', 'status');
+            el.innerHTML =
+                '<div class="uss-share-toast__bar" aria-hidden="true"></div>' +
+                '<div class="uss-share-toast__body">' +
+                '<p class="uss-share-toast__kicker">USSXC.ORG</p>' +
+                '<h3 class="uss-share-toast__title"></h3>' +
+                '<p class="uss-share-toast__text" hidden></p>' +
+                '</div>' +
+                '<button type="button" class="uss-share-toast__close" aria-label="关闭">&times;</button>' +
+                '<span class="uss-share-toast__timer" aria-hidden="true"></span>';
+            el.querySelector('.uss-share-toast__close').addEventListener('click', function () {
+                el.hidden = true;
+                clearTimeout(toast._t);
+            });
             document.body.appendChild(el);
         }
-        el.textContent = text;
+        var copied = text === '图片已复制';
+        el.querySelector('.uss-share-toast__title').textContent = text;
+        var detail = el.querySelector('.uss-share-toast__text');
+        detail.hidden = !copied;
+        detail.textContent = copied ? '已复制到剪贴板。' : '';
+        var timer = el.querySelector('.uss-share-toast__timer');
+        timer.remove();
+        timer = document.createElement('span');
+        timer.className = 'uss-share-toast__timer';
+        timer.setAttribute('aria-hidden', 'true');
+        el.appendChild(timer);
         el.hidden = false;
         clearTimeout(toast._t);
         toast._t = setTimeout(function () { el.hidden = true; }, 2200);
@@ -388,24 +433,30 @@
         });
     }
 
-    function maskSvgMarkup(maskValue, color) {
+    function maskSvgMarkup(maskValue, color, width, height) {
         var raw = String(maskValue || '');
-        var match = raw.match(/url\((['"]?)(data:image\/svg\+xml[^)'"]+)\1\)/);
-        if (!match) return '';
-        var data = match[2];
+        var quoted = raw.match(/url\((['"])(data:image\/svg\+xml[\s\S]*?)\1\)/);
+        var data = quoted ? quoted[2] : '';
+        if (!data) {
+            var plain = raw.match(/url\((data:image\/svg\+xml[^)]*)\)/);
+            data = plain ? plain[1] : '';
+        }
+        if (!data) return '';
         var xml = '';
         var comma = data.indexOf(',');
         if (comma < 0) return '';
         var body = data.slice(comma + 1);
         try {
-            xml = data.indexOf('base64,') >= 0 ? atob(body) : decodeURIComponent(body);
+            xml = decodeURIComponent(body);
         } catch (e) {
-            return '';
+            try { xml = atob(body); } catch (e2) { return ''; }
         }
         if (xml.indexOf('<svg') < 0) return '';
         var fill = color && color !== 'transparent' ? color : 'currentColor';
         xml = xml.replace(/fill=(['"])[^'"]*\1/gi, 'fill="' + fill + '"');
-        xml = xml.replace('<svg ', '<svg width="100%" height="100%" style="display:block" ');
+        var w = Math.max(1, Math.round(width || 0));
+        var h = Math.max(1, Math.round(height || 0));
+        xml = xml.replace(/<svg\b([^>]*)>/i, '<svg$1 width="' + w + '" height="' + h + '" preserveAspectRatio="xMidYMid meet" style="display:block">');
         return xml;
     }
 
@@ -414,13 +465,17 @@
         try { pcs = getComputedStyle(node, pseudo); } catch (e) { return; }
         if (!pcs) return;
         var content = pcs.getPropertyValue('content');
-        var mask = pcs.getPropertyValue('mask-image') || pcs.getPropertyValue('-webkit-mask-image');
-        var svg = maskSvgMarkup(mask, pcs.getPropertyValue('background-color') || pcs.getPropertyValue('color'));
+        var mask = pcs.getPropertyValue('mask-image') || pcs.getPropertyValue('-webkit-mask-image') || pcs.getPropertyValue('mask') || pcs.getPropertyValue('-webkit-mask');
+        var iconW = (parseFloat(pcs.width) || 0) * (scale || 1);
+        var iconH = (parseFloat(pcs.height) || 0) * (scale || 1);
+        var svg = maskSvgMarkup(mask, pcs.getPropertyValue('background-color') || pcs.getPropertyValue('color'), iconW, iconH);
         var emptyContent = !content || content === 'none' || content === 'normal' || content === '""' || content === "''";
         var borderW = (parseFloat(pcs.borderTopWidth) || 0) + (parseFloat(pcs.borderRightWidth) || 0) + (parseFloat(pcs.borderBottomWidth) || 0) + (parseFloat(pcs.borderLeftWidth) || 0);
         var bg = pcs.getPropertyValue('background-color');
+        var bgImage = pcs.getPropertyValue('background-image');
         var hasBg = bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)';
-        if (emptyContent && !svg && !borderW && !hasBg) return;
+        var hasBgImage = bgImage && bgImage !== 'none';
+        if (emptyContent && !svg && !borderW && !hasBg && !hasBgImage) return;
         var ghost = document.createElement('span');
         var quoted = String(content || '').match(/^["']([\s\S]*)["']$/);
         if (quoted && quoted[1]) ghost.textContent = quoted[1];
@@ -578,13 +633,7 @@
         var deck = el.querySelector('.sc-filter-deck');
         if (deck) {
             var deckBox = deck.getBoundingClientRect();
-            var deckTop = deckBox.top;
-            var search = deck.querySelector('.sc-filter-deck__search');
-            if (search) {
-                var searchBox = search.getBoundingClientRect();
-                if (searchBox.height > 2) deckTop = searchBox.bottom;
-            }
-            if (deckBox.bottom > viewTop && deckTop < viewBottom) top = Math.min(top, deckTop);
+            if (deckBox.height > 2) top = Math.min(top, deckBox.top);
         }
         var host = el.getBoundingClientRect();
         var bandTop = Math.max(host.top, top - 8);
@@ -620,7 +669,8 @@
         layer.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
         function add(node) {
             if (!node || node.nodeType !== 1) return;
-            if (node.classList && (node.classList.contains('uss-share-btn') || node.classList.contains('sc-img-hit') || node.classList.contains('sc-filter-deck__search'))) return;
+            if (node.classList && (node.classList.contains('uss-share-btn') || node.classList.contains('sc-img-hit') || node.classList.contains('market-detail__actions'))) return;
+            if (node.id === 'marketPageShareBtn' || node.id === 'sellerShareBtn') return;
             var tag = node.tagName.toLowerCase();
             if (tag === 'script' || tag === 'style' || tag === 'link') return;
             var cs = getComputedStyle(node);
@@ -643,6 +693,11 @@
                 try { copy.setAttribute('src', node.toDataURL('image/png')); } catch (e) {}
             } else if (isSvg) {
                 copy = node.cloneNode(true);
+            } else if (tag === 'select') {
+                copy = document.createElement('div');
+                var picked = node.selectedIndex >= 0 ? node.options[node.selectedIndex] : null;
+                if (picked) copy.textContent = picked.textContent;
+                copy._shareBg = 'display:flex;align-items:center;background-image:' + cs.backgroundImage + ';background-repeat:' + cs.backgroundRepeat + ';background-position:' + cs.backgroundPosition + ';background-size:' + cs.backgroundSize + ';';
             } else {
                 copy = node.cloneNode(false);
                 if (tag === 'img') {
@@ -735,7 +790,7 @@
             paintPseudo(node, copy, '::before', scale);
             paintPseudo(node, copy, '::after', scale);
             layer.appendChild(copy);
-            if (!isSvg && tag !== 'canvas' && tag !== 'img') Array.prototype.forEach.call(node.children, add);
+            if (!isSvg && tag !== 'canvas' && tag !== 'img' && tag !== 'select') Array.prototype.forEach.call(node.children, add);
         }
         add(src);
         return layer;
@@ -839,17 +894,7 @@
             width: measured.width,
             height: measured.height
         };
-        if (!band && el.querySelector) {
-            var search = el.querySelector('.sc-filter-deck__search');
-            if (search) {
-                var searchBox = search.getBoundingClientRect();
-                if (searchBox.height > 2 && searchBox.bottom > base.top && searchBox.bottom < base.bottom) {
-                    base.top = searchBox.bottom;
-                    base.height = base.bottom - base.top;
-                }
-            }
-        }
-        var clipToHost = !!(band || (el.classList && el.classList.contains('bp-detail')));
+        var clipToHost = !!(band || (el.classList && el.classList.contains('bp-detail')) || (el.getAttribute && el.getAttribute('data-share-clip') === 'page'));
         var right = base.right;
         var bottom = base.bottom;
         if (!clipToHost) {
@@ -891,6 +936,7 @@
         }
         var note = el.querySelector('.sc-detail-footnote, .sc-footnote');
         var qrTop = null;
+        var tightFooter = false;
         var lineEl = note && note.previousElementSibling;
         if (lineEl) {
             var lr = lineEl.getBoundingClientRect();
@@ -902,7 +948,17 @@
         if (qrTop == null && el.classList && el.classList.contains('bp-detail')) {
             qrTop = fullH + Math.round(14 * scale);
         }
-        return { canvas: canvas, scale: scale, qrTop: qrTop, mime: band ? 'image/jpeg' : 'image/png' };
+        if (qrTop == null && el.getAttribute && el.getAttribute('data-share-url')) {
+            var contentBottom = base.top;
+            Array.prototype.forEach.call(el.children, function (node) {
+                if (node.classList && node.classList.contains('market-detail__actions')) return;
+                var box = node.getBoundingClientRect();
+                if (box.height > 1 && box.bottom > contentBottom) contentBottom = box.bottom;
+            });
+            qrTop = (contentBottom - base.top) * scale + Math.round(12 * scale);
+            tightFooter = true;
+        }
+        return { canvas: canvas, scale: scale, qrTop: qrTop, tightFooter: tightFooter, mime: band ? 'image/jpeg' : 'image/png' };
     }
 
     function compose(shot, url) {
@@ -916,7 +972,7 @@
         var y = shot.qrTop != null ? Math.round(shot.qrTop) : Math.max(0, src.height - pad - qrBox);
         var canvas = document.createElement('canvas');
         canvas.width = src.width;
-        canvas.height = Math.max(src.height, y + qrBox + pad);
+        canvas.height = shot.tightFooter ? y + qrBox + pad : Math.max(src.height, y + qrBox + pad);
         var ctx = canvas.getContext('2d');
         ctx.fillStyle = '#122d48';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -961,7 +1017,7 @@
         btn = btn || (host && host.querySelector('.uss-share-btn'));
         if (btn) btn.disabled = true;
         try {
-            var url = location.href.split('#')[0];
+            var url = (host && host.getAttribute && host.getAttribute('data-share-url')) || location.href.split('#')[0];
             var shot = await raster(host);
             var canvas = compose(shot, url);
             await copyCanvas(canvas, shot.mime);
@@ -1004,11 +1060,11 @@
             else host.appendChild(btn);
             return;
         }
-        if (host.classList && host.classList.contains('cg-view')) {
-            var icons = host.querySelector('.cg-view-icons');
+        if (host.classList && host.classList.contains('st-kiosk')) {
+            var page = host.closest('.st-page') || host.parentElement;
             btn._shareHost = host;
-            btn.classList.add('cg-view-icon');
-            if (icons) icons.appendChild(btn);
+            btn.classList.add('uss-share-btn--st');
+            if (page) page.appendChild(btn);
             else host.appendChild(btn);
             return;
         }
@@ -1039,6 +1095,8 @@
             if (host) mount(host);
         });
     }
+
+    window.UssPageShare = { share: share };
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
     else boot();

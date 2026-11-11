@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"></noscript>
-    <link rel="stylesheet" href="market.css?v=114">
+    <link rel="stylesheet" href="market.css?v=121">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -295,7 +295,7 @@
                                     <span class="market-field__label">联系方式</span>
                                     <input type="text" id="marketContactInput" maxlength="120" placeholder="邮箱、QQ 或其他联系方式" autocomplete="off">
                                 </label>
-                                <p class="market-field__hint">默认使用注册邮箱，可改为其他联系方式。买家提交购买后才显示完整信息。</p>
+                                <p class="market-field__hint">默认使用注册邮箱，可改为其他联系方式。确认购买后才显示完整信息。</p>
                             </div>
                         </div>
 
@@ -608,46 +608,26 @@
                                 <span class="market-flow-step__marker">1</span>
                                 <div class="market-flow-step__body">
                                     <span class="market-flow-step-key">重要节点</span>
-                                    <p>点击商品「购物车」→ 详情「提交购买」。</p>
+                                    <p>打开商品详情，点击「确认购买」。</p>
                                 </div>
                             </li>
                             <li class="market-flow-step">
                                 <span class="market-flow-step__marker">2</span>
                                 <div class="market-flow-step__body">
-                                    <p>等待卖家确认交易，或点击「联系」与卖家沟通。</p>
+                                    <p>在 <a href="market-trades.html">商城管理</a> 点击「联系卖家」，直接约定时间与地点。</p>
                                 </div>
                             </li>
                             <li class="market-flow-step market-flow-step--key">
                                 <span class="market-flow-step__marker">3</span>
                                 <div class="market-flow-step__body">
                                     <span class="market-flow-step-key">重要节点</span>
-                                    <p>等待卖家在 <a href="market-trades.html">商城管理</a> 点击「确认交易」。</p>
+                                    <p>游戏内交割后，买家点击「结束交易」，再选择「完成交易」或「未完成交易」。</p>
                                 </div>
                             </li>
                             <li class="market-flow-step">
                                 <span class="market-flow-step__marker">4</span>
                                 <div class="market-flow-step__body">
-                                    <p>与卖家约定时间与地点进行交易。</p>
-                                </div>
-                            </li>
-                            <li class="market-flow-step market-flow-step--key">
-                                <span class="market-flow-step__marker">5</span>
-                                <div class="market-flow-step__body">
-                                    <span class="market-flow-step-key">重要节点</span>
-                                    <p>到达卖家机库后转账 aUEC，并提交「转账截图」（≤4M，系统压缩为 WebP）。</p>
-                                </div>
-                            </li>
-                            <li class="market-flow-step">
-                                <span class="market-flow-step__marker">6</span>
-                                <div class="market-flow-step__body">
-                                    <p>物品交易完成后，买家点击「完成交易」并评论。</p>
-                                </div>
-                            </li>
-                            <li class="market-flow-step market-flow-step--key">
-                                <span class="market-flow-step__marker">7</span>
-                                <div class="market-flow-step__body">
-                                    <span class="market-flow-step-key">重要节点</span>
-                                    <p>若 3 天内买家未点击，系统将自动「完成交易」。</p>
+                                    <p>选择「完成交易」时，为卖家打星并填写评语，也可点选默认评语。</p>
                                 </div>
                             </li>
                         </ol>
@@ -666,47 +646,27 @@
                             <li class="market-flow-step">
                                 <span class="market-flow-step__marker">1</span>
                                 <div class="market-flow-step__body">
-                                    <p>订单上架（发布挂单）。</p>
+                                    <p>发布挂单，商品上架。</p>
                                 </div>
                             </li>
                             <li class="market-flow-step market-flow-step--key">
                                 <span class="market-flow-step__marker">2</span>
                                 <div class="market-flow-step__body">
                                     <span class="market-flow-step-key">重要节点</span>
-                                    <p>在 <a href="market-trades.html">商城管理</a>「收到订单」确认买家请求，点击「确认交易」。</p>
+                                    <p>买家确认购买后，在 <a href="market-trades.html">商城管理</a> 点击「联系买家」沟通。无需卖家再点确认。</p>
                                 </div>
                             </li>
                             <li class="market-flow-step">
                                 <span class="market-flow-step__marker">3</span>
                                 <div class="market-flow-step__body">
-                                    <p>与买家约定时间与地点进行交易。</p>
+                                    <p>按约定时间地点在游戏内交割。</p>
                                 </div>
                             </li>
                             <li class="market-flow-step market-flow-step--key">
                                 <span class="market-flow-step__marker">4</span>
                                 <div class="market-flow-step__body">
                                     <span class="market-flow-step-key">重要节点</span>
-                                    <p>上传交易凭证：「交易物品与买家游戏内碰面截图」（≤4M，系统压缩为 WebP）。</p>
-                                </div>
-                            </li>
-                            <li class="market-flow-step">
-                                <span class="market-flow-step__marker">5</span>
-                                <div class="market-flow-step__body">
-                                    <p>上传凭证后等待买家点击「完成交易」。</p>
-                                </div>
-                            </li>
-                            <li class="market-flow-step market-flow-step--key">
-                                <span class="market-flow-step__marker">6</span>
-                                <div class="market-flow-step__body">
-                                    <span class="market-flow-step-key">重要节点</span>
-                                    <p>3 天后买家未操作，系统自动「完成交易」。</p>
-                                </div>
-                            </li>
-                            <li class="market-flow-step market-flow-step--key">
-                                <span class="market-flow-step__marker">7</span>
-                                <div class="market-flow-step__body">
-                                    <span class="market-flow-step-key">重要节点</span>
-                                    <p>卖家已提交交易凭证且订单完成后，有效交易次数 +1。</p>
+                                    <p>买家结束交易并选择完成、提交星级和评语后，有效交易次数 +1。</p>
                                 </div>
                             </li>
                         </ol>
@@ -714,7 +674,7 @@
                 </div>
                 <div class="market-flow-modal__note" role="note">
                     <span class="market-flow-modal__note-icon" aria-hidden="true">i</span>
-                    <p>交易前请核对品质、数量与报价；转账截图与交易凭证请保留原图，便于纠纷追溯。</p>
+                    <p>交易前请核对品质、数量与报价。交割在游戏内完成，结束后由买家选择是否完成并评价。</p>
                 </div>
             </div>
             <footer class="market-flow-modal__foot" id="marketFlowForceFoot" hidden>
@@ -733,18 +693,22 @@
     <script src="login-drawer-mount.js"></script>
     <script src="home-boot.js"></script>
     <script defer src="pw-toggle-icons.js"></script>
-    <script src="api-error.js?v=4" defer></script>
+    <script src="api-error.js?v=6" defer></script>
     <script src="auth-api.js" defer></script>
     <script src="auth-session-sync.js" defer></script>
     <script defer src="rsi-client.js?v=20260827b"></script>
+    <button type="button" class="uss-share-btn market-page-share" id="marketPageShareBtn" aria-label="分享" title="分享">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="6" cy="12" r="2.2"/><circle cx="17" cy="7" r="2.2"/><circle cx="17" cy="17" r="2.2"/><path d="M8 11.2 14.8 8M8 12.8 14.8 16"/></svg>
+    </button>
     <script defer src="rsi-sync.js"></script>
     <script defer src="home-app.js?v=20260902c"></script>
     <script src="nav-dropdown.js" defer></script>
     <script src="nav-auth-tools.js" defer></script>
     <script src="site-footer.js" defer></script>
     <script src="community-image-lightbox.js" defer></script>
-    <script src="market-notify.js?v=6" defer></script>
-    <script src="market-chat.js?v=2" defer></script>
-    <script src="market.js?v=94" defer></script>
+    <script src="market-notify.js?v=7" defer></script>
+    <script src="market-chat.js?v=3" defer></script>
+    <script src="page-share.js?v=52" defer></script>
+    <script src="market.js?v=103" defer></script>
 </body>
 </html>

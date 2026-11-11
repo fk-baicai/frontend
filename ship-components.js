@@ -5077,7 +5077,7 @@
 
     function shortSourceLabel(meta) {
         if (!meta) return '—';
-        if (meta.data_source === 'wiki') return 'WIKI百科';
+        if (meta.data_source === 'wiki') return 'Star Citizen Wiki';
         if (meta.data_source === 'uex') return 'UEX';
         if (meta.data_source_label_zh) return meta.data_source_label_zh;
         return '—';
