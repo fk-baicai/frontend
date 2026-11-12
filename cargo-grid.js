@@ -1771,15 +1771,13 @@
         },
         capture: function () {
             var screen = viewPixels();
-            var target = exportPixels(screen);
+            if (canvas.width !== screen.w || canvas.height !== screen.h) draw(screen);
             var url = '';
             try {
-                draw(target);
                 url = stampDownload(canvas);
             } catch (e) {
                 url = '';
             }
-            draw(screen);
             return url;
         },
         refresh: function (refit) {

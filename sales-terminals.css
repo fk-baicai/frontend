@@ -961,16 +961,46 @@
         grid-template-rows: auto auto auto;
     }
 
-    .st-cats,
-    .st-list,
-    .st-detail {
+    .st-kiosk-main {
+        height: auto;
         max-height: none;
+        min-height: 0;
         overflow: visible;
+    }
+
+    .st-cats,
+    .st-detail {
+        height: auto;
+        max-height: 38vh;
+        min-height: 0;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .st-list {
+        height: auto;
+        max-height: min(62vh, 520px);
+        min-height: 12rem;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .st-list:has(.st-cards) {
+        container-type: normal;
+    }
+
+    .st-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .st-cards .st-card-img,
+    .st-cards .st-card-img-empty {
+        height: auto;
+        aspect-ratio: 351 / 210;
     }
 
     .st-cats {
         display: block;
-        overflow: auto;
         border-right: 0;
         border-bottom: 1px solid rgba(142, 224, 255, 0.18);
     }
