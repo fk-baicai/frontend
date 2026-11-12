@@ -988,7 +988,7 @@
 
     function captureBox(el) {
         var rect = el.getBoundingClientRect();
-        if (el.classList && el.classList.contains('bp-shell')) {
+        if (el.classList && (el.classList.contains('bp-shell') || el.classList.contains('st-kiosk'))) {
             return {
                 w: Math.max(1, Math.ceil(rect.width)),
                 h: Math.max(1, Math.ceil(rect.height))
@@ -1038,6 +1038,29 @@
         if (phantom) phantom.style.height = '0px';
     }
 
+    function pinKioskFrame(live, copy) {
+        if (!live || !copy || !live.classList || !live.classList.contains('st-kiosk')) return;
+        var shell = live.getBoundingClientRect();
+        var cs = window.getComputedStyle(live);
+        copy.style.height = Math.ceil(shell.height) + 'px';
+        copy.style.maxHeight = Math.ceil(shell.height) + 'px';
+        copy.style.overflow = 'hidden';
+        if (cs.gridTemplateColumns && cs.gridTemplateColumns !== 'none') copy.style.gridTemplateColumns = cs.gridTemplateColumns;
+        ['st-kiosk-body', 'st-kiosk-main', 'st-cats', 'st-list'].forEach(function (cls) {
+            var a = live.querySelector('.' + cls);
+            var b = copy.querySelector('.' + cls);
+            if (!a || !b) return;
+            var box = a.getBoundingClientRect();
+            var acs = window.getComputedStyle(a);
+            b.style.height = Math.ceil(box.height) + 'px';
+            b.style.maxHeight = Math.ceil(box.height) + 'px';
+            b.style.minHeight = '0';
+            b.style.overflow = 'hidden';
+            if (acs.gridTemplateColumns && acs.gridTemplateColumns !== 'none') b.style.gridTemplateColumns = acs.gridTemplateColumns;
+            if (acs.gridTemplateRows && acs.gridTemplateRows !== 'none') b.style.gridTemplateRows = acs.gridTemplateRows;
+        });
+    }
+
     async function raster(el) {
         var box = captureBox(el);
         var w = box.w;
@@ -1071,10 +1094,11 @@
             } catch (eHero) { /* hero stays without photo */ }
         }
         pinBlueprintFrame(el, clone);
+        pinKioskFrame(el, clone);
         clone.style.margin = '0';
         clone.style.width = w + 'px';
         clone.style.maxWidth = w + 'px';
-        if (el.classList && el.classList.contains('bp-shell')) {
+        if (el.classList && (el.classList.contains('bp-shell') || el.classList.contains('st-kiosk'))) {
             clone.style.height = h + 'px';
             clone.style.maxHeight = h + 'px';
         }
