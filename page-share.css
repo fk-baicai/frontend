@@ -152,9 +152,10 @@
 
 .uss-share-toast {
     position: fixed;
-    left: 50%;
-    bottom: 28px;
-    transform: translateX(-50%);
+    right: 1.25rem;
+    bottom: 1.25rem;
+    left: auto;
+    transform: none;
     z-index: 20000;
     margin: 0;
     padding: 0.45rem 0.85rem;

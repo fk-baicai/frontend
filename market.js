@@ -7,41 +7,130 @@
 
     var catalogTypeGroup = {};
 
+    /** 主分类 = UEX section，子分类 = UEX category name（api.uexcorp.uk/2.0/categories?type=item） */
+    var SUBTYPES_BY_GROUP = {
+        systems: ['coolers', 'power_plants', 'quantum_drives', 'shield_generators', 'batteries', 'gravity_generator', 'life_support'],
+        avionics: ['flight_blade', 'radar'],
+        propulsion: ['jump_modules'],
+        vehicle_weapons: ['guns', 'missile_racks', 'missiles', 'turrets', 'bombs', 'point_defense', 'torpedo_tubes', 'bomb_racks'],
+        utility: ['docking_collars', 'external_fuel_tanks', 'fuel_nozzle', 'gadgets', 'mining_laser_heads', 'mining_modules', 'scraper_beams', 'utility_container', 'tractor_beams', 'fabricator', 'salvage_beams'],
+        armor: ['armor_arms', 'armor_backpacks', 'armor_helmets', 'armor_legs', 'armor_torso', 'armor_full_set'],
+        undersuits: ['undersuits'],
+        clothing: ['footwear', 'gloves', 'hats', 'jackets', 'jumpsuits', 'legwear', 'shirts', 'clothing_full_set', 'eyeware', 'dresses'],
+        personal_weapons: ['attachments', 'personal_weapons'],
+        liveries: ['liveries'],
+        commodities: ['commodities', 'harvestables'],
+        data: ['points_of_interest', 'cards', 'storage'],
+        miscellaneous: ['misc_consumables', 'miscellaneous', 'drinks', 'foods', 'misc_container'],
+        consumable: ['consumable'],
+        technology: ['mobiglas'],
+        module: ['module'],
+        decorations: ['decorations'],
+        vehicles: ['vehicles'],
+        flair: ['flair_surface'],
+        other: ['other'],
+    };
+
+    var TYPE_LABELS = {
+        coolers: '散热',
+        power_plants: '电源',
+        quantum_drives: '量子驱动器',
+        shield_generators: '护盾',
+        batteries: '电池',
+        gravity_generator: '重力发生器',
+        life_support: '维生系统',
+        flight_blade: '飞行刀片',
+        radar: '雷达',
+        jump_modules: '跳跃模块',
+        guns: '舰炮',
+        missile_racks: '导弹架',
+        missiles: '导弹',
+        turrets: '炮台',
+        bombs: '炸弹',
+        point_defense: '点防御炮',
+        torpedo_tubes: '鱼雷发射管',
+        bomb_racks: '炸弹架',
+        docking_collars: '对接环',
+        external_fuel_tanks: '外置燃料箱',
+        fuel_nozzle: '燃料喷嘴',
+        gadgets: '小工具',
+        mining_laser_heads: '采矿激光头',
+        mining_modules: '采矿模组',
+        scraper_beams: '刮削束',
+        utility_container: '集装箱',
+        tractor_beams: '牵引光束',
+        fabricator: '制造机',
+        salvage_beams: '打捞光束',
+        armor_arms: '臂甲',
+        armor_backpacks: '背包',
+        armor_helmets: '头盔',
+        armor_legs: '腿甲',
+        armor_torso: '胸甲',
+        armor_full_set: '整套护甲',
+        undersuits: '基底服',
+        footwear: '鞋',
+        gloves: '手套',
+        hats: '帽子',
+        jackets: '夹克',
+        jumpsuits: '连体衣',
+        legwear: '裤装',
+        shirts: '上衣',
+        clothing_full_set: '整套服饰',
+        eyeware: '眼镜',
+        dresses: '裙装',
+        attachments: '配件',
+        personal_weapons: '个人武器',
+        liveries: '涂装',
+        commodities: '大宗货物',
+        harvestables: '采集物',
+        points_of_interest: '兴趣点',
+        cards: '卡牌',
+        storage: '数据存储',
+        misc_consumables: '消耗品',
+        miscellaneous: '杂项',
+        drinks: '饮料',
+        foods: '食物',
+        misc_container: '容器',
+        consumable: '消耗品',
+        mobiglas: 'Mobiglas',
+        module: '模组',
+        decorations: '装饰',
+        vehicles: '载具',
+        flair_surface: '表面挂饰',
+        other: '其他',
+    };
+
     var TYPE_TO_NAV_GROUP = (function () {
         var map = {};
-        var groups = {
-            component: ['cooling', 'power', 'shield', 'quantum', 'jump', 'radar'],
-            weapon: ['ship_weapon', 'ship_missile', 'missile_rack', 'ship_turret', 'ship_emp'],
-            other: ['mining_laser', 'ship_module', 'salvage_scraper', 'fuel_nozzle'],
-            fps_weapon: [
-                'weapon_pistol', 'weapon_smg', 'weapon_rifle', 'weapon_sniper',
-                'weapon_shotgun', 'weapon_lmg', 'weapon_launcher', 'weapon_crossbow',
-                'weapon_throwable', 'weapon_melee', 'weapon_misc',
-            ],
-            fps_armor: ['armor_helmet', 'armor_torso', 'armor_legs', 'armor_arms', 'armor_backpack', 'armor_undersuit'],
-            fps_magazine: [
-                'magazine', 'attachment_ironsight', 'attachment_barrel',
-                'attachment_bottom', 'attachment_utility', 'attachment_missile', 'attachment_other',
-            ],
-        };
-        Object.keys(groups).forEach(function (gk) {
-            groups[gk].forEach(function (t) { map[t] = gk; });
+        Object.keys(SUBTYPES_BY_GROUP).forEach(function (gk) {
+            SUBTYPES_BY_GROUP[gk].forEach(function (t) { map[t] = gk; });
         });
         return map;
     })();
 
-    var MAIN_CATEGORY_GROUPS = {
-        component: 1,
-        weapon: 1,
-        fps_weapon: 1,
-        fps_magazine: 1,
-        fps_armor: 1,
-    };
-
     var CATEGORY_LABELS = {
+        systems: '舰船系统',
+        avionics: '航电',
+        propulsion: '推进',
+        vehicle_weapons: '舰船武器',
+        utility: '实用设备',
+        armor: '护甲',
+        undersuits: '基底服',
+        clothing: '服饰',
+        personal_weapons: '个人武器',
+        liveries: '涂装',
+        commodities: '货物',
+        data: '数据',
+        miscellaneous: '杂项',
+        consumable: '消耗品',
+        technology: '科技',
+        module: '模组',
+        decorations: '装饰',
+        vehicles: '载具',
+        flair: '挂饰',
+        other: '其他',
         component: '舰船组件',
         weapon: '舰船武器',
-        other: '其他',
         fps_weapon: '个人武器',
         fps_magazine: '武器配件',
         fps_armor: '个人护甲',
@@ -50,17 +139,21 @@
         lottery: '抽奖',
     };
 
-    var CATEGORY_GROUPS = [
-        { id: '', label: '全部' },
-        { id: 'component', label: '舰船组件' },
-        { id: 'weapon', label: '舰船武器' },
-        { id: 'fps_weapon', label: '个人武器' },
-        { id: 'fps_magazine', label: '武器配件' },
-        { id: 'fps_armor', label: '个人护甲' },
-        { id: 'other', label: '其他' },
-        { id: 'gift', label: '礼物' },
-        { id: 'lottery', label: '抽奖' },
-    ];
+    var MAIN_CATEGORY_GROUPS = (function () {
+        var map = {};
+        Object.keys(SUBTYPES_BY_GROUP).forEach(function (id) { map[id] = 1; });
+        return map;
+    })();
+
+    var CATEGORY_GROUPS = [{ id: '', label: '全部' }].concat(
+        Object.keys(SUBTYPES_BY_GROUP).map(function (id) {
+            return { id: id, label: CATEGORY_LABELS[id] || id };
+        }),
+        [
+            { id: 'gift', label: '礼物' },
+            { id: 'lottery', label: '抽奖' },
+        ]
+    );
 
     var STATION_ZH = {
         'Port Olisar': '奥丽莎空间站',
@@ -221,6 +314,7 @@
     var state = {
         tab: 'sell',
         categoryGroup: '',
+        categoryType: '',
         searchQ: '',
         orders: [],
         loading: false,
@@ -231,18 +325,19 @@
             tradeType: 'currency',
             orderType: 'sell',
             expireDays: 7,
-            tradeTimeStart: '20:00',
-            tradeTimeEnd: '21:00',
+            tradeTimeStart: '00:00',
+            tradeTimeEnd: '23:59',
             categoryGroup: '',
             itemInfo: '',
             contact: '',
+            contactPublic: false,
             location: null,
-            items: [{ componentId: null, name: '', categoryGroup: null, typeLabel: '', quantity: 1, swapGiveQty: 1, pricePerUnit: '', quality: DEFAULT_QUALITY, giftRedeemUrls: [''] }],
+            items: [{ componentId: null, name: '', categoryGroup: null, typeKey: null, typeLabel: '', quantity: '', swapGiveQty: '', pricePerUnit: '', quality: DEFAULT_QUALITY, giftRedeemUrls: [''] }],
             autoImage: null,
             autoImageComponentId: null,
             userImage: null,
             existingImage: null,
-            barterWant: { componentId: null, name: '', nameZh: null, categoryGroup: null, typeLabel: '', quantity: 1, quality: DEFAULT_QUALITY },
+            barterWant: { componentId: null, name: '', nameZh: null, categoryGroup: null, typeKey: null, typeLabel: '', quantity: '', quality: DEFAULT_QUALITY },
             barterWantCategoryGroup: '',
             barterWantAutoImage: null,
             barterWantAutoComponentId: null,
@@ -453,12 +548,13 @@
             escapeHtml(formatTradeCount(seller)) +
             '</span>';
         var rightChips =
-            '<span class="market-footer-chip" title="交易位置"><span class="market-footer-chip__k">位置</span>' +
-            escapeHtml(loc) +
+            '<span class="market-footer-chip market-footer-chip--loc" title="' + escapeHtml(loc) + '">' +
+            '<span class="market-footer-chip__k">位置</span>' +
+            '<span class="market-footer-chip__marquee"><span>' + escapeHtml(loc) + '</span></span>' +
             '</span>';
         if (order.tradeType !== 'barter') {
             rightChips +=
-                '<span class="market-footer-chip market-footer-chip--qty" title="单次数量"><span class="market-footer-chip__k">数量</span>' +
+                '<span class="market-footer-chip" title="库存"><span class="market-footer-chip__k">库存</span>' +
                 escapeHtml(String(qty)) +
                 '</span>';
         }
@@ -486,17 +582,160 @@
         );
     }
 
+    var LEGACY_NAV_GROUP = {
+        fps_armor: 'armor',
+        fps_weapon: 'personal_weapons',
+        fps_magazine: 'personal_weapons',
+        component: 'systems',
+        weapon: 'vehicle_weapons',
+    };
+
+    var LEGACY_TYPE_KEY = {
+        armor_helmet: 'armor_helmets',
+    };
+
+    function navGroupOf(group) {
+        var g = String(group || '').trim();
+        return LEGACY_NAV_GROUP[g] || g;
+    }
+
+    function canonicalTypeKey(typeKey) {
+        var t = String(typeKey || '').trim();
+        return LEGACY_TYPE_KEY[t] || t;
+    }
+
     function marketGroupFromRaw(raw) {
         if (raw === 'mining' || raw === 'salvage' || raw === 'fuel_nozzle' || raw === 'module') {
             return 'other';
         }
-        return raw || null;
+        return navGroupOf(raw) || null;
     }
 
     function inferNavGroupFromType(typeKey) {
         var t = String(typeKey || '').trim();
         if (!t) return null;
         return marketGroupFromRaw(catalogTypeGroup[t] || TYPE_TO_NAV_GROUP[t] || null);
+    }
+
+    function subtypesForGroup(group) {
+        var g = String(group || '').trim();
+        if (!g || g === 'gift' || g === 'lottery' || g === 'hq_points') return [];
+        return (SUBTYPES_BY_GROUP[g] || []).slice();
+    }
+
+    function typeLabelOf(typeKey) {
+        var t = String(typeKey || '').trim();
+        if (!t) return '';
+        return TYPE_LABELS[t] || t;
+    }
+
+    function fillTypeSelect(selectEl, group, selected) {
+        if (!selectEl) return;
+        var types = subtypesForGroup(group);
+        var cur = String(selected || '').trim();
+        var html = '<option value="">请选择子分类</option>';
+        if (!String(group || '').trim()) {
+            Object.keys(SUBTYPES_BY_GROUP).forEach(function (id) {
+                var list = SUBTYPES_BY_GROUP[id] || [];
+                if (!list.length) return;
+                html += '<optgroup label="' + escapeHtml(CATEGORY_LABELS[id] || id) + '">';
+                list.forEach(function (key) {
+                    html += '<option value="' + escapeHtml(key) + '"' + (key === cur ? ' selected' : '') + '>' +
+                        escapeHtml(typeLabelOf(key)) + '</option>';
+                });
+                html += '</optgroup>';
+            });
+        } else {
+            types.forEach(function (key) {
+                html += '<option value="' + escapeHtml(key) + '"' + (key === cur ? ' selected' : '') + '>' +
+                    escapeHtml(typeLabelOf(key)) + '</option>';
+            });
+        }
+        selectEl.innerHTML = html;
+        if (cur) selectEl.value = cur;
+        else selectEl.value = '';
+        paintCategoryChips(selectEl, chipSegForSelect(selectEl));
+    }
+
+    function chipSegForSelect(selectEl) {
+        if (!selectEl || !el) return null;
+        if (selectEl === el.categorySelect) return el.categorySeg;
+        if (selectEl === el.typeSelect) return el.typeSeg;
+        if (selectEl === el.wantCategorySelect) return el.wantCategorySeg;
+        if (selectEl === el.wantTypeSelect) return el.wantTypeSeg;
+        return null;
+    }
+
+    function paintCategoryChips(selectEl, segEl) {
+        if (!selectEl || !segEl) return;
+        var html = '';
+        Array.prototype.forEach.call(selectEl.options, function (opt) {
+            if (!opt.value || opt.hidden) return;
+            var active = selectEl.value === opt.value ? ' is-active' : '';
+            html += '<button type="button" data-value="' + escapeHtml(opt.value) + '" class="' + active.trim() + '">' +
+                escapeHtml(opt.textContent || '') + '</button>';
+        });
+        segEl.innerHTML = html;
+    }
+
+    function fillMainCategorySelect(selectEl, withSpecial) {
+        if (!selectEl) return;
+        var cur = selectEl.value;
+        var html = '<option value="">请选择分类</option>';
+        Object.keys(SUBTYPES_BY_GROUP).forEach(function (id) {
+            html += '<option value="' + id + '">' + escapeHtml(CATEGORY_LABELS[id] || id) + '</option>';
+        });
+        if (withSpecial) {
+            html += '<option value="gift" id="marketGiftCategoryOption" hidden>礼物</option>';
+            html += '<option value="lottery" id="marketLotteryCategoryOption" hidden>抽奖</option>';
+        }
+        html += '<option value="hq_points">签到积分</option>';
+        selectEl.innerHTML = html;
+        if (cur) selectEl.value = cur;
+    }
+
+    function fillMainCategorySelects() {
+        fillMainCategorySelect(el.categorySelect, true);
+        fillMainCategorySelect(el.wantCategorySelect, false);
+        el.giftCategoryOption = document.getElementById('marketGiftCategoryOption');
+        el.lotteryCategoryOption = document.getElementById('marketLotteryCategoryOption');
+    }
+
+    function paintAllCategoryChips() {
+        paintCategoryChips(el.categorySelect, el.categorySeg);
+        paintCategoryChips(el.typeSelect, el.typeSeg);
+        paintCategoryChips(el.wantCategorySelect, el.wantCategorySeg);
+        paintCategoryChips(el.wantTypeSelect, el.wantTypeSeg);
+    }
+
+    function bindCategoryChips(selectEl, segEl) {
+        if (!selectEl || !segEl || segEl._chipBound) return;
+        segEl._chipBound = true;
+        segEl.addEventListener('click', function (ev) {
+            var btn = ev.target && ev.target.closest ? ev.target.closest('button[data-value]') : null;
+            if (!btn || !segEl.contains(btn)) return;
+            selectEl.value = btn.getAttribute('data-value') || '';
+            selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+            paintCategoryChips(selectEl, segEl);
+        });
+    }
+
+    function syncTypeFieldsVisibility() {
+        var offerGroup = state.create.categoryGroup || '';
+        var wantGroup = state.create.barterWantCategoryGroup || '';
+        var offerSpecial = offerGroup === 'gift' || offerGroup === 'lottery' || offerGroup === 'hq_points';
+        var wantSpecial = wantGroup === 'hq_points';
+        if (el.typeField) el.typeField.hidden = offerSpecial;
+        if (el.wantTypeField) el.wantTypeField.hidden = state.create.tradeType !== 'barter' || wantSpecial;
+        fillTypeSelect(el.typeSelect, offerGroup, currentItem().typeKey);
+        fillTypeSelect(el.wantTypeSelect, wantGroup, currentWantItem().typeKey);
+    }
+
+    function applyTypeToItem(it, typeKey) {
+        if (!it) return;
+        var key = String(typeKey || '').trim();
+        it.typeKey = key || null;
+        it.typeLabel = key ? typeLabelOf(key) : '';
     }
 
     function uniqueSuggestItems(items) {
@@ -651,7 +890,25 @@
         if (isHqPointsItem(it)) return Math.max(1, parseInt(it.hqPointsAmount || it.quantity, 10) || 1);
         var give = parseInt(it.swapGiveQty, 10);
         if (Number.isFinite(give) && give >= 1) return give;
-        return Math.max(1, parseInt(it.quantity, 10) || 1);
+        return 1;
+    }
+
+    function itemStockQty(it) {
+        return Math.max(0, Math.floor(Number(it && it.quantity) || 0));
+    }
+
+    function maxPurchaseLotsOf(order) {
+        var it = (order && order.items && order.items[0]) || {};
+        var stock = itemStockQty(it);
+        if (stock < 1) return 0;
+        if (order && order.tradeType === 'lottery') return stock;
+        var give = itemSwapQty(it);
+        if (order && (order.tradeType === 'barter' || order.tradeType === 'currency')) {
+            if (isGiftItem(it)) return stock >= 1 ? 1 : 0;
+            if (isHqPointsItem(it)) return stock;
+            return Math.floor(stock / Math.max(1, give));
+        }
+        return stock;
     }
 
     function listingHeadline(order) {
@@ -696,6 +953,21 @@
         return { text: '立即抽奖', disabled: false };
     }
 
+    function formatCompactAuec(amount) {
+        var v = Number(amount);
+        if (!Number.isFinite(v)) return '—';
+        var sign = v < 0 ? '-' : '';
+        var abs = Math.abs(v);
+        function trim(x) {
+            var r = Math.round(x * 10) / 10;
+            if (Math.abs(r - Math.round(r)) < 1e-9) return String(Math.round(r));
+            return r.toFixed(1);
+        }
+        if (abs >= 1e6) return sign + trim(abs / 1e6) + 'M aUEC';
+        if (abs >= 1e3) return sign + trim(abs / 1e3) + 'K aUEC';
+        return sign + String(Math.round(abs)) + ' aUEC';
+    }
+
     function formatPrice(order) {
         if (order.tradeType === 'lottery') {
             var lot = order.lottery || {};
@@ -713,19 +985,30 @@
         return Number(item.pricePerUnit).toLocaleString('zh-CN') + ' aUEC';
     }
 
-    function formatPriceTotal(order, quantity) {
+    /** 列表卡片用简写金额；详情仍用 formatPrice 完整数字 */
+    function formatPriceCard(order) {
+        if (order.tradeType === 'lottery' || order.tradeType === 'barter') return formatPrice(order);
+        var item = (order.items && order.items[0]) || {};
+        if (item.pricePerUnit == null) return '面议';
+        return formatCompactAuec(item.pricePerUnit);
+    }
+
+    function formatPriceTotal(order, lots) {
         if (order.tradeType === 'barter') return formatPrice(order);
         var item = (order.items && order.items[0]) || {};
         if (item.pricePerUnit == null) return '面议';
-        var qty = Math.max(1, Math.floor(Number(quantity) || 1));
+        var lotN = Math.max(1, Math.floor(Number(lots) || 1));
+        var give = itemSwapQty(item);
+        var pieces = lotN * Math.max(1, give);
         var unit = Number(item.pricePerUnit);
-        if (qty <= 1) return unit.toLocaleString('zh-CN') + ' aUEC';
+        var total = unit * pieces;
+        if (pieces <= 1) return unit.toLocaleString('zh-CN') + ' aUEC';
         return (
             unit.toLocaleString('zh-CN') +
             ' aUEC × ' +
-            qty +
+            pieces +
             ' = ' +
-            (unit * qty).toLocaleString('zh-CN') +
+            total.toLocaleString('zh-CN') +
             ' aUEC'
         );
     }
@@ -748,8 +1031,9 @@
             name: '',
             nameZh: null,
             categoryGroup: null,
+            typeKey: null,
             typeLabel: '',
-            quantity: 1,
+            quantity: '',
             quality: DEFAULT_QUALITY,
         };
     }
@@ -840,7 +1124,10 @@
 
     function primaryCategory(order) {
         var it = (order.items && order.items[0]) || {};
-        return categoryLabel(it.categoryGroup);
+        var main = categoryLabel(it.categoryGroup);
+        var sub = String(it.typeLabel || typeLabelOf(it.typeKey) || '').trim();
+        if (sub && sub !== main) return main + ' · ' + sub;
+        return main;
     }
 
     function currentItem() {
@@ -849,8 +1136,10 @@
                 componentId: null,
                 name: '',
                 categoryGroup: null,
+                typeKey: null,
                 typeLabel: '',
-                quantity: 1,
+                quantity: '',
+                swapGiveQty: '',
                 pricePerUnit: '',
                 quality: DEFAULT_QUALITY,
             });
@@ -947,7 +1236,6 @@
         var params = new URLSearchParams();
         params.set('orderType', state.tab === 'sell' ? 'sell' : 'buy');
         if (state.searchQ) params.set('q', state.searchQ);
-        if (state.categoryGroup) params.set('categoryGroup', state.categoryGroup);
         try {
             var r = await fetch(joinUrl('/api/market/orders?' + params.toString()), {
                 headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
@@ -955,6 +1243,31 @@
             var data = await r.json().catch(function () { return {}; });
             if (!r.ok) throw new Error((data && data.message) || '加载失败');
             state.orders = Array.isArray(data.orders) ? data.orders : [];
+            if (state.categoryGroup) {
+                var wantGroup = state.categoryGroup;
+                state.orders = state.orders.filter(function (o) {
+                    return (o.items || []).some(function (it) {
+                        var g = navGroupOf(it.categoryGroup);
+                        if (wantGroup === 'other') return isOtherCategory(g);
+                        return g === wantGroup;
+                    });
+                });
+            }
+            if (state.categoryType) {
+                var typeKey = state.categoryType;
+                var typeLabel = typeLabelOf(typeKey);
+                state.orders = state.orders.filter(function (o) {
+                    return (o.items || []).some(function (it) {
+                        var raw = String(it.typeKey || '').trim();
+                        if (canonicalTypeKey(raw) === typeKey) return true;
+                        if (!raw && typeLabel) {
+                            var blob = String(it.name || '') + String(it.nameZh || '') + String(it.typeLabel || '');
+                            return blob.indexOf(typeLabel) >= 0;
+                        }
+                        return false;
+                    });
+                });
+            }
         } catch (e) {
             state.orders = [];
             if (el.gridEmpty) {
@@ -1174,10 +1487,8 @@
         if (confirmPromptMode) {
             var val = el.confirmPromptInput ? String(el.confirmPromptInput.value || '').trim() : '';
             if (confirmPromptRequired && !val) {
-                if (el.confirmPromptError) {
-                    el.confirmPromptError.textContent = '请填写下架理由';
-                    el.confirmPromptError.hidden = false;
-                }
+                showCornerNotice('请填写下架理由');
+                if (el.confirmPromptError) el.confirmPromptError.hidden = true;
                 if (el.confirmPromptInput) {
                     el.confirmPromptInput.setAttribute('aria-invalid', 'true');
                     el.confirmPromptInput.focus();
@@ -1205,7 +1516,7 @@
                     return;
                 }
                 if (opts.notice) {
-                    window.alert(opts.message || '');
+                    showCornerNotice(opts.message || '');
                     resolve(true);
                     return;
                 }
@@ -1537,7 +1848,7 @@
             '<span class="market-card__cat">' + catLine + '</span>' +
             '<h2 class="market-card__title">' + escapeHtml(listingHeadline(o)) +
             (o.tradeType !== 'barter' && o.items.length > 1 ? ' 等' + o.items.length + '件' : '') + '</h2>' +
-            '<p class="market-card__price' + priceClass + '">' + escapeHtml(formatPrice(o)) + '</p>' +
+            '<p class="market-card__price' + priceClass + '" title="' + escapeHtml(formatPrice(o)) + '">' + escapeHtml(formatPriceCard(o)) + '</p>' +
             '</div>' +
             '<button type="button" class="market-card__cta" aria-label="购买">' + CART_SVG + '</button>' +
             '</div>' +
@@ -1615,6 +1926,48 @@
         return html;
     }
 
+    function formatSellerPresenceAgo(iso) {
+        var t = Date.parse(String(iso || ''));
+        if (!Number.isFinite(t)) return '';
+        var sec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+        if (sec < 60) return '刚刚';
+        if (sec < 3600) return Math.floor(sec / 60) + ' 分钟前';
+        if (sec < 86400) return Math.floor(sec / 3600) + ' 小时前';
+        if (sec < 86400 * 7) return Math.floor(sec / 86400) + ' 天前';
+        var d = new Date(t);
+        var m = d.getMonth() + 1;
+        var day = d.getDate();
+        return m + '月' + day + '日';
+    }
+
+    function sellerPresenceHtml(seller) {
+        if (!seller) return '';
+        if (seller.isOnline) {
+            return (
+                '<div class="market-seller-card__presence is-online" title="语音频道在线">' +
+                '<span class="market-seller-card__presence-dot" aria-hidden="true"></span>' +
+                '<span class="market-seller-card__presence-label">在线</span>' +
+                '</div>'
+            );
+        }
+        var ago = formatSellerPresenceAgo(seller.lastSeenAt);
+        if (ago) {
+            return (
+                '<div class="market-seller-card__presence is-offline" title="上次语音在线">' +
+                '<span class="market-seller-card__presence-dot" aria-hidden="true"></span>' +
+                '<span class="market-seller-card__presence-label">上次在线</span>' +
+                '<span class="market-seller-card__presence-ago">' + escapeHtml(ago) + '</span>' +
+                '</div>'
+            );
+        }
+        return (
+            '<div class="market-seller-card__presence is-unknown" title="暂无语音在线记录">' +
+            '<span class="market-seller-card__presence-dot" aria-hidden="true"></span>' +
+            '<span class="market-seller-card__presence-label">暂无在线记录</span>' +
+            '</div>'
+        );
+    }
+
     function renderSellerProfileHtml(seller, partyLabel, opts) {
         opts = opts || {};
         var revealed = !!seller.contactRevealed || !!opts.revealed;
@@ -1627,6 +1980,7 @@
         var orgLogo = resolveAssetUrl(seller.rsiOrgLogoUrl);
         var tradeHtml = '<span class="market-seller-card__trade">交易：' + escapeHtml(formatTradeCount(seller)) + '</span>';
         var fleetBadge = seller.isFleetMember ? '<span class="market-seller-card__fleet">舰队</span>' : '';
+        var online = !!seller.isOnline;
         var ratingHtml = '';
         if (seller.averageRating != null && seller.reviewCount > 0) {
             ratingHtml =
@@ -1688,7 +2042,7 @@
                 '</span>' +
                 '</div>';
             if (!revealed) {
-                contactHtml += '<p class="market-seller-card__contact-hint">确认购买后显示完整联系方式</p>';
+                contactHtml += '<p class="market-seller-card__contact-hint">发布者已隐藏联系方式（脱敏展示）；确认购买后可见完整信息</p>';
             }
         } else {
             contactHtml = '<p class="market-detail__note">发布者未公开联系方式</p>';
@@ -1699,12 +2053,18 @@
             '<h4 class="market-seller-card__title">' + escapeHtml(partyLabel) + '</h4>' +
             '<div class="market-seller-card__body">' +
             '<div class="market-seller-card__profile">' +
+            '<div class="market-seller-card__avatar-wrap' + (online ? ' is-online' : '') + '">' +
             '<img class="market-seller-card__avatar" src="' + escapeHtml(avatar) + '" alt="">' +
+            (online ? '<span class="market-seller-card__avatar-live" aria-hidden="true"></span>' : '') +
+            '</div>' +
             '<div class="market-seller-card__identity">' +
             '<div class="market-seller-card__name-row">' +
+            '<div class="market-seller-card__name-main">' +
             (seller.shopKey
                 ? '<a class="market-seller-card__name" href="market-seller.html?seller=' + encodeURIComponent(seller.shopKey) + '">' + escapeHtml(displayName) + '</a>'
                 : '<span class="market-seller-card__name">' + escapeHtml(displayName) + '</span>') +
+            sellerPresenceHtml(seller) +
+            '</div>' +
             '<div class="market-seller-card__badges">' + tradeHtml + fleetBadge + '</div>' +
             '</div>' +
             subLine +
@@ -1848,8 +2208,8 @@
     }
 
     function formatTradeWindow(order) {
-        var s = String(order.tradeTimeStart || '20:00').slice(0, 5);
-        var e = String(order.tradeTimeEnd || '21:00').slice(0, 5);
+        var s = String(order.tradeTimeStart || '00:00').slice(0, 5);
+        var e = String(order.tradeTimeEnd || '23:59').slice(0, 5);
         return s + ' – ' + e;
     }
 
@@ -2042,7 +2402,9 @@
         var showPurchaseHint = !!options.showPurchaseHint;
         if (!el.detailBody) return;
         var it0 = (order.items && order.items[0]) || {};
-        var stockQty = Math.max(1, Math.floor(Number(it0.quantity) || 1));
+        var stockPieces = Math.max(0, itemStockQty(it0));
+        var givePerLot = itemSwapQty(it0);
+        var stockQty = Math.max(1, maxPurchaseLotsOf(order) || 1);
         var seller = getSeller(order);
         var sellerRevealed = isOwnOrder(order) || !!options.unlockSellerContact
             || (!!seller.contactRevealed && !isPrivilegedSession());
@@ -2062,7 +2424,7 @@
         var qtyPickerHtml = canPickQty
             ? (
                 '<div class="market-detail__qty" id="marketDetailQtyPicker"' + (showPurchaseHint ? ' hidden' : '') + '>' +
-                '<span class="market-detail__qty-label">购买数量</span>' +
+                '<span class="market-detail__qty-label">' + (order.tradeType === 'currency' ? '购买份数' : '购买数量') + '</span>' +
                 '<div class="market-detail__qty-stepper">' +
                 '<button type="button" class="market-detail__qty-btn" id="marketDetailQtyMinus" aria-label="减少数量">−</button>' +
                 '<input type="number" class="market-detail__qty-input" id="marketDetailQtyInput" min="1" max="' + escapeHtml(String(stockQty)) + '" value="1" inputmode="numeric">' +
@@ -2099,7 +2461,7 @@
         var lot = order.lottery || {};
         var lotteryFacts = '';
         if (isLottery) {
-            var audienceText = lot.audience === 'public' ? '所有人' : '仅舰队成员';
+            var audienceText = '仅舰队成员';
             var costText = lot.pointCost > 0 ? (String(lot.pointCost) + ' 签到积分') : '免费';
             var modeText = lot.mode === 'scheduled'
                 ? ('定时开奖，' + formatLotteryClock(lot.drawAt) + ' 随机抽取')
@@ -2177,7 +2539,14 @@
                 ? lotteryFacts
                 : (isHqPointsItem(it0)
                     ? '<dt>积分数</dt><dd>×' + escapeHtml(String(it0.hqPointsAmount || 1)) + '</dd>'
-                    : '<dt>可购数量</dt><dd>×' + escapeHtml(String(stockQty)) + '</dd><dt>品质</dt><dd>' + escapeHtml(itemQuality(it0)) + '</dd>') +
+                    : (
+                        (order.tradeType === 'currency'
+                            ? '<dt>库存</dt><dd>×' + escapeHtml(String(stockPieces)) + '</dd>' +
+                              '<dt>单次数量</dt><dd>×' + escapeHtml(String(givePerLot)) + '</dd>' +
+                              '<dt>可购份数</dt><dd>×' + escapeHtml(String(stockQty)) + '</dd>'
+                            : '<dt>可购数量</dt><dd>×' + escapeHtml(String(stockPieces || stockQty)) + '</dd>') +
+                        '<dt>品质</dt><dd>' + escapeHtml(itemQuality(it0)) + '</dd>'
+                    )) +
                 '<dt>交易位置</dt><dd>' + escapeHtml(locLine) + '</dd>' +
                 '<dt>交易时段</dt><dd>每日 ' + escapeHtml(formatTradeWindow(order)) + '</dd>') +
             (formatDateMinute(order.createdAt)
@@ -2376,7 +2745,7 @@
                     return;
                 }
                 if (isHqPointsListing(order) && !isFleetMemberSession()) {
-                    window.alert('无权限');
+                    showCornerNotice('无权限');
                     return;
                 }
                 if (isGiftListing(order) && !sessionEmailVerified()) {
@@ -2397,14 +2766,23 @@
                 requireMarketAck('purchase', function () {
                     purchaseBtn.disabled = true;
                     submitPurchase(oid, buyQty).then(function (data) {
-                        var next = data && data.purchase && data.purchase.order;
+                        var purchase = data && data.purchase;
+                        var next = purchase && purchase.order;
                         var shown = next ? mergeOrderIntoState(next) || order : order;
                         renderOrderDetail(shown, {
                             showPurchaseHint: true,
                             unlockSellerContact: true,
-                            purchaseId: data.purchase && data.purchase.id,
+                            purchaseId: purchase && purchase.id,
                         });
                         setPurchaseSubmittedUi(shown, true);
+                        if (purchase && purchase.id && window.UssMarketChat && typeof window.UssMarketChat.open === 'function') {
+                            window.UssMarketChat.open({
+                                purchaseId: purchase.id,
+                                itemName: primaryItemName(purchase.order || shown),
+                                peerName: (purchase.sellerDisplayName || getSeller(purchase.order || shown).bindingId || ''),
+                                myRole: 'buyer',
+                            });
+                        }
                         if (window.UssMarketNotify && typeof window.UssMarketNotify.push === 'function') {
                             window.UssMarketNotify.push({
                                 kind: 'buyer',
@@ -2421,7 +2799,7 @@
                         purchaseBtn.classList.add('market-btn--accent');
                         purchaseBtn.classList.remove('is-done');
                         purchaseBtn.removeAttribute('aria-disabled');
-                        window.alert((e && e.message) || '提交失败');
+                        showCornerNotice((e && e.message) || '提交失败');
                     });
                 });
             });
@@ -2479,7 +2857,6 @@
             renderOrderDetail(order);
             el.detailBackdrop.hidden = false;
             syncBodyScrollLock();
-            if (el.detailClose) el.detailClose.focus();
         }
         fetch(joinUrl('/api/market/orders/' + encodeURIComponent(orderId)), {
             headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
@@ -2519,7 +2896,6 @@
         renderOrderDetail(order, opts);
         el.detailBackdrop.hidden = false;
         syncBodyScrollLock();
-        if (el.detailClose) el.detailClose.focus();
         if (!order.id) return;
         fetch(joinUrl('/api/market/orders/' + encodeURIComponent(order.id)), {
             headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
@@ -2541,12 +2917,36 @@
         if (el.detailModal) el.detailModal.classList.remove('market-detail--barter');
     }
 
+    function catButton(label, attrs, active) {
+        return '<button type="button" class="market-cat' + (active ? ' is-active' : '') + '" ' + attrs + '>' + escapeHtml(label) + '</button>';
+    }
+
     function renderCategoryChips() {
-        if (!el.cats) return;
-        el.cats.innerHTML = CATEGORY_GROUPS.map(function (g) {
-            var active = g.id === state.categoryGroup ? ' is-active' : '';
-            return '<button type="button" class="market-cat' + active + '" data-cat="' + escapeHtml(g.id) + '">' + escapeHtml(g.label) + '</button>';
+        var main = document.getElementById('marketCatsMain');
+        var sub = document.getElementById('marketCatsSub');
+        if (!main || !sub) return;
+        var fleet = isFleetMemberSession();
+        if (!fleet && (state.categoryGroup === 'lottery' || state.categoryGroup === 'gift')) {
+            state.categoryGroup = '';
+            state.categoryType = '';
+        }
+        var mains = CATEGORY_GROUPS.filter(function (g) {
+            if (g.id === 'gift' || g.id === 'lottery') return fleet;
+            return true;
+        });
+        main.innerHTML = mains.map(function (g) {
+            return catButton(g.label, 'data-cat="' + escapeHtml(g.id) + '"', g.id === state.categoryGroup);
         }).join('');
+        var parts = [];
+        var types = subtypesForGroup(state.categoryGroup);
+        if (types.length) {
+            parts.push(catButton('全部', 'data-type=""', !state.categoryType));
+            types.forEach(function (key) {
+                parts.push(catButton(typeLabelOf(key), 'data-type="' + escapeHtml(key) + '"', state.categoryType === key));
+            });
+        }
+        sub.innerHTML = parts.join('');
+        sub.hidden = !parts.length;
     }
 
     function syncTabs() {
@@ -2607,10 +3007,7 @@
             el.listingTermsWrap.classList.add('is-required-miss');
         }
         failRequired('请先勾选服务与风险告知后再生成单据', el.listingTermsChk);
-        if (el.listingTermsHint) {
-            el.listingTermsHint.textContent = '请先勾选服务与风险告知后再生成单据';
-            el.listingTermsHint.hidden = false;
-        }
+        if (el.listingTermsHint) el.listingTermsHint.hidden = true;
     }
 
     function clearRequiredMarks() {
@@ -2622,12 +3019,36 @@
         if (el.listingTermsWrap) el.listingTermsWrap.classList.remove('is-required-miss');
     }
 
+    function showCornerNotice(message) {
+        var text = String(message || '').trim();
+        if (!text || typeof document === 'undefined') return;
+        var styleId = 'marketCornerNoticeStyle';
+        if (!document.getElementById(styleId)) {
+            var style = document.createElement('style');
+            style.id = styleId;
+            style.textContent =
+                '.market-corner-notice{position:fixed;right:1.25rem;bottom:1.25rem;z-index:12040;width:min(22.5rem,calc(100vw - 1.5rem));margin:0;padding:.85rem 1rem;border-radius:8px;border:1px solid rgba(255,68,102,.45);background:rgba(14,41,67,.96);color:#ffd0d8;font-size:.8125rem;line-height:1.45;box-shadow:0 16px 40px rgba(0,0,0,.45);pointer-events:none}' +
+                '@media (max-width:640px){.market-corner-notice{right:.75rem;bottom:.75rem}}';
+            document.head.appendChild(style);
+        }
+        var node = document.getElementById('marketCornerNotice');
+        if (!node) {
+            node = document.createElement('p');
+            node.id = 'marketCornerNotice';
+            node.className = 'market-corner-notice';
+            node.setAttribute('role', 'status');
+            document.body.appendChild(node);
+        }
+        node.textContent = text;
+        node.hidden = false;
+        if (showCornerNotice._t) window.clearTimeout(showCornerNotice._t);
+        showCornerNotice._t = window.setTimeout(function () { node.hidden = true; }, 3200);
+    }
+
     function failRequired(message, focusEl) {
         clearRequiredMarks();
-        if (el.formError) {
-            el.formError.textContent = message;
-            el.formError.hidden = false;
-        }
+        showCornerNotice(message);
+        if (el.formError) el.formError.hidden = true;
         if (!focusEl) return false;
         var wrap = focusEl.closest
             ? (focusEl.closest('.market-inline-field')
@@ -2697,11 +3118,12 @@
             tradeType: order.tradeType || 'currency',
             orderType: order.orderType || 'sell',
             expireDays: inferExpireDays(order),
-            tradeTimeStart: order.tradeTimeStart || '20:00',
-            tradeTimeEnd: order.tradeTimeEnd || '21:00',
+            tradeTimeStart: order.tradeTimeStart || '00:00',
+            tradeTimeEnd: order.tradeTimeEnd || '23:59',
             categoryGroup: it0.categoryGroup || '',
             itemInfo: order.note || '',
             contact: order.contact || (order.seller && order.seller.email) || accountEmail(),
+            contactPublic: !!order.contactPublic,
             location: order.location ? {
                 id: order.location.id || null,
                 name: order.location.name || '',
@@ -2713,7 +3135,8 @@
                 name: it0.nameZh || it0.name || '',
                 nameZh: it0.nameZh || null,
                 categoryGroup: it0.categoryGroup || null,
-                typeLabel: '',
+                typeKey: it0.typeKey || null,
+                typeLabel: it0.typeLabel || typeLabelOf(it0.typeKey) || '',
                 quantity: isHqPointsItem(it0) ? (it0.hqPointsAmount || it0.quantity || 1) : (it0.quantity || 1),
                 swapGiveQty: it0.swapGiveQty || 1,
                 hqPointsAmount: it0.hqPointsAmount,
@@ -2732,7 +3155,8 @@
                 name: it1.nameZh || it1.name || '',
                 nameZh: it1.nameZh || null,
                 categoryGroup: it1.categoryGroup || null,
-                typeLabel: '',
+                typeKey: it1.typeKey || null,
+                typeLabel: it1.typeLabel || typeLabelOf(it1.typeKey) || '',
                 quantity: isHqPointsItem(it1) ? (it1.hqPointsAmount || it1.quantity || 1) : (it1.quantity || 1),
                 hqPointsAmount: it1.hqPointsAmount,
                 quality: itemQuality(it1),
@@ -2767,13 +3191,14 @@
             tradeType: 'currency',
             orderType: state.tab === 'buy' ? 'buy' : 'sell',
             expireDays: 7,
-            tradeTimeStart: '20:00',
-            tradeTimeEnd: '21:00',
+            tradeTimeStart: '00:00',
+            tradeTimeEnd: '23:59',
             categoryGroup: '',
             itemInfo: '',
             contact: accountEmail(),
+            contactPublic: false,
             location: null,
-            items: [{ componentId: null, name: '', categoryGroup: null, typeLabel: '', quantity: 1, swapGiveQty: 1, pricePerUnit: '', quality: DEFAULT_QUALITY, giftRedeemUrls: [''] }],
+            items: [{ componentId: null, name: '', categoryGroup: null, typeKey: null, typeLabel: '', quantity: '', swapGiveQty: '', pricePerUnit: '', quality: DEFAULT_QUALITY, giftRedeemUrls: [''] }],
             autoImage: null,
             autoImageComponentId: null,
             userImage: null,
@@ -2800,6 +3225,22 @@
         });
     }
 
+    function syncContactPublicUi() {
+        var on = !!state.create.contactPublic;
+        if (el.contactPublicSwitch) {
+            el.contactPublicSwitch.setAttribute('aria-checked', on ? 'true' : 'false');
+            el.contactPublicSwitch.classList.toggle('is-on', on);
+        }
+        if (el.contactPublicSwitchLabel) {
+            el.contactPublicSwitchLabel.textContent = on ? '公开' : '脱敏';
+        }
+        if (el.contactHint) {
+            el.contactHint.textContent = on
+                ? '详情页公开完整联系方式'
+                : '脱敏展示；确认购买后可见完整信息';
+        }
+    }
+
     function syncHqPointsFormHints() {
         var offerPts = isHqPointsItem(currentItem());
         var wantPts = isHqPointsItem(currentWantItem());
@@ -2807,11 +3248,17 @@
         if (el.hqPointsHint) {
             el.hqPointsHint.hidden = !(isSuperAdminSession() && isBarter);
         }
-        if (el.qtyLabel) el.qtyLabel.textContent = offerPts ? '积分数' : (isBarter ? '给出数量' : '数量');
+        if (el.qtyLabel) {
+            el.qtyLabel.textContent = offerPts ? '积分数' : (isBarter ? '给出数量' : '单次数量');
+        }
+        if (el.stockLabel) {
+            el.stockLabel.textContent = isBarter ? '我方总数' : '库存';
+        }
         if (el.wantQtyLabel) el.wantQtyLabel.textContent = wantPts ? '积分数' : '换取数量';
         if (el.wantQtyField) el.wantQtyField.hidden = !isBarter;
         var giftOn = isBarter && isGiftCategorySelected();
-        var showStock = isBarter && !offerPts;
+        var isCurrency = state.create.tradeType === 'currency';
+        var showStock = (isBarter && !offerPts) || (isCurrency && !offerPts);
         if (el.stockField) el.stockField.hidden = !showStock;
         if (el.giveQtyField) el.giveQtyField.hidden = !!(isBarter && giftOn);
         var qtyWrap = el.qtyInput && el.qtyInput.closest('.market-inline-field');
@@ -2821,14 +3268,18 @@
             currentItem().swapGiveQty = 1;
         }
         if (el.barterQtyHint) {
-            el.barterQtyHint.hidden = !isBarter;
+            el.barterQtyHint.hidden = false;
             if (isBarter && giftOn) {
                 el.barterQtyHint.textContent = '我方总数等于链接条数。对方每次只能换走 1 份（消耗 1 条链接），不会一次拿走全部。';
             } else if (isBarter) {
                 el.barterQtyHint.textContent = '我方总数是库存。给出数量 / 换取数量是单次比例，例如库存 10、给出 5、换取 4，则可成交 2 次。';
+            } else if (state.create.orderType === 'buy') {
+                el.barterQtyHint.textContent = '单次数量是你每次求购的件数。库存是你想收购的总件数。报价是每一件的 aUEC。';
+            } else {
+                el.barterQtyHint.textContent = '单次数量是买家每次购买拿到的件数。库存是你能卖出的总件数。报价是每一件的 aUEC。';
             }
         }
-        if (el.qtyPriceRow) el.qtyPriceRow.classList.toggle('market-row-2--barter-qty', isBarter && showStock);
+        if (el.qtyPriceRow) el.qtyPriceRow.classList.toggle('market-row-2--barter-qty', !!showStock);
     }
 
     var GIFT_MAX_URLS = 30;
@@ -2886,23 +3337,19 @@
 
     function syncLotteryFieldVisibility() {
         var mode = lotterySegValue(el.lotteryModeSeg, 'data-lottery-mode') || 'instant';
-        var audience = lotterySegValue(el.lotteryAudienceSeg, 'data-lottery-audience') || 'fleet';
         var instant = mode === 'instant';
-        var fleetOnly = audience === 'fleet';
         if (el.lotteryProbField) el.lotteryProbField.hidden = !instant;
         if (el.lotteryDrawAtField) el.lotteryDrawAtField.hidden = instant;
         if (el.lotteryDrawAtHint) el.lotteryDrawAtHint.hidden = instant;
-        if (el.lotteryCostField) el.lotteryCostField.hidden = !fleetOnly;
-        if (el.lotteryCostHint) el.lotteryCostHint.hidden = !fleetOnly;
+        if (el.lotteryCostField) el.lotteryCostField.hidden = false;
+        if (el.lotteryCostHint) el.lotteryCostHint.hidden = false;
         if (el.lotteryModeHint) {
             el.lotteryModeHint.textContent = instant
                 ? '点一次开一次。中奖概率只对即抽即开生效。未中奖也会扣除参与消耗。'
                 : '到点后在已参与的人里随机抽取，不看概率。人数少于奖品份数时，参与者全部中奖。';
         }
         if (el.lotteryAudienceHint) {
-            el.lotteryAudienceHint.textContent = fleetOnly
-                ? '只有舰队成员能参与，可以用总部签到积分作为参与消耗。填 0 表示免费。'
-                : '所有人都能参与，包含非舰队成员。非舰队成员没有签到积分，因此不能设置参与消耗。';
+            el.lotteryAudienceHint.textContent = '抽奖仅舰队成员可见和参与，可以用总部签到积分作为参与消耗。填 0 表示免费。';
         }
     }
 
@@ -2932,7 +3379,7 @@
 
     function readLotteryForm() {
         var mode = lotterySegValue(el.lotteryModeSeg, 'data-lottery-mode') || 'instant';
-        var audience = lotterySegValue(el.lotteryAudienceSeg, 'data-lottery-audience') || 'fleet';
+        var audience = 'fleet';
         var prize = Math.floor(Number(el.lotteryPrizeCount && el.lotteryPrizeCount.value));
         if (!Number.isFinite(prize) || prize < 1 || prize > 500) {
             return { error: '奖品份数须为 1 到 500', el: el.lotteryPrizeCount };
@@ -2953,11 +3400,9 @@
             }
             drawAt = new Date(at).toISOString();
         }
-        if (audience === 'fleet') {
-            pointCost = Math.floor(Number(el.lotteryPointCost && el.lotteryPointCost.value));
-            if (!Number.isFinite(pointCost) || pointCost < 0 || pointCost > 100000) {
-                return { error: '参与消耗须为 0 到 100000 的整数', el: el.lotteryPointCost };
-            }
+        pointCost = Math.floor(Number(el.lotteryPointCost && el.lotteryPointCost.value));
+        if (!Number.isFinite(pointCost) || pointCost < 0 || pointCost > 100000) {
+            return { error: '参与消耗须为 0 到 100000 的整数', el: el.lotteryPointCost };
         }
         return {
             lottery: {
@@ -3005,14 +3450,18 @@
         if (el.locInput) el.locInput.value = c.location ? c.location.name || '' : '';
         if (el.categorySelect) el.categorySelect.value = c.categoryGroup || it.categoryGroup || '';
         if (el.itemInput) el.itemInput.value = it.name || '';
-        if (el.qtyInput) el.qtyInput.value = it.quantity || 1;
-        if (el.priceInput) el.priceInput.value = it.pricePerUnit !== '' && it.pricePerUnit != null ? it.pricePerUnit : '';
-        if (el.tradeTimeStart) el.tradeTimeStart.value = c.tradeTimeStart || '20:00';
-        if (el.tradeTimeEnd) el.tradeTimeEnd.value = c.tradeTimeEnd || '21:00';
+        if (el.priceInput) {
+            el.priceInput.value = it.pricePerUnit !== '' && it.pricePerUnit != null ? it.pricePerUnit : '';
+        }
+        if (el.tradeTimeStart) el.tradeTimeStart.value = c.tradeTimeStart || '00:00';
+        if (el.tradeTimeEnd) el.tradeTimeEnd.value = c.tradeTimeEnd || '23:59';
         if (el.itemInfoInput) el.itemInfoInput.value = c.itemInfo || '';
         if (el.contactInput) el.contactInput.value = c.contact || '';
+        syncContactPublicUi();
+        syncTypeFieldsVisibility();
         if (el.qualityInput) el.qualityInput.value = itemQuality(it);
         var isBarter = c.tradeType === 'barter';
+        var isCurrency = c.tradeType === 'currency';
         if (el.priceField) el.priceField.hidden = isBarter;
         if (el.orderTypeField) el.orderTypeField.hidden = isBarter;
         if (el.barterWantSection) el.barterWantSection.hidden = !isBarter;
@@ -3025,24 +3474,26 @@
         if (el.wantQualityInput) el.wantQualityInput.value = itemQuality(want);
         if (el.qtyInput) {
             if (isHqPointsItem(it)) {
-                el.qtyInput.value = it.hqPointsAmount || it.quantity || 1;
-            } else if (isBarter) {
-                el.qtyInput.value = it.swapGiveQty || 1;
+                el.qtyInput.value = it.hqPointsAmount || it.quantity || '';
+            } else if (isBarter || isCurrency) {
+                el.qtyInput.value = it.swapGiveQty != null && it.swapGiveQty !== '' ? it.swapGiveQty : '';
             } else {
-                el.qtyInput.value = it.quantity || 1;
+                el.qtyInput.value = it.quantity != null && it.quantity !== '' ? it.quantity : '';
             }
         }
         if (el.stockInput) {
-            el.stockInput.value = it.quantity || 1;
+            el.stockInput.value = it.quantity != null && it.quantity !== '' ? it.quantity : '';
         }
         if (el.wantQtyInput) {
-            el.wantQtyInput.value = isHqPointsItem(want) ? (want.hqPointsAmount || want.quantity || 1) : (want.quantity || 1);
+            var wq = isHqPointsItem(want) ? (want.hqPointsAmount || want.quantity) : want.quantity;
+            el.wantQtyInput.value = wq != null && wq !== '' ? wq : '';
         }
         syncGiftFormUi();
         syncLotteryFormUi();
         renderProductImage(it);
         renderWantProductImage(want);
         syncHqPointsFormHints();
+        paintAllCategoryChips();
         if (el.formError) el.formError.hidden = true;
     }
 
@@ -3159,6 +3610,7 @@
             want.componentId = 'uss-hq-points';
             want.name = '积分';
             want.nameZh = '签到积分';
+            want.typeKey = null;
             want.typeLabel = '签到积分';
             want.categoryGroup = 'hq_points';
             state.create.barterWantCategoryGroup = 'hq_points';
@@ -3172,14 +3624,15 @@
             state.create.barterWantAutoComponentId = null;
             renderWantProductImage(want);
             syncHqPointsFormHints();
+            syncTypeFieldsVisibility();
             return;
         }
         var want = currentWantItem();
         want.componentId = itemComponentId(picked);
         want.name = itemDisplayName(picked) || String(picked.id_item || '');
         want.nameZh = picked.name_zh || null;
-        want.typeLabel = itemTypeLabel(picked);
         want.categoryGroup = inferNavGroupFromType(picked.type) || 'other';
+        applyTypeToItem(want, picked.type || '');
         want.quality = DEFAULT_QUALITY;
         state.create.barterWantCategoryGroup = want.categoryGroup;
         if (el.wantCategorySelect) el.wantCategorySelect.value = want.categoryGroup;
@@ -3192,12 +3645,13 @@
         state.create.barterWantAutoComponentId = want.componentId;
         state.create.barterWantAutoImage = componentImageUrl(want.componentId);
         renderWantProductImage(want);
+        syncTypeFieldsVisibility();
     }
 
     function clearWantItemPick() {
         var want = currentWantItem();
         want.componentId = null;
-        want.typeLabel = '';
+        applyTypeToItem(want, '');
         if (!state.create.barterWantCategoryGroup) want.categoryGroup = null;
         state.create.barterWantAutoImage = null;
         state.create.barterWantAutoComponentId = null;
@@ -3212,6 +3666,7 @@
             it.componentId = 'uss-hq-points';
             it.name = '积分';
             it.nameZh = '签到积分';
+            it.typeKey = null;
             it.typeLabel = '签到积分';
             it.categoryGroup = 'hq_points';
             state.create.categoryGroup = 'hq_points';
@@ -3225,14 +3680,15 @@
             state.create.autoImageComponentId = null;
             renderProductImage(it);
             syncHqPointsFormHints();
+            syncTypeFieldsVisibility();
             return;
         }
         var it = currentItem();
         it.componentId = itemComponentId(picked);
         it.name = itemDisplayName(picked) || String(picked.id_item || '');
         it.nameZh = picked.name_zh || null;
-        it.typeLabel = itemTypeLabel(picked);
         it.categoryGroup = inferNavGroupFromType(picked.type) || 'other';
+        applyTypeToItem(it, picked.type || '');
         it.quality = DEFAULT_QUALITY;
         state.create.categoryGroup = it.categoryGroup;
         if (el.categorySelect) el.categorySelect.value = it.categoryGroup;
@@ -3245,12 +3701,13 @@
         state.create.autoImageComponentId = it.componentId;
         state.create.autoImage = componentImageUrl(it.componentId);
         renderProductImage(it);
+        syncTypeFieldsVisibility();
     }
 
     function clearItemPick() {
         var it = currentItem();
         it.componentId = null;
-        it.typeLabel = '';
+        applyTypeToItem(it, '');
         if (!state.create.categoryGroup) it.categoryGroup = null;
         state.create.autoImage = null;
         state.create.autoImageComponentId = null;
@@ -3274,26 +3731,34 @@
         return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
     }
 
+    function parsePositiveIntInput(raw) {
+        if (raw === '' || raw == null) return null;
+        var n = parseInt(raw, 10);
+        if (!Number.isFinite(n) || n < 1) return null;
+        return n;
+    }
+
     function readFormIntoState() {
         var c = state.create;
         var it = currentItem();
         if (el.qtyInput) {
-            var qv = Math.max(1, parseInt(el.qtyInput.value, 10) || 1);
+            var qv = parsePositiveIntInput(el.qtyInput.value);
             if (isHqPointsItem(it)) {
-                it.quantity = qv;
-                it.hqPointsAmount = qv;
+                it.quantity = qv != null ? qv : '';
+                it.hqPointsAmount = it.quantity;
             } else if (isGiftCategorySelected()) {
                 it.swapGiveQty = 1;
-            } else if (c.tradeType === 'barter') {
-                it.swapGiveQty = qv;
+            } else if (c.tradeType === 'barter' || c.tradeType === 'currency') {
+                it.swapGiveQty = qv != null ? qv : '';
             } else {
-                it.quantity = qv;
+                it.quantity = qv != null ? qv : '';
             }
         }
-        if (el.stockInput && c.tradeType === 'barter' && !isHqPointsItem(it)) {
-            it.quantity = Math.max(1, parseInt(el.stockInput.value, 10) || 1);
-            if (isGiftCategorySelected()) {
-                resizeGiftUrls(it, it.quantity);
+        if (el.stockInput && (c.tradeType === 'barter' || c.tradeType === 'currency') && !isHqPointsItem(it)) {
+            var stockV = parsePositiveIntInput(el.stockInput.value);
+            it.quantity = stockV != null ? stockV : '';
+            if (isGiftCategorySelected() && stockV != null) {
+                resizeGiftUrls(it, stockV);
             }
         }
         if (el.priceInput) it.pricePerUnit = el.priceInput.value;
@@ -3301,9 +3766,12 @@
             c.categoryGroup = el.categorySelect.value || '';
             it.categoryGroup = c.categoryGroup || it.categoryGroup;
         }
+        if (el.typeSelect && el.typeField && !el.typeField.hidden) {
+            applyTypeToItem(it, el.typeSelect.value || '');
+        }
         if (el.qualityInput) it.quality = normalizeQuality(el.qualityInput.value);
-        if (el.tradeTimeStart) c.tradeTimeStart = el.tradeTimeStart.value || '20:00';
-        if (el.tradeTimeEnd) c.tradeTimeEnd = el.tradeTimeEnd.value || '21:00';
+        if (el.tradeTimeStart) c.tradeTimeStart = el.tradeTimeStart.value || '00:00';
+        if (el.tradeTimeEnd) c.tradeTimeEnd = el.tradeTimeEnd.value || '23:59';
         if (el.itemInfoInput) c.itemInfo = el.itemInfoInput.value.trim();
         if (el.contactInput) c.contact = el.contactInput.value.trim();
         readGiftLinksFromDom();
@@ -3324,6 +3792,9 @@
             if (el.wantCategorySelect) {
                 c.barterWantCategoryGroup = el.wantCategorySelect.value || '';
                 want.categoryGroup = c.barterWantCategoryGroup || want.categoryGroup;
+            }
+            if (el.wantTypeSelect && el.wantTypeField && !el.wantTypeField.hidden) {
+                applyTypeToItem(want, el.wantTypeSelect.value || '');
             }
             if (el.wantQualityInput) want.quality = normalizeQuality(el.wantQualityInput.value);
         }
@@ -3558,12 +4029,18 @@
             quantity: offerPts ? 1 : it.quantity,
             quality: itemQuality(it),
         };
+        if (!offerPts && it.typeKey) {
+            row.typeKey = it.typeKey;
+            row.typeLabel = it.typeLabel || typeLabelOf(it.typeKey);
+        }
         if (offerPts) row.hqPointsAmount = offerAmount;
-        if (c.tradeType === 'barter' && !offerPts) {
-            row.quantity = Math.max(1, parseInt(it.quantity, 10) || 1);
+        if ((c.tradeType === 'barter' || c.tradeType === 'currency') && !offerPts) {
+            var stockParsed = parseInt(it.quantity, 10);
+            var giveParsed = parseInt(it.swapGiveQty, 10);
+            row.quantity = Number.isFinite(stockParsed) && stockParsed >= 1 ? stockParsed : 0;
             row.swapGiveQty = isGiftCategorySelected()
                 ? 1
-                : Math.max(1, parseInt(it.swapGiveQty, 10) || 1);
+                : (Number.isFinite(giveParsed) && giveParsed >= 1 ? giveParsed : 0);
         }
         if (isGiftCategorySelected()) {
             row.categoryGroup = 'gift';
@@ -3594,6 +4071,10 @@
             quantity: wantPts ? wantAmount : want.quantity,
             quality: itemQuality(want),
         };
+        if (!wantPts && want.typeKey) {
+            wantRow.typeKey = want.typeKey;
+            wantRow.typeLabel = want.typeLabel || typeLabelOf(want.typeKey);
+        }
         if (wantPts) wantRow.hqPointsAmount = wantAmount;
         return [row, wantRow];
     }
@@ -3627,6 +4108,12 @@
         }
         if (!c.categoryGroup && !isHqPointsItem(currentItem())) {
             return failRequired('请选择物品分类', el.categorySelect);
+        }
+        if (!isHqPointsItem(currentItem()) && !isLotteryCategorySelected() && !isGiftCategorySelected()) {
+            var offerSubs = subtypesForGroup(c.categoryGroup);
+            if (offerSubs.length && (!currentItem().typeKey || offerSubs.indexOf(currentItem().typeKey) < 0)) {
+                return failRequired('请选择子分类', el.typeSelect || el.categorySelect);
+            }
         }
         var startMin = parseTimeMinutes(c.tradeTimeStart);
         var endMin = parseTimeMinutes(c.tradeTimeEnd);
@@ -3664,6 +4151,13 @@
             }
             if (!wantPts && !c.barterWantCategoryGroup && !items[1].categoryGroup) {
                 return failRequired('请选择换取物品分类', el.wantCategorySelect);
+            }
+            if (!wantPts) {
+                var wantGroup = c.barterWantCategoryGroup || items[1].categoryGroup;
+                var wantSubs = subtypesForGroup(wantGroup);
+                if (wantSubs.length && (!items[1].typeKey || wantSubs.indexOf(items[1].typeKey) < 0)) {
+                    return failRequired('请选择换取子分类', el.wantTypeSelect || el.wantCategorySelect);
+                }
             }
             if (!items[1].name) {
                 return failRequired('请搜索选择期望换取的物品', el.wantItemInput);
@@ -3705,6 +4199,19 @@
                     return failRequired('请填写有效的单件报价（可为 0 aUEC）', el.priceInput);
                 }
             }
+            if (!isHqPointsItem(items[0])) {
+                var curStock = parseInt(items[0].quantity, 10);
+                var curGive = parseInt(items[0].swapGiveQty, 10);
+                if (!Number.isFinite(curGive) || curGive < 1) {
+                    return failRequired('请填写单次数量', el.qtyInput);
+                }
+                if (!Number.isFinite(curStock) || curStock < 1) {
+                    return failRequired('请填写库存', el.stockInput);
+                }
+                if (curStock < curGive) {
+                    return failRequired('库存须不少于单次数量', el.stockInput);
+                }
+            }
         }
         }
         var payload = {
@@ -3720,6 +4227,7 @@
             images: submitImages(),
             note: c.itemInfo || '',
             contact: c.contact || '',
+            contactPublic: !!c.contactPublic,
             lottery: lotteryPayload,
         };
         if (el.btnSubmit) {
@@ -3737,6 +4245,7 @@
                     images: payload.images,
                     note: payload.note,
                     contact: payload.contact,
+                    contactPublic: !!payload.contactPublic,
                 };
                 var patchRes = await fetch(joinUrl('/api/market/orders/' + encodeURIComponent(state.editingOrderId)), {
                     method: 'PATCH',
@@ -3793,24 +4302,10 @@
         if (pageShareBtn) {
             pageShareBtn.addEventListener('click', function () {
                 var host = document.getElementById('marketContent');
-                var hero = host && host.querySelector('.market-hero');
                 if (!host || !window.UssPageShare) return;
-                var shot = null;
-                if (hero) {
-                    shot = document.createElement('img');
-                    shot.className = 'market-hero-share-bg';
-                    shot.alt = '';
-                    shot.src = 'images/hero/B2.webp';
-                    hero.classList.add('is-share-capture');
-                    hero.insertBefore(shot, hero.firstChild);
-                }
                 host.setAttribute('data-share-url', location.origin + location.pathname);
                 host.setAttribute('data-share-clip', 'page');
-                var done = window.UssPageShare.share(host, pageShareBtn);
-                Promise.resolve(done).then(function () {
-                    if (shot) shot.remove();
-                    if (hero) hero.classList.remove('is-share-capture');
-                });
+                window.UssPageShare.share(host, pageShareBtn);
             });
         }
         if (el.searchInput) {
@@ -3840,7 +4335,14 @@
             el.cats.addEventListener('click', function (ev) {
                 var btn = ev.target.closest('.market-cat');
                 if (!btn) return;
+                if (btn.hasAttribute('data-type')) {
+                    state.categoryType = btn.getAttribute('data-type') || '';
+                    renderCategoryChips();
+                    fetchOrders();
+                    return;
+                }
                 state.categoryGroup = btn.getAttribute('data-cat') || '';
+                state.categoryType = '';
                 renderCategoryChips();
                 fetchOrders();
             });
@@ -4030,6 +4532,12 @@
         bindSeg(el.segTradeType, 'tradeType', 'trade-type');
         bindSeg(el.segOrderType, 'orderType', 'order-type');
         bindSeg(el.segExpireDays, 'expireDays', 'expire-days');
+        if (el.contactPublicSwitch) {
+            el.contactPublicSwitch.addEventListener('click', function () {
+                state.create.contactPublic = !state.create.contactPublic;
+                syncContactPublicUi();
+            });
+        }
         [el.lotteryModeSeg, el.lotteryAudienceSeg].forEach(function (seg) {
             if (!seg) return;
             seg.addEventListener('click', function (ev) {
@@ -4047,8 +4555,11 @@
                 state.create.categoryGroup = el.categorySelect.value || '';
                 var it = currentItem();
                 if (state.create.categoryGroup) it.categoryGroup = state.create.categoryGroup;
+                var allowed = subtypesForGroup(state.create.categoryGroup);
+                if (!allowed.length || allowed.indexOf(it.typeKey) < 0) applyTypeToItem(it, '');
                 if (state.create.categoryGroup === 'gift') {
                     it.componentId = 'uss-gift';
+                    it.typeKey = null;
                     it.typeLabel = '礼物';
                     it.swapGiveQty = 1;
                     if (!it.name) it.name = '礼物';
@@ -4060,6 +4571,7 @@
                 if (state.create.categoryGroup === 'lottery') {
                     state.create.tradeType = 'lottery';
                     it.componentId = 'uss-lottery';
+                    it.typeKey = null;
                     it.typeLabel = '抽奖';
                     it.categoryGroup = 'lottery';
                 } else if (state.create.tradeType === 'lottery') {
@@ -4070,6 +4582,25 @@
                 syncGiftFormUi();
                 syncLotteryFormUi();
                 syncCreateFormUi();
+            });
+        }
+        if (el.typeSelect) {
+            el.typeSelect.addEventListener('change', function () {
+                var key = el.typeSelect.value || '';
+                var group = inferNavGroupFromType(key);
+                var it = currentItem();
+                if (group && state.create.categoryGroup !== group) {
+                    state.create.categoryGroup = group;
+                    it.categoryGroup = group;
+                    if (el.categorySelect) el.categorySelect.value = group;
+                }
+                applyTypeToItem(it, key);
+                syncTypeFieldsVisibility();
+            });
+        }
+        if (el.wantTypeSelect) {
+            el.wantTypeSelect.addEventListener('change', function () {
+                applyTypeToItem(currentWantItem(), el.wantTypeSelect.value || '');
             });
         }
         if (el.stockInput) {
@@ -4093,7 +4624,7 @@
 
         if (el.tradeTimeStart) {
             el.tradeTimeStart.addEventListener('change', function () {
-                state.create.tradeTimeStart = el.tradeTimeStart.value || '20:00';
+                state.create.tradeTimeStart = el.tradeTimeStart.value || '00:00';
                 var start = parseTimeMinutes(state.create.tradeTimeStart);
                 var end = parseTimeMinutes(el.tradeTimeEnd && el.tradeTimeEnd.value);
                 if (start != null && (end == null || end <= start) && el.tradeTimeEnd) {
@@ -4104,7 +4635,7 @@
         }
         if (el.tradeTimeEnd) {
             el.tradeTimeEnd.addEventListener('change', function () {
-                state.create.tradeTimeEnd = el.tradeTimeEnd.value || '21:00';
+                state.create.tradeTimeEnd = el.tradeTimeEnd.value || '23:59';
             });
         }
 
@@ -4114,18 +4645,14 @@
                 var file = inputEl.files && inputEl.files[0];
                 if (!file) return;
                 if (!/^image\//i.test(file.type) && file.type) {
-                    if (el.formError) {
-                        el.formError.textContent = '请上传图片文件';
-                        el.formError.hidden = false;
-                    }
+                    showCornerNotice('请上传图片文件');
+                    if (el.formError) el.formError.hidden = true;
                     inputEl.value = '';
                     return;
                 }
                 if (file.size > 4 * 1024 * 1024) {
-                    if (el.formError) {
-                        el.formError.textContent = '图片不能超过 4MB';
-                        el.formError.hidden = false;
-                    }
+                    showCornerNotice('图片不能超过 4MB');
+                    if (el.formError) el.formError.hidden = true;
                     inputEl.value = '';
                     return;
                 }
@@ -4171,8 +4698,16 @@
                 state.create.barterWantCategoryGroup = el.wantCategorySelect.value || '';
                 var want = currentWantItem();
                 if (state.create.barterWantCategoryGroup) want.categoryGroup = state.create.barterWantCategoryGroup;
+                var allowedWant = subtypesForGroup(state.create.barterWantCategoryGroup);
+                if (!allowedWant.length || allowedWant.indexOf(want.typeKey) < 0) applyTypeToItem(want, '');
+                syncTypeFieldsVisibility();
             });
         }
+        bindCategoryChips(el.categorySelect, el.categorySeg);
+        bindCategoryChips(el.typeSelect, el.typeSeg);
+        bindCategoryChips(el.wantCategorySelect, el.wantCategorySeg);
+        bindCategoryChips(el.wantTypeSelect, el.wantTypeSeg);
+        paintAllCategoryChips();
 
         function scheduleItemSuggest(inputEl, suggestNode, onRender, timerKey, controllerKey, onInputChange) {
             if (!inputEl) return;
@@ -4326,6 +4861,8 @@
         }
         var seller = row.sellerMasked || '用户';
         var buyer = row.buyerMasked || '用户';
+        var qty = Math.max(1, Math.floor(Number(row.quantity) || 1));
+        var itemLabel = (row.itemName || '') + '（' + qty + '个）';
         return (
             '<span class="market-ticker__item">' +
             '<span class="market-ticker__party">' +
@@ -4337,7 +4874,7 @@
             '</span>' +
             kindHtml +
             '<span class="market-ticker__name">' +
-            escapeHtml(row.itemName || '') +
+            escapeHtml(itemLabel) +
             '</span></span>'
         );
     }
@@ -4426,6 +4963,14 @@
         el.locInput = $('marketLocInput');
         el.locSuggest = $('marketLocSuggest');
         el.categorySelect = $('marketCategorySelect');
+        el.categorySeg = $('marketCategorySeg');
+        el.typeSeg = $('marketTypeSeg');
+        el.wantCategorySeg = $('marketWantCategorySeg');
+        el.wantTypeSeg = $('marketWantTypeSeg');
+        el.typeField = $('marketTypeField');
+        el.typeSelect = $('marketTypeSelect');
+        el.wantTypeField = $('marketWantTypeField');
+        el.wantTypeSelect = $('marketWantTypeSelect');
         el.giftCategoryOption = $('marketGiftCategoryOption');
         el.giftField = $('marketGiftLinkField');
         el.giftLinksList = $('marketGiftLinksList');
@@ -4453,6 +4998,9 @@
         el.tradeTimeEnd = $('marketTradeTimeEnd');
         el.itemInfoInput = $('marketItemInfoInput');
         el.contactInput = $('marketContactInput');
+        el.contactPublicSwitch = $('marketContactPublicSwitch');
+        el.contactPublicSwitchLabel = $('marketContactPublicSwitchLabel');
+        el.contactHint = $('marketContactHint');
         el.itemInput = $('marketItemInput');
         el.itemSuggest = $('marketItemSuggest');
         el.itemPreviewType = $('marketItemPreviewType');
@@ -4466,6 +5014,7 @@
         el.giveQtyField = $('marketGiveQtyField');
         el.qtyPriceRow = $('marketQtyPriceRow');
         el.stockField = $('marketStockField');
+        el.stockLabel = $('marketStockLabel');
         el.stockInput = $('marketStockInput');
         el.priceInput = $('marketPriceInput');
         el.priceField = $('marketPriceField');
@@ -4474,6 +5023,7 @@
         el.wantItemInput = $('marketWantItemInput');
         el.wantItemSuggest = $('marketWantItemSuggest');
         el.wantCategorySelect = $('marketWantCategorySelect');
+        fillMainCategorySelects();
         el.wantQualityInput = $('marketWantQualityInput');
         el.wantQtyField = $('marketWantQtyField');
         el.wantQtyInput = $('marketWantQtyInput');
@@ -4518,6 +5068,7 @@
         if (document.body.classList.contains('market-trades-body') || document.body.classList.contains('market-seller-body')) {
             return;
         }
+        syncCreateFormUi();
         refreshNavLoginState();
         window.addEventListener('storage', refreshNavLoginState);
         renderCategoryChips();

@@ -882,113 +882,281 @@
         });
     }
 
-    async function raster(el) {
-        var band = cardShareBand(el);
-        await prefetchShareImages(band && band.cards && band.cards.length ? band.cards : [el]);
-        var measured = band || el.getBoundingClientRect();
-        var base = {
-            top: measured.top,
-            left: measured.left,
-            right: measured.right,
-            bottom: measured.bottom,
-            width: measured.width,
-            height: measured.height
-        };
-        var clipToHost = !!(band || (el.classList && el.classList.contains('bp-detail')) || (el.getAttribute && el.getAttribute('data-share-clip') === 'page'));
-        var right = base.right;
-        var bottom = base.bottom;
-        if (!clipToHost) {
-            el.querySelectorAll('*').forEach(function (node) {
-                if (node.classList && node.classList.contains('uss-share-btn')) return;
-                var box = node.getBoundingClientRect();
-                if (box.width < 1 && box.height < 1) return;
-                if (box.right > right) right = box.right;
-                if (box.bottom > bottom) bottom = box.bottom;
-            });
+    function absCssUrls(css, base) {
+        return String(css || '').replace(/url\(\s*(['"]?)(?!data:|blob:|https?:)([^)'"]+)\1\s*\)/gi, function (_, _q, rel) {
+            try {
+                return 'url("' + new URL(String(rel).trim(), base).href + '")';
+            } catch (e) {
+                return 'url("' + rel + '")';
+            }
+        });
+    }
+
+    function collectPageCss() {
+        var text = '';
+        for (var i = 0; i < document.styleSheets.length; i++) {
+            var sheet = document.styleSheets[i];
+            var rules;
+            try { rules = sheet.cssRules; } catch (e) { rules = null; }
+            if (!rules) continue;
+            var base = sheet.href || window.location.href;
+            for (var r = 0; r < rules.length; r++) text += absCssUrls(rules[r].cssText, base) + '\n';
         }
-        var w = Math.max(1, Math.ceil(Math.max(right - base.left, clipToHost ? base.width : el.scrollWidth) + 2));
-        var h = Math.max(1, Math.ceil(Math.max(bottom - base.top, clipToHost ? base.height : el.scrollHeight) + 2));
-        var scale = band ? 2 : 4;
-        if (w * scale > 7680) scale = 7680 / w;
-        if (h * scale > 16300) scale = 16300 / h;
-        var layer = flattenSnap(el, base, scale, band);
+        text += '.market-hero::before{content:none !important;background-image:none !important;}';
+        text += '.sc-workspace-wrap,.sc-workspace,.sc-filter-deck,.sc-filter-deck__nav,.sc-catalog-tools,.sc-facet-bar{width:100% !important;max-width:none !important;overflow:visible !important;box-sizing:border-box !important;}';
+        return text.replace(/]]>/g, ']]]]><![CDATA[>');
+    }
+
+    function rootVarCss() {
+        var cs = getComputedStyle(document.documentElement);
+        var css = '';
+        for (var i = 0; i < cs.length; i++) {
+            var prop = cs[i];
+            if (prop.indexOf('--') === 0) css += prop + ':' + cs.getPropertyValue(prop) + ';';
+        }
+        return css;
+    }
+
+    async function mirrorNode(live, copy) {
+        if (!live || !copy || live.nodeType !== 1 || copy.nodeType !== 1) return;
+        var tag = live.tagName;
+        if (tag === 'IMG') {
+            var data = await imageToDataAsync(live);
+            if (data) copy.setAttribute('src', data);
+        } else if (tag === 'CANVAS') {
+            var shot = document.createElement('img');
+            try { shot.setAttribute('src', live.toDataURL('image/png')); } catch (e) {}
+            shot.setAttribute('style', 'display:block;width:' + (live.clientWidth || live.width) + 'px;height:' + (live.clientHeight || live.height) + 'px;');
+            if (copy.parentNode) copy.parentNode.replaceChild(shot, copy);
+            return;
+        } else if (tag === 'SELECT') {
+            copy.selectedIndex = live.selectedIndex;
+            for (var s = 0; s < live.options.length && s < copy.options.length; s++) {
+                copy.options[s].selected = live.options[s].selected;
+            }
+        } else if (tag === 'INPUT' || tag === 'TEXTAREA') {
+            copy.value = live.value;
+            if (live.checked) copy.setAttribute('checked', 'checked');
+        }
+        var csNode = null;
+        try { csNode = getComputedStyle(live); } catch (eCs) { csNode = null; }
+        if (csNode) {
+            var solid = csNode.backgroundColor;
+            if (solid && solid !== 'transparent' && solid !== 'rgba(0, 0, 0, 0)') {
+                copy.style.backgroundColor = solid;
+            }
+            if (csNode.color) copy.style.color = csNode.color;
+            var fill = csNode.getPropertyValue('-webkit-text-fill-color');
+            if (fill && fill !== 'transparent' && fill !== 'rgba(0, 0, 0, 0)') {
+                copy.style.webkitTextFillColor = fill;
+            }
+            var layer = String(csNode.transform || '');
+            if (layer === 'none' || layer === 'matrix(1, 0, 0, 1, 0, 0)' || layer.indexOf('matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)') === 0) {
+                copy.style.transform = 'none';
+                copy.style.backfaceVisibility = 'visible';
+            }
+        }
+        var bg = csNode ? (csNode.backgroundImage || '') : '';
+        if (bg && bg.indexOf('gradient(') >= 0) copy.style.backgroundImage = bg;
+        var urlMatch = bg && bg !== 'none' ? bg.match(/url\((['"]?)([^"')]+)\1\)/) : null;
+        if (urlMatch && urlMatch[2] && urlMatch[2].indexOf('data:') !== 0) {
+            try {
+                var res = await fetch(shareImageUrl(urlMatch[2]));
+                if (res.ok) {
+                    var inline = await blobToData(await res.blob());
+                    if (inline) copy.style.backgroundImage = bg.replace(urlMatch[0], 'url("' + inline + '")');
+                }
+            } catch (e3) { /* keep stylesheet url */ }
+        }
+        var liveKids = live.children;
+        var copyKids = copy.children;
+        var n = Math.min(liveKids.length, copyKids.length);
+        for (var i = 0; i < n; i++) await mirrorNode(liveKids[i], copyKids[i]);
+    }
+
+    function insideScrollClip(node, root) {
+        var p = node.parentElement;
+        while (p && p !== root) {
+            var cs = window.getComputedStyle(p);
+            var ox = cs.overflowX;
+            var oy = cs.overflowY;
+            if (ox === 'auto' || ox === 'scroll' || ox === 'hidden' || oy === 'auto' || oy === 'scroll' || oy === 'hidden') return true;
+            p = p.parentElement;
+        }
+        return false;
+    }
+
+    function captureBox(el) {
+        var rect = el.getBoundingClientRect();
+        if (el.classList && el.classList.contains('bp-shell')) {
+            return {
+                w: Math.max(1, Math.ceil(rect.width)),
+                h: Math.max(1, Math.ceil(rect.height))
+            };
+        }
+        var left = rect.left;
+        var top = rect.top;
+        var right = rect.right;
+        var bottom = rect.bottom;
+        var nodes = el.querySelectorAll('*');
+        for (var i = 0; i < nodes.length; i++) {
+            var node = nodes[i];
+            if (node.classList && node.classList.contains('uss-share-btn')) continue;
+            if (insideScrollClip(node, el)) continue;
+            var box = node.getBoundingClientRect();
+            if (box.width < 1 && box.height < 1) continue;
+            if (box.left < left) left = box.left;
+            if (box.top < top) top = box.top;
+            if (box.right > right) right = box.right;
+            if (box.bottom > bottom) bottom = box.bottom;
+        }
+        return {
+            w: Math.max(1, Math.ceil(Math.max(el.scrollWidth || 0, el.offsetWidth || 0, right - left))),
+            h: Math.max(1, Math.ceil(Math.max(el.scrollHeight || 0, el.offsetHeight || 0, bottom - top)))
+        };
+    }
+
+    function pinBlueprintFrame(live, copy) {
+        if (!live || !copy || !live.classList || !live.classList.contains('bp-shell')) return;
+        var shell = live.getBoundingClientRect();
+        var cs = window.getComputedStyle(live);
+        copy.style.height = Math.ceil(shell.height) + 'px';
+        copy.style.maxHeight = Math.ceil(shell.height) + 'px';
+        copy.style.overflow = 'hidden';
+        if (cs.gridTemplateRows && cs.gridTemplateRows !== 'none') copy.style.gridTemplateRows = cs.gridTemplateRows;
+        ['bp-sidebar', 'bp-detail', 'bp-list-wrap'].forEach(function (cls) {
+            var a = live.querySelector('.' + cls);
+            var b = copy.querySelector('.' + cls);
+            if (!a || !b) return;
+            var box = a.getBoundingClientRect();
+            b.style.height = Math.ceil(box.height) + 'px';
+            b.style.maxHeight = Math.ceil(box.height) + 'px';
+            b.style.minHeight = '0';
+            b.style.overflow = 'hidden';
+        });
+        var phantom = copy.querySelector('.bp-list-phantom');
+        if (phantom) phantom.style.height = '0px';
+    }
+
+    async function raster(el) {
+        var box = captureBox(el);
+        var w = box.w;
+        var h = box.h;
+        var scale = 2;
+        if (w * scale > 2400) scale = 2400 / w;
+        if (h * scale > 8000) scale = Math.min(scale, 8000 / h);
+        if (scale < 1) scale = 1;
         var fullW = Math.max(1, Math.round(w * scale));
         var fullH = Math.max(1, Math.round(h * scale));
-        layer.style.cssText = 'position:relative;width:' + fullW + 'px;height:' + fullH + 'px;overflow:' + (clipToHost ? 'hidden' : 'visible') + ';margin:0;background:#122d48;';
-        var xhtml = new XMLSerializer().serializeToString(layer);
+        var clone = el.cloneNode(true);
+        Array.prototype.forEach.call(clone.querySelectorAll('.uss-share-btn'), function (btn) {
+            if (btn.parentNode) btn.parentNode.removeChild(btn);
+        });
+        await mirrorNode(el, clone);
+        var liveHero = el.querySelector && el.querySelector('.market-hero');
+        var hero = clone.querySelector && clone.querySelector('.market-hero');
+        if (liveHero && hero) {
+            try {
+                var heroRes = await fetch(new URL('images/hero/B2.webp', window.location.href).href);
+                if (heroRes.ok) {
+                    var heroData = await blobToData(await heroRes.blob());
+                    if (heroData) {
+                        var heroImg = document.createElement('img');
+                        heroImg.setAttribute('alt', '');
+                        heroImg.setAttribute('src', heroData);
+                        heroImg.setAttribute('style', 'position:absolute;left:-10px;top:-10px;width:calc(100% + 20px);height:calc(100% + 20px);object-fit:cover;object-position:center;z-index:0;pointer-events:none;');
+                        hero.insertBefore(heroImg, hero.firstChild);
+                    }
+                }
+            } catch (eHero) { /* hero stays without photo */ }
+        }
+        pinBlueprintFrame(el, clone);
+        clone.style.margin = '0';
+        clone.style.width = w + 'px';
+        clone.style.maxWidth = w + 'px';
+        if (el.classList && el.classList.contains('bp-shell')) {
+            clone.style.height = h + 'px';
+            clone.style.maxHeight = h + 'px';
+        }
+        var css = collectPageCss();
+        var inner = new XMLSerializer().serializeToString(clone);
         var canvas = document.createElement('canvas');
         canvas.width = fullW;
         canvas.height = fullH;
         var ctx = canvas.getContext('2d');
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
         ctx.fillStyle = '#122d48';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        var sliceH = Math.round(1200 * scale);
-        for (var y = 0; y < fullH; y += sliceH) {
-            var sh = Math.min(sliceH, fullH - y);
-            var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + fullW + '" height="' + sh + '">' +
-                '<foreignObject x="0" y="0" width="' + fullW + '" height="' + sh + '">' +
-                '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + fullW + 'px;height:' + fullH + 'px;transform:translateY(-' + y + 'px)">' +
-                xhtml + '</div></foreignObject></svg>';
+        var sliceCss = Math.round(1400);
+        for (var y = 0; y < h; y += sliceCss) {
+            var sh = Math.min(sliceCss, h - y);
+            var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + sh + '">' +
+                '<foreignObject x="0" y="0" width="' + w + '" height="' + sh + '">' +
+                '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + w + 'px;height:' + h + 'px;background:#122d48;transform:translateY(-' + y + 'px);' + rootVarCss() + '">' +
+                '<style><![CDATA[' + css + ']]></style>' + inner +
+                '</div></foreignObject></svg>';
             var image = await loadSvgImage(svg);
-            ctx.drawImage(image, 0, y);
+            ctx.drawImage(image, 0, 0, w, sh, 0, Math.round(y * scale), Math.round(w * scale), Math.round(sh * scale));
         }
-        var note = el.querySelector('.sc-detail-footnote, .sc-footnote');
-        var qrTop = null;
-        var tightFooter = false;
-        var lineEl = note && note.previousElementSibling;
-        if (lineEl) {
-            var lr = lineEl.getBoundingClientRect();
-            qrTop = (lr.bottom - base.top) * scale + Math.round(10 * scale);
-        } else if (note) {
-            var nr = note.getBoundingClientRect();
-            if (nr.height > 1) qrTop = (nr.bottom - base.top) * scale + Math.round(6 * scale);
+        return { canvas: canvas, scale: scale, mime: 'image/png' };
+    }
+
+    function fitShareUrl(ctx, url, maxWidth, scale) {
+        var fontSize = Math.round(14 * scale);
+        var minSize = Math.round(10 * scale);
+        var label = String(url || '');
+        function apply(size) {
+            ctx.font = '600 ' + size + 'px "Segoe UI", sans-serif';
         }
-        if (qrTop == null && el.classList && el.classList.contains('bp-detail')) {
-            qrTop = fullH + Math.round(14 * scale);
+        apply(fontSize);
+        while (fontSize > minSize && ctx.measureText(label).width > maxWidth) {
+            fontSize -= 1;
+            apply(fontSize);
         }
-        if (qrTop == null && el.getAttribute && el.getAttribute('data-share-url')) {
-            var contentBottom = base.top;
-            Array.prototype.forEach.call(el.children, function (node) {
-                if (node.classList && node.classList.contains('market-detail__actions')) return;
-                var box = node.getBoundingClientRect();
-                if (box.height > 1 && box.bottom > contentBottom) contentBottom = box.bottom;
-            });
-            qrTop = (contentBottom - base.top) * scale + Math.round(12 * scale);
-            tightFooter = true;
+        if (ctx.measureText(label).width > maxWidth) {
+            var clipped = label;
+            while (clipped.length > 12 && ctx.measureText(clipped + '…').width > maxWidth) {
+                clipped = clipped.slice(0, -1);
+            }
+            label = clipped + '…';
         }
-        return { canvas: canvas, scale: scale, qrTop: qrTop, tightFooter: tightFooter, mime: band ? 'image/jpeg' : 'image/png' };
+        return label;
     }
 
     function compose(shot, url) {
         var src = shot.canvas;
-        var qrPx = Math.max(2, Math.round(shot.scale || 2));
+        var scale = shot.scale || 2;
+        var pad = Math.round(16 * scale);
+        var qrPx = Math.max(2, Math.round(scale));
         var qrBox = (function () {
             var probe = qrModules(url);
             return (probe.size + 4) * qrPx;
         })();
-        var pad = Math.round(10 * (shot.scale || 2));
-        var y = shot.qrTop != null ? Math.round(shot.qrTop) : Math.max(0, src.height - pad - qrBox);
+        var footerH = qrBox + pad * 2;
         var canvas = document.createElement('canvas');
         canvas.width = src.width;
-        canvas.height = shot.tightFooter ? y + qrBox + pad : Math.max(src.height, y + qrBox + pad);
+        canvas.height = src.height + footerH;
         var ctx = canvas.getContext('2d');
         ctx.fillStyle = '#122d48';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(src, 0, 0);
+        var y = src.height;
+        ctx.fillStyle = '#0e2943';
+        ctx.fillRect(0, y, canvas.width, footerH);
+        ctx.fillStyle = 'rgba(95, 184, 255, 0.22)';
+        ctx.fillRect(0, y, canvas.width, Math.max(1, Math.round(scale)));
         var qx = canvas.width - pad - qrBox;
-        ctx.fillStyle = 'rgba(186, 214, 232, 0.9)';
-        ctx.font = '600 ' + Math.round(12 * (shot.scale || 2)) + 'px "Segoe UI", sans-serif';
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText('USSXC.ORG', qx - Math.round(8 * (shot.scale || 2)), y + qrBox);
-        drawQr(ctx, url, qx, y, qrPx, '#122d48');
+        var qy = y + pad;
+        var textMax = Math.max(40, qx - pad * 2);
+        ctx.fillStyle = 'rgba(232, 244, 255, 0.92)';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        var label = fitShareUrl(ctx, 'USSXC.ORG', textMax, scale);
+        ctx.fillText(label, pad, y + footerH / 2);
+        drawQr(ctx, url, qx, qy, qrPx, '#0e2943');
         return canvas;
     }
 
-    async function copyCanvas(canvas, mime) {
-        mime = mime || 'image/png';
+    async function copyCanvas(canvas) {
         var png = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/png'); });
         if (!png) throw new Error('生成图片失败');
         var copied = false;
@@ -999,15 +1167,9 @@
             } catch (e) { copied = false; }
         }
         if (copied) return;
-        var ext = mime === 'image/jpeg' ? 'jpg' : 'png';
-        var blob = png;
-        if (mime === 'image/jpeg') {
-            blob = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/jpeg', 0.82); });
-            if (!blob) blob = png;
-        }
         var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'ussxc-share.' + ext;
+        a.href = URL.createObjectURL(png);
+        a.download = 'ussxc-share.png';
         a.click();
         setTimeout(function () { URL.revokeObjectURL(a.href); }, 1500);
         throw new Error('download');
@@ -1020,7 +1182,7 @@
             var url = (host && host.getAttribute && host.getAttribute('data-share-url')) || location.href.split('#')[0];
             var shot = await raster(host);
             var canvas = compose(shot, url);
-            await copyCanvas(canvas, shot.mime);
+            await copyCanvas(canvas);
             toast('图片已复制');
         } catch (err) {
             toast(err && err.message === 'download' ? '无法复制，已下载图片' : '生成图片失败');
@@ -1053,7 +1215,7 @@
         if (host.classList && host.classList.contains('bp-detail')) {
             var actions = host.querySelector('.bp-hero__actions');
             var link = host.querySelector('.bp-hero__link');
-            btn._shareHost = host;
+            btn._shareHost = document.querySelector('.bp-shell') || host;
             btn.classList.add('uss-share-btn--nav');
             if (actions && link) actions.insertBefore(btn, link);
             else if (actions) actions.insertBefore(btn, actions.firstChild);
@@ -1069,7 +1231,7 @@
             return;
         }
         if (host.classList && host.classList.contains('sc-view-toggle')) {
-            var workspace = document.querySelector('.sc-workspace');
+            var workspace = document.querySelector('.sc-workspace-wrap') || document.querySelector('.sc-workspace');
             btn._shareHost = workspace || host;
             btn.classList.add('uss-share-btn--float');
             document.body.appendChild(btn);

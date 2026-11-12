@@ -8,8 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"></noscript>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="market.css?v=118">
+    <link rel="stylesheet" href="styles.css?v=20261112a">
+    <link rel="stylesheet" href="market.css?v=131">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <script src="auth-config.js"></script>
     <script>
@@ -189,7 +189,6 @@
                 <button type="button" class="market-trades-tab" data-tab="purchases" role="tab">我的购买</button>
                 <button type="button" class="market-trades-tab" data-tab="incoming" role="tab">收到订单</button>
                 <button type="button" class="market-trades-tab" data-tab="reviews" role="tab">评价</button>
-                <button type="button" class="market-trades-tab" data-tab="chat" role="tab">聊天</button>
             </div>
 
             <div class="market-trades-panel market-trades-grid" id="marketTradesPanel" role="tabpanel"></div>
@@ -234,6 +233,23 @@
                                     <textarea id="marketItemInfoInput" rows="3" maxlength="500" placeholder="成色、改装、备注…"></textarea>
                                 </label>
                             </div>
+
+                            <div class="market-field" id="marketContactField">
+                                <label class="market-inline-field" for="marketContactInput">
+                                    <span class="market-field__label">联系方式</span>
+                                    <input type="text" id="marketContactInput" maxlength="120" placeholder="邮箱、QQ 或其他联系方式" autocomplete="off">
+                                </label>
+                                <div class="market-contact-visibility">
+                                    <span class="market-field__label">详情页展示</span>
+                                    <div class="market-contact-switch-row">
+                                        <button type="button" class="market-switch" id="marketContactPublicSwitch" role="switch" aria-checked="false" aria-label="公开展示联系方式">
+                                            <span class="market-switch__track" aria-hidden="true"><span class="market-switch__thumb"></span></span>
+                                        </button>
+                                        <span class="market-contact-switch-label" id="marketContactPublicSwitchLabel">脱敏</span>
+                                    </div>
+                                </div>
+                                <p class="market-field__hint market-field__hint--compact" id="marketContactHint">脱敏展示；确认购买后可见完整信息</p>
+                            </div>
                         </div>
 
                         <div class="market-form__col market-form__col--details">
@@ -260,10 +276,13 @@
                                 <div id="marketLocSuggest" class="market-suggest" hidden></div>
                             </div>
 
-                            <div class="market-field">
-                                <label class="market-inline-field" for="marketCategorySelect">
+                            <div class="market-cat-block" id="marketCategoryRow">
+                                <div class="market-field">
                                     <span class="market-field__label">物品分类</span>
-                                    <select id="marketCategorySelect">
+                                    <div class="market-seg market-seg--chips" id="marketCategorySeg" role="group" aria-label="物品分类"></div>
+                                </div>
+                                <label class="market-select-proxy" for="marketCategorySelect">
+                                    <select id="marketCategorySelect" tabindex="-1" aria-hidden="true">
                                         <option value="">请选择分类</option>
                                         <option value="component">舰船组件</option>
                                         <option value="weapon">舰船武器</option>
@@ -274,6 +293,13 @@
                                         <option value="gift" id="marketGiftCategoryOption" hidden>礼物</option>
                                     </select>
                                 </label>
+                                <div class="market-field" id="marketTypeField" hidden>
+                                    <span class="market-field__label">子分类</span>
+                                    <div class="market-seg market-seg--chips" id="marketTypeSeg" role="group" aria-label="子分类"></div>
+                                    <select id="marketTypeSelect" class="market-select-proxy" tabindex="-1" aria-hidden="true">
+                                        <option value="">请选择子分类</option>
+                                    </select>
+                                </div>
                             </div>
 
                             <div class="market-field" id="marketGiftLinkField" hidden>
@@ -293,29 +319,29 @@
                             <div class="market-row-2 market-row-2--controls" id="marketQtyPriceRow">
                                 <label class="market-inline-field" id="marketPriceField">
                                     <span class="market-field__label">报价 (aUEC)</span>
-                                    <input type="number" id="marketPriceInput" class="market-control" min="0" step="1" placeholder="120">
-                                </label>
-                                <label class="market-inline-field" id="marketStockField" hidden>
-                                    <span class="market-field__label">我方总数</span>
-                                    <input type="number" id="marketStockInput" class="market-control" min="1" step="1" value="1">
+                                    <input type="number" id="marketPriceInput" class="market-control" min="0" step="1" inputmode="numeric">
                                 </label>
                                 <label class="market-inline-field" id="marketGiveQtyField">
-                                    <span class="market-field__label" id="marketQtyLabel">数量</span>
-                                    <input type="number" id="marketQtyInput" class="market-control" min="1" step="1" value="1">
+                                    <span class="market-field__label" id="marketQtyLabel">单次数量</span>
+                                    <input type="number" id="marketQtyInput" class="market-control" min="1" step="1" inputmode="numeric">
+                                </label>
+                                <label class="market-inline-field" id="marketStockField">
+                                    <span class="market-field__label" id="marketStockLabel">库存</span>
+                                    <input type="number" id="marketStockInput" class="market-control" min="1" step="1" inputmode="numeric">
                                 </label>
                                 <label class="market-inline-field" id="marketWantQtyField" hidden>
                                     <span class="market-field__label" id="marketWantQtyLabel">换取数量</span>
-                                    <input type="number" id="marketWantQtyInput" class="market-control" min="1" step="1" value="1">
+                                    <input type="number" id="marketWantQtyInput" class="market-control" min="1" step="1" inputmode="numeric">
                                 </label>
                             </div>
-                            <p class="market-field__hint" id="marketBarterQtyHint" hidden>我方总数是库存。给出数量 / 换取数量是单次比例。</p>
+                            <p class="market-field__hint" id="marketBarterQtyHint">单次数量是买家每次购买拿到的件数。库存是你能卖出的总件数。报价是每一件的 aUEC。</p>
 
                             <div class="market-field">
                                 <span class="market-field__label">每日交易时段</span>
                                 <div class="market-time-range">
-                                    <input type="time" id="marketTradeTimeStart" value="20:00" step="900">
+                                    <input type="time" id="marketTradeTimeStart" value="00:00" step="60">
                                     <span class="market-time-range__sep">至</span>
-                                    <input type="time" id="marketTradeTimeEnd" value="21:00" step="900">
+                                    <input type="time" id="marketTradeTimeEnd" value="23:59" step="60">
                                 </div>
                                 <p class="market-field__hint">挂单有效期内，每天在此时间段内可约定交易</p>
                             </div>
@@ -351,10 +377,13 @@
                                     <button type="button" class="market-product-media__reset" id="marketWantImageRemove" hidden>恢复默认图</button>
                                 </div>
                             </div>
-                            <div class="market-field">
-                                <label class="market-inline-field" for="marketWantCategorySelect">
+                            <div class="market-cat-block" id="marketWantCategoryRow">
+                                <div class="market-field">
                                     <span class="market-field__label">换取物品分类</span>
-                                    <select id="marketWantCategorySelect">
+                                    <div class="market-seg market-seg--chips" id="marketWantCategorySeg" role="group" aria-label="换取物品分类"></div>
+                                </div>
+                                <label class="market-select-proxy" for="marketWantCategorySelect">
+                                    <select id="marketWantCategorySelect" tabindex="-1" aria-hidden="true">
                                         <option value="">请选择分类</option>
                                         <option value="component">舰船组件</option>
                                         <option value="weapon">舰船武器</option>
@@ -364,6 +393,13 @@
                                         <option value="other">其他</option>
                                     </select>
                                 </label>
+                                <div class="market-field" id="marketWantTypeField" hidden>
+                                    <span class="market-field__label">换取子分类</span>
+                                    <div class="market-seg market-seg--chips" id="marketWantTypeSeg" role="group" aria-label="换取子分类"></div>
+                                    <select id="marketWantTypeSelect" class="market-select-proxy" tabindex="-1" aria-hidden="true">
+                                        <option value="">请选择子分类</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="market-row-2 market-row-2--controls">
                                 <label class="market-inline-field" for="marketWantQualityInput">
@@ -461,20 +497,20 @@
     <script src="login-drawer-mount.js"></script>
     <script src="home-boot.js"></script>
     <script defer src="pw-toggle-icons.js"></script>
-    <script src="api-error.js?v=6" defer></script>
+    <script src="api-error.js?v=7" defer></script>
     <script src="auth-api.js" defer></script>
     <script src="auth-session-sync.js" defer></script>
     <script defer src="rsi-client.js?v=20260827b"></script>
     <script defer src="rsi-sync.js"></script>
     <script defer src="home-app.js?v=20260902c"></script>
     <script src="nav-dropdown.js" defer></script>
-    <script src="nav-auth-tools.js" defer></script>
+    <script src="nav-auth-tools.js?v=2" defer></script>
     <script src="site-footer.js" defer></script>
     <script src="community-image-lightbox.js" defer></script>
-    <script src="market-notify.js?v=7" defer></script>
-    <script src="market-chat.js?v=3" defer></script>
-    <script src="page-share.js?v=52" defer></script>
-    <script src="market.js?v=103" defer></script>
-    <script src="market-trades.js?v=38" defer></script>
+    <script src="market-notify.js?v=12" defer></script>
+    <script src="market-chat.js?v=5" defer></script>
+    <script src="page-share.js?v=61" defer></script>
+    <script src="market.js?v=123" defer></script>
+    <script src="market-trades.js?v=40" defer></script>
 </body>
 </html>

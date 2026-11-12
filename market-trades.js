@@ -193,6 +193,22 @@
         return p.sellerReviewAt || (p.sellerReviewRating ? (p.completedAt || p.updatedAt) : '');
     }
 
+    function hasBuyerReviewed(p) {
+        return !!(p && p.reviewRating != null);
+    }
+
+    function hasSellerReviewed(p) {
+        return !!(p && p.sellerReviewRating != null);
+    }
+
+    function reviewedHintHtml(rating) {
+        return (
+            '<span class="market-trades-wait-hint">已评价 ' +
+            reviewStarsHtml(rating) +
+            '</span>'
+        );
+    }
+
     function showGate(msg) {
         if (!el.gate) return;
         el.gate.textContent = msg || '请先登录';
@@ -441,11 +457,13 @@
             if (p.completedBy === 'auto') {
                 actions = '<span class="market-trades-wait-hint">系统已自动完成交易</span>';
             }
-            if (!p.reviewRating && role === 'buyer') {
-                actions += reviewFormHtml(p.id, 'buyer');
+            if (role === 'buyer') {
+                if (!hasBuyerReviewed(p)) actions += reviewFormHtml(p.id, 'buyer');
+                else actions += reviewedHintHtml(p.reviewRating);
             }
-            if (!p.sellerReviewRating && role === 'seller') {
-                actions += reviewFormHtml(p.id, 'seller');
+            if (role === 'seller') {
+                if (!hasSellerReviewed(p)) actions += reviewFormHtml(p.id, 'seller');
+                else actions += reviewedHintHtml(p.sellerReviewRating);
             }
         } else if (p.status === 'cancelled') {
             actions = '<span class="market-trades-wait-hint">订单已取消</span>' +
@@ -571,8 +589,8 @@
     function reviewEntryHtml(p, role) {
         var order = p.order || {};
         var title = primaryItemName(order);
-        var buyerForm = !p.reviewRating && role === 'buyer' ? reviewFormHtml(p.id, 'buyer') : '';
-        var sellerForm = !p.sellerReviewRating && role === 'seller' ? reviewFormHtml(p.id, 'seller') : '';
+        var buyerForm = role === 'buyer' && !hasBuyerReviewed(p) ? reviewFormHtml(p.id, 'buyer') : '';
+        var sellerForm = role === 'seller' && !hasSellerReviewed(p) ? reviewFormHtml(p.id, 'seller') : '';
         var buyerName = partyName(p, 'buyer');
         var sellerName = partyName(p, 'seller');
         return (
@@ -994,6 +1012,9 @@
                 reader.readAsDataURL(file);
             });
             el.panel.addEventListener('pointerdown', function (ev) {
+                if (ev.target && (ev.target.matches('input, textarea, select') || ev.target.closest('input, textarea, select'))) {
+                    return;
+                }
                 var box = ev.target.closest && ev.target.closest('.market-trades-stars');
                 if (!box) return;
                 ev.preventDefault();
@@ -1032,18 +1053,28 @@
                 var form = ev.target.closest('.market-trades-review-form');
                 if (!form) return;
                 ev.preventDefault();
+                if (form.getAttribute('data-submitting') === '1') return;
                 var pid = form.getAttribute('data-purchase-id');
                 var role = form.getAttribute('data-review-role');
                 var ratingEl = form.querySelector('[name="rating"]');
                 var textEl = form.querySelector('[name="text"]');
                 var rating = Number(ratingEl && ratingEl.value);
                 var text = textEl ? String(textEl.value || '').trim() : '';
+                if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+                    window.alert('请选择 1-5 星评价');
+                    return;
+                }
                 var body = form.getAttribute('data-finish') === '1'
                     ? { status: 'completed', reviewRating: rating, reviewText: text }
                     : (role === 'seller'
                         ? { sellerReviewRating: rating, sellerReviewText: text }
                         : { reviewRating: rating, reviewText: text });
+                form.setAttribute('data-submitting', '1');
+                var submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) submitBtn.disabled = true;
                 patchPurchase(pid, body).then(loadTabData).catch(function (e) {
+                    form.removeAttribute('data-submitting');
+                    if (submitBtn) submitBtn.disabled = false;
                     window.alert((e && e.message) || '评价失败');
                 });
             });

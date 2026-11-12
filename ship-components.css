@@ -2694,8 +2694,9 @@ body:not(.sc-source-wiki) #scTable td.sc-col-wiki-stat {
 
 .sc-upload-toast {
     position: fixed;
-    top: calc(var(--navbar-height, 6.3rem) + 0.55rem);
-    right: max(0.85rem, env(safe-area-inset-right, 0px));
+    top: auto;
+    bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+    right: max(1.25rem, env(safe-area-inset-right, 0px));
     z-index: 21000;
     min-width: 16.5rem;
     max-width: min(22rem, calc(100% - 1rem));

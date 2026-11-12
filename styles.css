@@ -558,6 +558,7 @@ html:not(.auth-session-cached) .auth-fleet-only {
 }
 
 .nav-login-avatar-inner {
+ position: relative;
  display: flex;
  align-items: center;
  justify-content: center;
@@ -577,8 +578,56 @@ html:not(.auth-session-cached) .auth-fleet-only {
  flex-shrink: 0;
 }
 
-.drawer-profile-row {
+.market-chat-avatar-ping {
+ position: absolute;
+ right: -0.05rem;
+ bottom: -0.05rem;
+ z-index: 3;
+ width: 0.72rem;
+ height: 0.72rem;
+ padding: 0;
+ border: 1.5px solid rgba(10, 24, 40, 0.95);
+ border-radius: 50%;
+ background: #ff4d4f;
+ box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.7);
+ cursor: pointer;
+ appearance: none;
+ animation: market-chat-avatar-ping-blink 1.1s ease-in-out infinite;
+}
 
+.market-chat-avatar-ping[hidden] {
+ display: none !important;
+}
+
+.market-chat-avatar-ping:hover,
+.market-chat-avatar-ping:focus-visible {
+ outline: none;
+ transform: scale(1.12);
+}
+
+@keyframes market-chat-avatar-ping-blink {
+ 0%,
+ 100% {
+  opacity: 1;
+  box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.55);
+ }
+ 50% {
+  opacity: 0.45;
+  box-shadow: 0 0 0 0.35rem rgba(255, 77, 79, 0);
+ }
+}
+
+.market-chat-avatar-ping--drawer {
+ left: calc(var(--drawer-avatar-display, 3rem) - 0.55rem);
+ right: auto;
+ top: calc(var(--drawer-avatar-display, 3rem) - 0.55rem);
+ bottom: auto;
+ width: 0.8rem;
+ height: 0.8rem;
+}
+
+.drawer-profile-row {
+ position: relative;
  --drawer-name-main: calc(1.05rem * var(--dps, 1));
  --drawer-name-main-lh: 1.22;
  --drawer-name-sub: calc(0.78rem * var(--dps, 1));
@@ -10255,14 +10304,24 @@ a.community-author-avatar-link:focus-visible {
  grid-row: 3;
  }
  #home-funding-section.home-exec-hangar-section {
+ padding-left: var(--home-content-pad-x);
+ padding-right: var(--home-content-pad-x);
+ }
+ #home-funding-section .rsi-funding-panel {
+ padding: 0.85rem 0 0.7rem;
+ border-radius: var(--home-module-radius, 17px);
+ border-left: 1px solid rgba(0, 240, 255, 0.42);
+ border-right: 1px solid rgba(0, 240, 255, 0.42);
+ }
+ #home-funding-section .rsi-funding-body {
  padding-left: 0;
  padding-right: 0;
  }
- #home-funding-section .rsi-funding-panel {
- padding: 0.85rem 0.7rem 0.7rem;
- border-radius: 0;
- border-left: none;
- border-right: none;
+ #home-funding-section .home-exec-hangar-head,
+ #home-funding-section .rsi-funding-body-title,
+ #home-funding-section .rsi-funding-chart-head {
+ padding-left: 1rem;
+ padding-right: 1rem;
  }
  .rsi-funding-chart-frame {
  grid-column: 1;

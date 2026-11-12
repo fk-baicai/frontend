@@ -6,6 +6,7 @@
     var API_BASE = (typeof window !== 'undefined' && window.USS_AUTH_API_BASE) || 'http://127.0.0.1:3789';
     var POLL_MS = 4000;
     var MAX_TEXT = 400;
+    var RECALL_MS = 3 * 60 * 1000;
 
     var dock = null;
     var pollTimer = null;
@@ -60,6 +61,14 @@
         return pad(d.getHours()) + ':' + pad(d.getMinutes());
     }
 
+    function canRecallMessage(m, myBid) {
+        if (!m || m.recalled) return false;
+        if (String(m.fromBindingId || '').toLowerCase() !== String(myBid || '').toLowerCase()) return false;
+        var t = Date.parse(String(m.createdAt || ''));
+        if (!Number.isFinite(t)) return false;
+        return Date.now() - t <= RECALL_MS;
+    }
+
     function ensureDock() {
         if (dock) return dock;
         dock = document.createElement('div');
@@ -70,10 +79,9 @@
             '<div class="market-chat-panel" role="dialog" aria-label="临时交易聊天">' +
             '<header class="market-chat-head">' +
             '<div class="market-chat-head__text">' +
-            '<p class="market-chat-head__item" id="marketChatItem"></p>' +
+            '<button type="button" class="market-chat-head__item" id="marketChatItem" title="前往商城管理对应订单"></button>' +
             '<p class="market-chat-head__peer" id="marketChatPeer"></p>' +
             '</div>' +
-            '<button type="button" class="market-chat-delete" id="marketChatDelete" hidden>删除</button>' +
             '<button type="button" class="market-chat-close" id="marketChatClose" aria-label="关闭聊天">×</button>' +
             '</header>' +
             '<div class="market-chat-log" id="marketChatLog" aria-live="polite"></div>' +
@@ -85,12 +93,32 @@
             '</div>';
         document.body.appendChild(dock);
         dock.querySelector('#marketChatClose').addEventListener('click', close);
-        dock.querySelector('#marketChatDelete').addEventListener('click', deleteSnapshot);
+        dock.querySelector('#marketChatItem').addEventListener('click', goToTradeManage);
         dock.querySelector('#marketChatForm').addEventListener('submit', function (ev) {
             ev.preventDefault();
             sendCurrent();
         });
+        dock.querySelector('#marketChatLog').addEventListener('click', function (ev) {
+            var btn = ev.target && ev.target.closest ? ev.target.closest('[data-recall-id]') : null;
+            if (!btn) return;
+            ev.preventDefault();
+            recallMessage(btn.getAttribute('data-recall-id'));
+        });
         return dock;
+    }
+
+    function goToTradeManage() {
+        if (!state.purchaseId) return;
+        var tab = state.myRole === 'seller' ? 'incoming' : 'purchases';
+        var url = 'market-trades.html?tab=' + encodeURIComponent(tab) +
+            '&highlight=' + encodeURIComponent(state.purchaseId);
+        window.location.href = url;
+    }
+
+    function notifyChatSeen(lastAt) {
+        if (window.UssMarketNotify && typeof window.UssMarketNotify.markChatSeen === 'function') {
+            window.UssMarketNotify.markChatSeen(state.purchaseId, lastAt || new Date().toISOString());
+        }
     }
 
     function stopPoll() {
@@ -107,6 +135,46 @@
         if (dock) dock.hidden = true;
     }
 
+    function messageInnerHtml(m, mine, myBid) {
+        if (m.recalled) {
+            return (
+                '<p class="market-chat-msg__text market-chat-msg__text--recalled">已撤回一条消息</p>' +
+                '<time class="market-chat-msg__time">' + escapeHtml(formatTime(m.createdAt)) + '</time>'
+            );
+        }
+        var recall =
+            canRecallMessage(m, myBid)
+                ? '<button type="button" class="market-chat-msg__recall" data-recall-id="' +
+                  escapeHtml(m.id) +
+                  '">撤回</button>'
+                : '';
+        return (
+            '<p class="market-chat-msg__text">' + escapeHtml(m.text) + '</p>' +
+            '<div class="market-chat-msg__meta">' +
+            '<time class="market-chat-msg__time">' + escapeHtml(formatTime(m.createdAt)) + '</time>' +
+            recall +
+            '</div>'
+        );
+    }
+
+    function upsertMessage(log, m, myBid) {
+        if (!log || !m || !m.id) return;
+        var mine = String(m.fromBindingId || '').toLowerCase() === String(myBid || '').toLowerCase();
+        var existing = log.querySelector('[data-msg-id="' + m.id + '"]');
+        if (existing) {
+            existing.className = 'market-chat-msg' + (mine ? ' is-mine' : '') + (m.recalled ? ' is-recalled' : '');
+            existing.innerHTML = messageInnerHtml(m, mine, myBid);
+            return;
+        }
+        var empty = log.querySelector('.market-chat-empty');
+        if (empty) empty.remove();
+        var div = document.createElement('div');
+        div.className = 'market-chat-msg' + (mine ? ' is-mine' : '') + (m.recalled ? ' is-recalled' : '');
+        div.setAttribute('data-msg-id', m.id);
+        div.innerHTML = messageInnerHtml(m, mine, myBid);
+        log.appendChild(div);
+    }
+
     function appendRows(rows, reset) {
         var log = document.getElementById('marketChatLog');
         if (!log) return;
@@ -115,15 +183,7 @@
         var myBid = String(sess.bindingId || '').toLowerCase();
         (rows || []).forEach(function (m) {
             if (!m || !m.id) return;
-            if (log.querySelector('[data-msg-id="' + m.id + '"]')) return;
-            var mine = String(m.fromBindingId || '').toLowerCase() === myBid;
-            var div = document.createElement('div');
-            div.className = 'market-chat-msg' + (mine ? ' is-mine' : '');
-            div.setAttribute('data-msg-id', m.id);
-            div.innerHTML =
-                '<p class="market-chat-msg__text">' + escapeHtml(m.text) + '</p>' +
-                '<time class="market-chat-msg__time">' + escapeHtml(formatTime(m.createdAt)) + '</time>';
-            log.appendChild(div);
+            upsertMessage(log, m, myBid);
             if (m.seq > state.maxSeq) state.maxSeq = m.seq;
         });
         if (rows && rows.length) log.scrollTop = log.scrollHeight;
@@ -138,37 +198,51 @@
         state.canSend = !!canSend;
         var form = document.getElementById('marketChatForm');
         var hint = document.getElementById('marketChatReadonly');
-        var del = document.getElementById('marketChatDelete');
         if (form) form.hidden = !state.canSend;
         if (hint) hint.hidden = state.canSend;
-        if (del) del.hidden = false;
         if (!state.canSend) stopPoll();
         else if (!pollTimer) startPoll();
     }
 
-    async function deleteSnapshot() {
-        if (!state.purchaseId) return;
-        if (!window.confirm('删除后你将不再看到这条聊天快照，对方仍可查看。确定删除？')) return;
+    async function recallMessage(messageId) {
+        var mid = String(messageId || '').trim();
+        if (!mid || !state.purchaseId) return;
         try {
-            var r = await fetch(joinUrl('/api/market/chat/threads/' + encodeURIComponent(state.purchaseId)), {
-                method: 'DELETE',
-                headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
-            });
+            var r = await fetch(
+                joinUrl(
+                    '/api/market/chat/threads/' +
+                        encodeURIComponent(state.purchaseId) +
+                        '/messages/' +
+                        encodeURIComponent(mid) +
+                        '/recall'
+                ),
+                {
+                    method: 'POST',
+                    headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
+                }
+            );
             var data = await r.json().catch(function () { return {}; });
-            if (!r.ok) throw new Error((data && data.message) || '删除失败');
-            close();
-            try {
-                window.dispatchEvent(new CustomEvent('uss-market-chat-deleted'));
-            } catch (e2) { /* ignore */ }
+            if (!r.ok) {
+                var hinted =
+                    data && data.code && window.UssApiError && window.UssApiError.formatUserError
+                        ? window.UssApiError.formatUserError(data.code)
+                        : '';
+                throw new Error(hinted || (data && data.message) || '撤回失败');
+            }
+            if (data.message) {
+                var log = document.getElementById('marketChatLog');
+                var sess = loadSession() || {};
+                upsertMessage(log, data.message, String(sess.bindingId || '').toLowerCase());
+            }
         } catch (e) {
-            window.alert((e && e.message) || '删除失败');
+            window.alert((e && e.message) || '撤回失败');
         }
     }
 
     async function fetchMessages(reset) {
         if (!state.purchaseId) return;
-        var qs = reset ? '' : (state.maxSeq ? '?afterSeq=' + encodeURIComponent(String(state.maxSeq)) : '');
-        var r = await fetch(joinUrl('/api/market/chat/threads/' + encodeURIComponent(state.purchaseId) + qs), {
+        // Always load the full thread so peer recalls update existing bubbles.
+        var r = await fetch(joinUrl('/api/market/chat/threads/' + encodeURIComponent(state.purchaseId)), {
             headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
         });
         var data = await r.json().catch(function () { return {}; });
@@ -183,10 +257,19 @@
             var peerEl = document.getElementById('marketChatPeer');
             if (peerEl) peerEl.textContent = (data.myRole === 'buyer' ? '卖家 ' : '买家 ') + data.peerBindingId;
         }
+        if (data.myRole) state.myRole = String(data.myRole);
         var rows = Array.isArray(data.messages) ? data.messages : [];
         if (typeof data.canSend === 'boolean') setSendEnabled(data.canSend);
         appendRows(rows, !!reset);
         if (typeof data.maxSeq === 'number' && data.maxSeq > state.maxSeq) state.maxSeq = data.maxSeq;
+        var lastAt = data.updatedAt || null;
+        for (var i = rows.length - 1; i >= 0; i -= 1) {
+            if (rows[i] && rows[i].createdAt && !rows[i].recalled) {
+                lastAt = rows[i].createdAt;
+                break;
+            }
+        }
+        notifyChatSeen(lastAt || new Date().toISOString());
     }
 
     async function sendCurrent() {
@@ -250,7 +333,12 @@
         state.canSend = opts.canSend !== false && !opts.snapshot;
         var itemEl = document.getElementById('marketChatItem');
         var peerEl = document.getElementById('marketChatPeer');
-        if (itemEl) itemEl.textContent = state.itemName;
+        if (itemEl) {
+            itemEl.textContent = state.itemName;
+            itemEl.title = state.myRole === 'seller'
+                ? '前往商城管理 · 收到订单'
+                : '前往商城管理 · 我的购买';
+        }
         if (peerEl) {
             peerEl.textContent = state.peerName
                 ? ((state.myRole === 'seller' ? '买家 ' : '卖家 ') + state.peerName)
@@ -262,6 +350,7 @@
         if (log) log.innerHTML = '<p class="market-chat-empty">加载中…</p>';
         var input = document.getElementById('marketChatInput');
         if (input && state.canSend) input.focus();
+        notifyChatSeen(new Date().toISOString());
         fetchMessages(true).catch(function (e) {
             if (log) log.innerHTML = '<p class="market-chat-empty">' + escapeHtml((e && e.message) || '加载失败') + '</p>';
         });

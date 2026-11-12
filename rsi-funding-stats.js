@@ -177,9 +177,18 @@
         var svgRect = svg.getBoundingClientRect();
         var xRatio = Number(cx) / chartLayout.width;
         var yRatio = Number(cy) / chartLayout.height;
-        tip.style.left = svgRect.left - frameRect.left + svgRect.width * xRatio + 'px';
-        tip.style.top = svgRect.top - frameRect.top + svgRect.height * yRatio + 'px';
+        var tipLeft = svgRect.left - frameRect.left + svgRect.width * xRatio;
+        var tipTop = svgRect.top - frameRect.top + svgRect.height * yRatio;
+        tip.style.left = tipLeft + 'px';
+        tip.style.top = tipTop + 'px';
         tip.hidden = false;
+        var tipW = tip.offsetWidth;
+        var edge = 6;
+        var minCenter = edge + tipW / 2;
+        var maxCenter = frameRect.width - edge - tipW / 2;
+        if (tipLeft < minCenter) tipLeft = minCenter;
+        if (tipLeft > maxCenter) tipLeft = maxCenter;
+        tip.style.left = tipLeft + 'px';
 
         chartEl.querySelectorAll('.rsi-funding-chart-point').forEach(function (node) {
             node.classList.toggle('is-active', Number(node.getAttribute('data-index')) === index);
@@ -248,8 +257,8 @@
             typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches;
         var width = 760;
         var height = compact ? (mobile ? 300 : 250) : 260;
-        var padL = mobile ? 8 : 18;
-        var padR = mobile ? 8 : 16;
+        var padL = mobile ? 28 : 36;
+        var padR = mobile ? 28 : 36;
         var padT = mobile ? 36 : 46;
         var padB = mobile ? 26 : 32;
         var axisOffset = mobile ? 12 : 10;
@@ -403,13 +412,6 @@
                 }
                 var anchor = 'middle';
                 var labelX = x;
-                if (i === 0) {
-                    anchor = 'start';
-                    labelX = x;
-                } else if (i === list.length - 1) {
-                    anchor = 'end';
-                    labelX = x;
-                }
                 return (
                     '<g class="rsi-funding-chart-point" data-index="' +
                     i +

@@ -9,7 +9,8 @@
     var API_BASE = (typeof window !== 'undefined' && window.USS_AUTH_API_BASE) || 'http://127.0.0.1:3789';
     var STORAGE_KEY = 'ussMarketPurchaseNotifyState';
     var STICKY_KEY = 'ussMarketPurchaseNotifySticky';
-    var POLL_MS = 15000;
+    var CHAT_SEEN_KEY = 'ussMarketChatSeen';
+    var POLL_MS = 2500;
     var TOAST_MS = 8000;
     var MAX_TOASTS = 4;
 
@@ -17,6 +18,8 @@
     var pollInFlight = null;
     var listenersBound = false;
     var toastUid = 0;
+    var unreadChatThreads = [];
+    var chatScriptPromise = null;
     function later(fn, ms) {
         var t = global.setTimeout(fn, ms);
         if (t && typeof t.unref === 'function') t.unref();
@@ -103,19 +106,19 @@
         });
     }
 
-    function sellerChatPings(list) {
-        return (list || []).filter(function (t) {
-            return t && t.purchaseId && t.myRole === 'seller' && t.hasBuyerMessage;
-        });
+    function sellerPurchaseAlert(p, title, body) {
+        return {
+            kind: 'seller',
+            sticky: true,
+            purchaseId: p && p.id,
+            title: title,
+            body: body,
+            url: tradesUrl('incoming', p && p.id),
+            actionLabel: '查看订单',
+        };
     }
 
-    function rememberChats(map, list) {
-        sellerChatPings(list).forEach(function (t) {
-            map[t.purchaseId] = true;
-        });
-    }
-
-    function collectMarketAlerts(state, buyerList, sellerList, chatThreads) {
+    function collectMarketAlerts(state, buyerList, sellerList) {
         var alerts = [];
         var nextPurchases = {};
         if (state && state.purchases && typeof state.purchases === 'object') {
@@ -123,61 +126,35 @@
                 nextPurchases[k] = state.purchases[k];
             });
         }
-        var nextChats = {};
-        if (state && state.chats && typeof state.chats === 'object') {
-            Object.keys(state.chats).forEach(function (k) {
-                nextChats[k] = state.chats[k];
-            });
-        }
         var initialized = !!(state && state.initialized);
 
         if (!initialized) {
             rememberPurchases(nextPurchases, buyerList);
             rememberPurchases(nextPurchases, sellerList);
-            rememberChats(nextChats, chatThreads);
             var pending = (sellerList || []).filter(function (p) {
                 return p && p.status === 'pending';
             });
             if (pending.length) {
-                alerts.push({
-                    kind: 'seller',
-                    sticky: true,
-                    purchaseId: pending[0].id,
-                    title: '待确认购买请求',
-                    body: pending.length === 1
+                alerts.push(sellerPurchaseAlert(
+                    pending[0],
+                    '待确认购买请求',
+                    pending.length === 1
                         ? '买家意向：' + primaryItemName(pending[0].order)
-                        : '你有 ' + pending.length + ' 笔购买请求待确认',
-                    url: tradesUrl('incoming', pending[0].id),
-                });
+                        : '你有 ' + pending.length + ' 笔购买请求待确认'
+                ));
             }
-            var firstChats = sellerChatPings(chatThreads);
-            if (firstChats.length) {
-                alerts.push({
-                    kind: 'seller',
-                    sticky: true,
-                    purchaseId: 'chat:' + firstChats[0].purchaseId,
-                    title: '买家发来消息',
-                    body: firstChats.length === 1
-                        ? '商品：' + (firstChats[0].itemName || '交易沟通')
-                        : '你有 ' + firstChats.length + ' 条买家消息待查看',
-                    url: tradesUrl('chat', firstChats[0].purchaseId),
-                    actionLabel: '查看聊天',
-                });
-            }
-            return { alerts: alerts, state: { initialized: true, purchases: nextPurchases, chats: nextChats } };
+            return { alerts: alerts, state: { initialized: true, purchases: nextPurchases, chats: {} } };
         }
 
         (sellerList || []).forEach(function (p) {
-            if (!p || !p.id || p.status !== 'pending') return;
+            if (!p || !p.id) return;
+            if (p.status !== 'pending' && p.status !== 'approved') return;
             if (!state.purchases[p.id]) {
-                alerts.push({
-                    kind: 'seller',
-                    sticky: true,
-                    purchaseId: p.id,
-                    title: '收到购买请求',
-                    body: '买家意向：' + primaryItemName(p.order),
-                    url: tradesUrl('incoming', p.id),
-                });
+                alerts.push(sellerPurchaseAlert(
+                    p,
+                    '买家已提交购买',
+                    primaryItemName(p.order)
+                ));
             }
         });
 
@@ -190,6 +167,7 @@
                     title: '交易已开始',
                     body: primaryItemName(p.order) + ' 可以联系卖家了',
                     url: tradesUrl('purchases', p.id),
+                    actionLabel: '查看订单',
                 });
             }
             if (prev && prev.status === 'pending' && p.status === 'cancelled' && p.cancelledBy === 'seller') {
@@ -198,27 +176,14 @@
                     title: '卖家已取消这笔交易',
                     body: primaryItemName(p.order) + ' 的购买请求已被拒绝',
                     url: tradesUrl('purchases', p.id),
+                    actionLabel: '查看订单',
                 });
             }
         });
 
-        sellerChatPings(chatThreads).forEach(function (t) {
-            if (state.chats && state.chats[t.purchaseId]) return;
-            alerts.push({
-                kind: 'seller',
-                sticky: true,
-                purchaseId: 'chat:' + t.purchaseId,
-                title: '买家发来消息',
-                body: '商品：' + (t.itemName || '交易沟通'),
-                url: tradesUrl('chat', t.purchaseId),
-                actionLabel: '查看聊天',
-            });
-        });
-
         rememberPurchases(nextPurchases, buyerList);
         rememberPurchases(nextPurchases, sellerList);
-        rememberChats(nextChats, chatThreads);
-        return { alerts: alerts, state: { initialized: true, purchases: nextPurchases, chats: nextChats } };
+        return { alerts: alerts, state: { initialized: true, purchases: nextPurchases, chats: {} } };
     }
 
     function canNotify() {
@@ -308,13 +273,24 @@
         return 'url:' + String(alert.url || '') + '|' + String(alert.title || '');
     }
 
+    function isLegacyChatSticky(alert) {
+        if (!alert) return false;
+        var pid = String(alert.purchaseId || '');
+        if (pid.indexOf('chat:') === 0) return true;
+        var title = String(alert.title || '');
+        return title.indexOf('买家发来消息') !== -1 || title.indexOf('买家消息') !== -1;
+    }
+
     function loadSticky() {
         try {
             if (typeof localStorage === 'undefined') return [];
             var raw = localStorage.getItem(STICKY_KEY);
             if (!raw) return [];
             var data = JSON.parse(raw);
-            return Array.isArray(data) ? data : [];
+            var list = Array.isArray(data) ? data : [];
+            var cleaned = list.filter(function (item) { return !isLegacyChatSticky(item); });
+            if (cleaned.length !== list.length) saveSticky(cleaned);
+            return cleaned;
         } catch (e) {
             return [];
         }
@@ -339,8 +315,8 @@
             purchaseId: alert.purchaseId || '',
             title: alert.title || '收到购买请求',
             body: alert.body || '',
-            actionLabel: alert.actionLabel || '',
-            url: alert.url || tradesUrl('incoming'),
+            actionLabel: alert.actionLabel || '查看订单',
+            url: alert.url || tradesUrl('incoming', alert.purchaseId),
         });
         saveSticky(list);
     }
@@ -385,21 +361,14 @@
         }
     }
 
-    function pruneStickyToasts(sellerList) {
-        var pending = {};
-        (sellerList || []).forEach(function (p) {
-            if (p && p.id && p.status === 'pending') pending[String(p.id)] = true;
-        });
+    function pruneStickyToasts() {
         var next = [];
         loadSticky().forEach(function (item) {
+            if (isLegacyChatSticky(item)) return;
             var pid = item && item.purchaseId != null ? String(item.purchaseId) : '';
-            if (pid.indexOf('chat:') === 0) {
-                next.push(item);
-                return;
-            }
-            if (pid && !pending[pid]) {
-                dismissStickyByPurchaseId(pid);
-                return;
+            if (item && !item.actionLabel) item.actionLabel = '查看订单';
+            if (item && (!item.url || String(item.url).indexOf('tab=incoming') === -1)) {
+                item.url = tradesUrl('incoming', pid || undefined);
             }
             next.push(item);
         });
@@ -526,16 +495,9 @@
             sticky: true,
             title: '收到购买请求',
             body: '买家意向：示例配件',
+            actionLabel: '查看订单',
             url: 'market-trades.html?tab=incoming',
         });
-        later(function () {
-            push({
-                kind: 'buyer',
-                title: '交易已开始',
-                body: '示例配件 可以联系卖家了',
-                url: 'market-trades.html?tab=purchases',
-            });
-        }, 450);
     }
 
     async function fetchPurchases(role) {
@@ -547,11 +509,151 @@
         return Array.isArray(data.purchases) ? data.purchases : [];
     }
 
+    function loadChatSeen() {
+        try {
+            var raw = localStorage.getItem(CHAT_SEEN_KEY);
+            if (!raw) return {};
+            var data = JSON.parse(raw);
+            return data && typeof data === 'object' ? data : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function saveChatSeen(map) {
+        try {
+            localStorage.setItem(CHAT_SEEN_KEY, JSON.stringify(map || {}));
+        } catch (e) { /* ignore */ }
+    }
+
+    function markChatSeen(purchaseId, lastAt) {
+        var pid = String(purchaseId || '').trim();
+        if (!pid) return;
+        var map = loadChatSeen();
+        map[pid] = String(lastAt || new Date().toISOString());
+        saveChatSeen(map);
+        unreadChatThreads = unreadChatThreads.filter(function (t) {
+            return !(t && String(t.purchaseId) === pid);
+        });
+        renderAvatarChatPings();
+    }
+
+    function isChatUnread(thread) {
+        if (!thread || !thread.purchaseId || !thread.unreadFromPeer || !thread.lastAt) return false;
+        var seen = loadChatSeen()[String(thread.purchaseId)];
+        if (!seen) return true;
+        return String(seen) < String(thread.lastAt);
+    }
+
+    function pickUnreadChats(chatThreads) {
+        return (chatThreads || [])
+            .filter(isChatUnread)
+            .sort(function (a, b) {
+                return String((b && b.lastAt) || '').localeCompare(String((a && a.lastAt) || ''));
+            });
+    }
+
+    function ensureAvatarPing(host, id, drawer) {
+        if (!host || typeof document === 'undefined') return null;
+        var btn = document.getElementById(id);
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.type = 'button';
+            btn.id = id;
+            btn.className = 'market-chat-avatar-ping' + (drawer ? ' market-chat-avatar-ping--drawer' : '');
+            btn.hidden = true;
+            btn.setAttribute('aria-label', '未读交易消息，点击打开聊天');
+            btn.addEventListener('click', function (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                openLatestUnreadChat();
+            });
+            host.appendChild(btn);
+        }
+        return btn;
+    }
+
+    function renderAvatarChatPings() {
+        if (typeof document === 'undefined') return;
+        var has = unreadChatThreads.length > 0;
+        var navHost = document.getElementById('navLoginAvatarWrap');
+        var navBtn = ensureAvatarPing(navHost, 'marketChatAvatarPingNav', false);
+        if (navBtn) {
+            navBtn.hidden = !has;
+            navBtn.title = has
+                ? ('未读交易消息：' + (unreadChatThreads[0].itemName || '打开聊天'))
+                : '';
+        }
+        var drawerImg = document.getElementById('drawerUserAvatarImg');
+        var drawerHost = drawerImg && drawerImg.parentElement;
+        var drawerBtn = ensureAvatarPing(drawerHost, 'marketChatAvatarPingDrawer', true);
+        if (drawerBtn) {
+            drawerBtn.hidden = !has;
+            drawerBtn.title = has
+                ? ('未读交易消息：' + (unreadChatThreads[0].itemName || '打开聊天'))
+                : '';
+        }
+    }
+
+    function ensureMarketChatScript() {
+        if (global.UssMarketChat && typeof global.UssMarketChat.open === 'function') {
+            return Promise.resolve(global.UssMarketChat);
+        }
+        if (chatScriptPromise) return chatScriptPromise;
+        chatScriptPromise = new Promise(function (resolve, reject) {
+            var existing = document.querySelector('script[src*="market-chat.js"]');
+            if (existing) {
+                var tries = 0;
+                var timer = global.setInterval(function () {
+                    tries += 1;
+                    if (global.UssMarketChat && typeof global.UssMarketChat.open === 'function') {
+                        global.clearInterval(timer);
+                        resolve(global.UssMarketChat);
+                    } else if (tries > 40) {
+                        global.clearInterval(timer);
+                        reject(new Error('聊天组件加载超时'));
+                    }
+                }, 50);
+                return;
+            }
+            var s = document.createElement('script');
+            s.src = 'market-chat.js?v=5';
+            s.defer = true;
+            s.onload = function () {
+                if (global.UssMarketChat) resolve(global.UssMarketChat);
+                else reject(new Error('聊天组件不可用'));
+            };
+            s.onerror = function () { reject(new Error('聊天组件加载失败')); };
+            document.body.appendChild(s);
+        });
+        return chatScriptPromise;
+    }
+
+    function openLatestUnreadChat() {
+        var t = unreadChatThreads[0];
+        if (!t || !t.purchaseId) return;
+        ensureMarketChatScript().then(function (chat) {
+            chat.open({
+                purchaseId: t.purchaseId,
+                itemName: t.itemName || '交易沟通',
+                peerName: t.peerBindingId || '',
+                myRole: t.myRole || '',
+                canSend: t.canSend !== false,
+                snapshot: !!t.snapshot,
+            });
+            markChatSeen(t.purchaseId, t.lastAt);
+        }).catch(function (e) {
+            global.alert((e && e.message) || '无法打开聊天');
+        });
+    }
+
     function applyAlerts(buyerList, sellerList, chatThreads) {
-        var result = collectMarketAlerts(loadState(), buyerList, sellerList, chatThreads);
+        var result = collectMarketAlerts(loadState(), buyerList, sellerList);
         saveState(result.state);
         pruneStickyToasts(sellerList);
         (result.alerts || []).forEach(emitAlert);
+        unreadChatThreads = pickUnreadChats(chatThreads);
+        renderAvatarChatPings();
         return result.alerts;
     }
 
@@ -564,14 +666,24 @@
         return Array.isArray(data.threads) ? data.threads : [];
     }
 
+    async function fetchPurchasesSafe(role) {
+        try {
+            return await fetchPurchases(role);
+        } catch (e) {
+            return [];
+        }
+    }
+
     async function pollOnce() {
         if (!isLoggedIn()) return [];
         if (pollInFlight) return pollInFlight;
         pollInFlight = (async function () {
-            var buyerList = await fetchPurchases('buyer');
-            var sellerList = await fetchPurchases('seller');
-            var chatThreads = await fetchChatThreads();
-            return applyAlerts(buyerList, sellerList, chatThreads);
+            var packed = await Promise.all([
+                fetchPurchasesSafe('buyer'),
+                fetchPurchasesSafe('seller'),
+                fetchChatThreads(),
+            ]);
+            return applyAlerts(packed[0], packed[1], packed[2]);
         })().catch(function () {
             return [];
         }).finally(function () {
@@ -607,10 +719,14 @@
                 pollOnce();
             }
         });
+        global.addEventListener('focus', function () {
+            if (isLoggedIn()) pollOnce();
+        });
         global.addEventListener('storage', function () {
             if (isLoggedIn()) {
                 restoreStickyToasts();
                 startPolling();
+                pollOnce();
             } else stopPolling();
         });
         try {
@@ -628,6 +744,10 @@
         preview: preview,
         tradesUrl: tradesUrl,
         collectMarketAlerts: collectMarketAlerts,
+        markChatSeen: markChatSeen,
+        refreshChatPings: function () {
+            return pollOnce();
+        },
     };
     global.UssMarketNotify = api;
 
