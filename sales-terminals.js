@@ -266,8 +266,64 @@
         sections.sort(function (a, b) { return a.sectionZh.localeCompare(b.sectionZh, 'zh-CN'); });
         return sections;
     }
+    var MAKERS = {
+        Aegis: '圣盾动力',
+        Anvil: '铁砧航天',
+        Aopoa: '奥波亚',
+        Argo: '南船座宇航',
+        Banu: '巴努',
+        'C.O.': '联合外域',
+        Crusader: '十字军工业',
+        Drake: '德雷克星际',
+        Esperia: '埃斯佩里亚',
+        Gatac: '盖塔克制造',
+        "Grey's": '格雷',
+        Greycat: '灰猫工业',
+        Kruger: '克鲁格星际',
+        MISC: '武藏工业与星航',
+        Mirai: '未来科技',
+        Origin: '起源跃迁',
+        RSI: '罗伯茨空间工业',
+        Tumbril: '盾博尔陆地系统',
+    };
+    function isShipItem(item) {
+        return item[2] === 102 || item[2] === 9001;
+    }
+    function makerKey(item) {
+        var name = String(item[0] || '').replace(/（租赁）$/, '').trim();
+        if (name.indexOf('C.O.') === 0) return 'C.O.';
+        if (name.indexOf("Grey's") === 0) return "Grey's";
+        return name.split(/\s+/)[0] || '';
+    }
+    function makerLabel(key) {
+        return MAKERS[key] || key || '其他';
+    }
+    var MAKER_LOGO = {
+        Aegis: 'assets/makers/aegis.png',
+        Anvil: 'assets/makers/anvil.png',
+        Argo: 'assets/makers/argo.png',
+        'C.O.': 'assets/makers/cnou.png',
+        Crusader: 'assets/makers/crusader.png',
+        Drake: 'assets/makers/drake.png',
+        Esperia: 'assets/makers/esperia.png',
+        Gatac: 'assets/makers/gatac.png',
+        "Grey's": 'assets/makers/grey.png',
+        Greycat: 'assets/makers/greycat.png',
+        MISC: 'assets/makers/musashi.png',
+        Mirai: 'assets/makers/mirai.png',
+        Origin: 'assets/makers/origin.png',
+        RSI: 'assets/makers/rsi.png',
+        Tumbril: 'assets/makers/tumbril.png',
+    };
+    function makerLogoHtml(key) {
+        var file = MAKER_LOGO[key];
+        if (!file) return '';
+        return '<img src="' + escapeHtml(file) + '" alt="" decoding="async">';
+    }
     function catMatches(item) {
         var cat = catById[item[2]];
+        if (state.cat === 's:__maker__') return isShipItem(item);
+        if (state.cat.indexOf('m:') === 0) return makerKey(item) === state.cat.slice(2);
         if (state.cat.indexOf('c:') === 0) return String(item[2]) === state.cat.slice(2);
         if (state.cat.indexOf('s:') === 0) return !!(cat && cat.section === state.cat.slice(2));
         return true;
@@ -280,14 +336,14 @@
     }
     function detailHref(item) {
         var id = item && item[4] ? String(item[4]).trim() : '';
-        if (!id) return '';
+        if (!id || id.indexOf('term-') === 0) return '';
         return 'ship-component-detail?id=' + encodeURIComponent(id) + '&from=' + encodeURIComponent(location.pathname + location.search);
     }
-    function catButton(key, name, count, extra, toggleId, open) {
+    function catButton(key, name, count, extra, toggleId, open, logo) {
         var on = key ? state.cat === key : !state.cat;
         var mark = toggleId
             ? '<span class="st-cat-mark" data-toggle="' + escapeHtml(toggleId) + '" aria-expanded="' + (open ? 'true' : 'false') + '" aria-label="' + (open ? '收起子分类' : '展开子分类') + '"></span>'
-            : '<span class="st-cat-mark"></span>';
+            : '<span class="st-cat-mark">' + (logo || '') + '</span>';
         return '<button type="button" class="st-cat' + (extra ? ' ' + extra : '') + (on ? ' is-on' : '') + '" data-cat="' + escapeHtml(key) + '">' +
             mark +
             '<span class="st-cat-name">' + escapeHtml(name) + '</span>' +
@@ -318,7 +374,7 @@
             jump +
             '<p class="st-detail-kicker">QUOTE</p>' +
             '<h3 class="st-detail-name">' + biHtml(item[3], item[0]) + '</h3>' +
-            '<div class="st-detail-row"><span>分类</span><strong>' + escapeHtml(cat.sectionZh + ' · ' + cat.nameZh) + '</strong></div>' +
+            '<div class="st-detail-row"><span>分类</span><strong>' + escapeHtml(isShipItem(item) ? ('船厂 · ' + makerLabel(makerKey(item))) : (cat.sectionZh + ' · ' + cat.nameZh)) + '</strong></div>' +
             '<div class="st-detail-row"><span>买入价</span><strong class="st-detail-price">' + money(item[1]) + '</strong></div>' +
             '<div class="st-detail-row"><span>终端</span><strong>' + biHtml(shop.nameZh, shop.name) + '</strong></div>' +
             '<div class="st-detail-loc"><span class="st-detail-loc-label">位置</span>' + locationLines(shop) + '</div>' +
@@ -342,6 +398,19 @@
             if (section.cats.length > 1) known['s:' + section.section] = true;
             section.cats.forEach(function (cat) { known['c:' + cat.id] = true; });
         });
+        var makers = [];
+        var makerSeen = {};
+        if (shop.items.length && shop.items.every(isShipItem)) {
+            shop.items.forEach(function (item) {
+                var key = makerKey(item);
+                if (!key || makerSeen[key]) return;
+                makerSeen[key] = true;
+                makers.push(key);
+            });
+            makers.sort(function (a, b) { return makerLabel(a).localeCompare(makerLabel(b), 'zh-CN'); });
+            makers.forEach(function (key) { known['m:' + key] = true; });
+            known['s:__maker__'] = true;
+        }
         if (!known[state.cat]) state.cat = '';
         var rows = visibleItems(shop);
         if (pickedKey && !rows.some(function (item) { return itemKey(item) === pickedKey; })) pickedKey = '';
@@ -351,7 +420,22 @@
         els.shopPath.textContent = '';
         els.shopCount.textContent = shop.items.length + ' ITEMS';
         var catHtml = catButton('', '全部', shop.items.length, '', '', false);
+        if (makers.length) {
+            var makerOn = state.cat.indexOf('m:') === 0;
+            if ((makerOn || state.cat === 's:__maker__') && openSections.__maker__ !== false) openSections.__maker__ = true;
+            var makerOpen = !!openSections.__maker__;
+            catHtml += catButton('s:__maker__', '船厂', shop.items.length, 'st-cat-parent' + (makerOpen ? ' is-open' : ''), '__maker__', makerOpen);
+            if (makerOpen) {
+                catHtml += '<div class="st-cat-kids">';
+                makers.forEach(function (key) {
+                    var count = shop.items.filter(function (item) { return makerKey(item) === key; }).length;
+                    catHtml += catButton('m:' + key, makerLabel(key), count, 'st-cat-sub st-cat-maker', '', false, makerLogoHtml(key));
+                });
+                catHtml += '</div>';
+            }
+        }
         sections.forEach(function (section) {
+            if (makers.length && section.cats.every(function (cat) { return cat.id === 102; })) return;
             if (section.cats.length === 1) {
                 var only = section.cats[0];
                 var onlyCount = shop.items.filter(function (item) { return item[2] === only.id; }).length;

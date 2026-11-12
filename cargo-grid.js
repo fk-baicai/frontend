@@ -414,6 +414,7 @@
             灰猫工业: 'assets/makers/greycat.png',
             盾博尔: 'assets/makers/tumbril.png',
             格雷黑市: 'assets/makers/grey.png',
+            未来科技: 'assets/makers/mirai.png',
         }[name];
         if (!file) return '';
         return '<img src="' + file + '" alt="" decoding="async">';

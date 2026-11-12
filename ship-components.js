@@ -3874,7 +3874,7 @@
     function armorLineBase(name) {
         var s = String(name || '').trim();
         if (!s) return '';
-        var re = /(?:头盔|胸甲|腿甲|臂甲|护甲|背包|飞行服)/g;
+        var re = /(?:头盔|胸甲|腿甲|臂甲|护甲|背包|基底服|飞行服)/g;
         var last = null;
         var match;
         while ((match = re.exec(s))) last = match;

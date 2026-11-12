@@ -509,12 +509,34 @@
 
 .st-cat-sub {
     color: rgba(200, 220, 235, 0.86);
-    font-size: 0.78rem;
+    font-size: 0.95rem;
     min-height: 34px;
     padding-top: 0.38rem;
     padding-bottom: 0.38rem;
     border-left-width: 0;
     grid-template-columns: 0.7rem minmax(0, 1fr) 2.4rem;
+}
+
+.st-cat-maker {
+    grid-template-columns: 1.35rem minmax(0, 1fr) 2.4rem;
+    column-gap: 0.45rem;
+}
+
+.st-cat-maker .st-cat-mark {
+    width: 1.35rem;
+    height: 1.35rem;
+}
+
+.st-cat-maker .st-cat-mark img {
+    width: 1.15rem;
+    height: 1.15rem;
+    display: block;
+    object-fit: contain;
+}
+
+
+.st-cat-kids .st-cat-maker .st-cat-mark::before {
+    display: none;
 }
 
 .st-cat-kids .st-cat-mark::before {
@@ -526,7 +548,7 @@
 }
 
 .st-cat-sub .st-cat-count {
-    font-size: 0.68rem;
+    font-size: 0.82rem;
 }
 
 .st-cat.is-on {
@@ -968,13 +990,20 @@
         overflow: visible;
     }
 
-    .st-cats,
-    .st-detail {
+    .st-cats {
         height: auto;
         max-height: 38vh;
         min-height: 0;
         overflow: auto;
         -webkit-overflow-scrolling: touch;
+    }
+
+    .st-detail {
+        height: auto;
+        max-height: none;
+        min-height: 0;
+        overflow: visible;
+        scroll-margin-top: 4.5rem;
     }
 
     .st-list {

@@ -100,6 +100,8 @@
         'Hedeby Gunworks': '赫德比枪工',
         'Universal Body Armor': '通用身铠',
         'UEE Navy': 'UEE海军',
+        'United Empire of Earth Navy': '地球联合帝国海军',
+        'United Empire of Earth': '地球联合帝国',
     };
 
     function normalizeMfgKey(s) {
