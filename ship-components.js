@@ -1909,6 +1909,7 @@
             'grade',
             'size',
             'wiki_q_speed',
+            'wiki_q_10gm',
             'wiki_q_engage',
             'wiki_pwr_use',
             'mfg',

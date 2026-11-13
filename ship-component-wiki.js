@@ -202,6 +202,53 @@
         return fromPorts != null ? fromPorts : null;
     }
 
+    function quantumDriveJump(item) {
+        var q = item && item.wiki_fields && item.wiki_fields.quantum_drive;
+        return q && q.standard_jump ? q.standard_jump : null;
+    }
+
+    function quantumSpeedMetersPerSec(jump) {
+        if (!jump) return null;
+        var formatted = String(jump.drive_speed_formatted || '');
+        var matched = formatted.match(/([\d.]+)\s*(Gm|Mm|km|m)\/s/i);
+        if (matched) {
+            var n = Number(matched[1]);
+            if (!Number.isFinite(n) || n <= 0) return null;
+            var unit = matched[2].toLowerCase();
+            if (unit === 'gm') return n * 1e9;
+            if (unit === 'mm') return n * 1e6;
+            if (unit === 'km') return n * 1e3;
+            return n;
+        }
+        var raw = Number(jump.drive_speed);
+        if (!Number.isFinite(raw) || raw <= 0) return null;
+        if (raw < 1e5) return raw * 1e6;
+        return raw;
+    }
+
+    function quantumTravel10GmSeconds(item) {
+        var mps = quantumSpeedMetersPerSec(quantumDriveJump(item));
+        if (!mps) return null;
+        return (10 * 1e9) / mps;
+    }
+
+    function formatQuantumTravel10Gm(item) {
+        var seconds = quantumTravel10GmSeconds(item);
+        if (seconds == null) return null;
+        if (seconds >= 3600) {
+            var hours = Math.floor(seconds / 3600);
+            var mins = Math.round((seconds % 3600) / 60);
+            return hours + ' 小时 ' + mins + ' 分';
+        }
+        if (seconds >= 60) {
+            var whole = Math.floor(seconds / 60);
+            var rest = Math.round(seconds % 60);
+            return rest ? whole + ' 分 ' + rest + ' 秒' : whole + ' 分';
+        }
+        var shown = seconds >= 10 ? Math.round(seconds) : Math.round(seconds * 10) / 10;
+        return shown + ' 秒';
+    }
+
     function formatWikiFieldDisplay(key, val, nestedKey, itemType) {
         if (val == null || val === '') return null;
         if (typeof val === 'number' && val < 0 && isUnlimitedRangeKey(key)) {
@@ -1338,6 +1385,10 @@
 
     function buildRowForWikiField(block, key, itemType, nestedKey) {
         if (!block) return null;
+        if (key === 'travel_time_10gm' && block.standard_jump) {
+            var travel = formatQuantumTravel10Gm({ wiki_fields: { quantum_drive: block } });
+            if (travel) return { label: wikiFieldLabel(key, itemType, nestedKey), value: travel };
+        }
         var val = block[key];
         if (val == null || val === '') return null;
         if (
@@ -2581,6 +2632,16 @@
                     var jump = q && q.standard_jump;
                     var v = jump && jump.drive_speed;
                     return v != null && Number.isFinite(Number(v)) ? Number(v) : null;
+                },
+            },
+            {
+                key: 'wiki_q_10gm',
+                label: '10 Gm 航行时间',
+                get: function (item) {
+                    return formatQuantumTravel10Gm(item);
+                },
+                sortGet: function (item) {
+                    return quantumTravel10GmSeconds(item);
                 },
             },
             {
