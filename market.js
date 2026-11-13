@@ -594,6 +594,57 @@
         armor_helmet: 'armor_helmets',
     };
 
+    var CATALOG_TYPE_TO_LISTING = {
+        cooling: 'coolers',
+        power: 'power_plants',
+        shield: 'shield_generators',
+        quantum: 'quantum_drives',
+        jump: 'jump_modules',
+        radar: 'radar',
+        ship_weapon: 'guns',
+        ship_missile: 'missiles',
+        missile_rack: 'missile_racks',
+        ship_turret: 'turrets',
+        ship_emp: 'guns',
+        mining_laser: 'mining_laser_heads',
+        ship_module: 'mining_modules',
+        salvage_scraper: 'scraper_beams',
+        fuel_nozzle: 'fuel_nozzle',
+        armor_helmet: 'armor_helmets',
+        armor_torso: 'armor_torso',
+        armor_legs: 'armor_legs',
+        armor_arms: 'armor_arms',
+        armor_backpack: 'armor_backpacks',
+        armor_undersuit: 'undersuits',
+        personal_weapon: 'personal_weapons',
+        weapon_pistol: 'personal_weapons',
+        weapon_smg: 'personal_weapons',
+        weapon_rifle: 'personal_weapons',
+        weapon_sniper: 'personal_weapons',
+        weapon_shotgun: 'personal_weapons',
+        weapon_lmg: 'personal_weapons',
+        weapon_launcher: 'personal_weapons',
+        weapon_crossbow: 'personal_weapons',
+        weapon_throwable: 'personal_weapons',
+        weapon_melee: 'personal_weapons',
+        weapon_misc: 'personal_weapons',
+        magazine: 'attachments',
+        attachment_ironsight: 'attachments',
+        attachment_barrel: 'attachments',
+        attachment_bottom: 'attachments',
+        attachment_utility: 'attachments',
+        attachment_missile: 'attachments',
+        attachment_other: 'attachments',
+    };
+
+    function listingTypeKey(typeKey) {
+        var t = canonicalTypeKey(typeKey);
+        if (!t) return '';
+        if (CATALOG_TYPE_TO_LISTING[t]) return CATALOG_TYPE_TO_LISTING[t];
+        if (TYPE_TO_NAV_GROUP[t]) return t;
+        return '';
+    }
+
     function navGroupOf(group) {
         var g = String(group || '').trim();
         return LEGACY_NAV_GROUP[g] || g;
@@ -2041,9 +2092,6 @@
                 escapeHtml(emailMasked || maskEmailDisplay(email) || '****@****') +
                 '</span>' +
                 '</div>';
-            if (!revealed) {
-                contactHtml += '<p class="market-seller-card__contact-hint">发布者已隐藏联系方式（脱敏展示）；确认购买后可见完整信息</p>';
-            }
         } else {
             contactHtml = '<p class="market-detail__note">发布者未公开联系方式</p>';
         }
@@ -2070,13 +2118,15 @@
             subLine +
             ratingHtml +
             '</div></div>' +
-            orgHtml +
-            factsHtml +
+            (opts.compact ? '' : orgHtml) +
+            (opts.compact ? '' : factsHtml) +
+            (opts.compact ? '' : (
             '<div class="market-seller-card__contact-wrap">' +
             '<div class="market-seller-card__contact-label">联系方式</div>' +
             contactHtml +
             '</div>' +
-            sellerReviewsHtml(seller) +
+            sellerReviewsHtml(seller)
+            )) +
             '</div></div>'
         );
     }
@@ -2492,6 +2542,7 @@
         var lotteryBtn = isLottery ? lotteryActionState(order) : null;
         var canLottery = !options.readOnly && !isOwnOrder(order) && isLottery && lotteryBtn;
         var detailActionsHtml = '';
+        var shareBtnHtml = '<button type="button" class="market-btn" id="marketDetailShareBtn" data-order-id="' + escapeHtml(order.id) + '">分享</button>';
         if (canTakedown || canPurchase || canLottery) {
             detailActionsHtml =
                 '<div class="market-detail__actions' + (canTakedown && !canPurchase && !canLottery ? ' market-detail__actions--end' : '') + '">' +
@@ -2509,15 +2560,21 @@
                         '<button type="button" class="market-btn market-detail__nudge" id="marketDetailContactBtn" data-order-id="' + escapeHtml(order.id) + '"' +
                         (options.purchaseId ? ' data-purchase-id="' + escapeHtml(options.purchaseId) + '"' : '') +
                         (showPurchaseHint ? '' : ' hidden') + '>联系卖家</button>' +
-                        '<button type="button" class="market-btn" id="marketDetailShareBtn" data-order-id="' + escapeHtml(order.id) + '">分享</button>' +
+                        shareBtnHtml +
                         '<button type="button" class="market-btn market-btn--accent" id="marketDetailPurchaseBtn" data-order-id="' + escapeHtml(order.id) + '">' +
                         (order.tradeType === 'barter' ? '确认互换' : '确认购买') +
                         '</button>'
                     )
                     : '') +
+                (canPurchase ? '' : shareBtnHtml) +
                 (canTakedown
                     ? '<button type="button" class="market-btn market-detail__takedown-btn" id="marketDetailTakedownBtn" data-order-id="' + escapeHtml(order.id) + '">下架该商品</button>'
                     : '') +
+                '</div></div>';
+        } else if (!options.readOnly && !order.listingGone) {
+            detailActionsHtml =
+                '<div class="market-detail__actions market-detail__actions--end"><div class="market-detail__actions-end">' +
+                shareBtnHtml +
                 '</div></div>';
         }
 
@@ -3631,8 +3688,9 @@
         want.componentId = itemComponentId(picked);
         want.name = itemDisplayName(picked) || String(picked.id_item || '');
         want.nameZh = picked.name_zh || null;
-        want.categoryGroup = inferNavGroupFromType(picked.type) || 'other';
-        applyTypeToItem(want, picked.type || '');
+        var wantListingType = listingTypeKey(picked.type);
+        want.categoryGroup = inferNavGroupFromType(wantListingType) || inferNavGroupFromType(picked.type) || 'other';
+        applyTypeToItem(want, wantListingType);
         want.quality = DEFAULT_QUALITY;
         state.create.barterWantCategoryGroup = want.categoryGroup;
         if (el.wantCategorySelect) el.wantCategorySelect.value = want.categoryGroup;
@@ -3687,8 +3745,9 @@
         it.componentId = itemComponentId(picked);
         it.name = itemDisplayName(picked) || String(picked.id_item || '');
         it.nameZh = picked.name_zh || null;
-        it.categoryGroup = inferNavGroupFromType(picked.type) || 'other';
-        applyTypeToItem(it, picked.type || '');
+        var listingType = listingTypeKey(picked.type);
+        it.categoryGroup = inferNavGroupFromType(listingType) || inferNavGroupFromType(picked.type) || 'other';
+        applyTypeToItem(it, listingType);
         it.quality = DEFAULT_QUALITY;
         state.create.categoryGroup = it.categoryGroup;
         if (el.categorySelect) el.categorySelect.value = it.categoryGroup;

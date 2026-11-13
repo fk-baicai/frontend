@@ -1020,19 +1020,34 @@
         if (!live || !copy || !live.classList || !live.classList.contains('bp-shell')) return;
         var shell = live.getBoundingClientRect();
         var cs = window.getComputedStyle(live);
+        var body = live.closest('.bp-craft-body');
+        if (body) {
+            var bcs = window.getComputedStyle(body);
+            for (var i = 0; i < bcs.length; i++) {
+                var prop = bcs[i];
+                if (prop.indexOf('--bp-') === 0) copy.style.setProperty(prop, bcs.getPropertyValue(prop));
+            }
+        }
+        copy.style.display = 'grid';
+        copy.style.width = Math.ceil(shell.width) + 'px';
         copy.style.height = Math.ceil(shell.height) + 'px';
         copy.style.maxHeight = Math.ceil(shell.height) + 'px';
         copy.style.overflow = 'hidden';
-        if (cs.gridTemplateRows && cs.gridTemplateRows !== 'none') copy.style.gridTemplateRows = cs.gridTemplateRows;
-        ['bp-sidebar', 'bp-detail', 'bp-list-wrap'].forEach(function (cls) {
+        copy.style.gridTemplateColumns = cs.gridTemplateColumns;
+        copy.style.gridTemplateRows = cs.gridTemplateRows;
+        copy.style.columnGap = cs.columnGap;
+        copy.style.rowGap = cs.rowGap;
+        ['bp-sidebar', 'bp-detail', 'bp-list-wrap', 'bp-missions-bar'].forEach(function (cls) {
             var a = live.querySelector('.' + cls);
             var b = copy.querySelector('.' + cls);
             if (!a || !b) return;
             var box = a.getBoundingClientRect();
+            b.style.width = Math.ceil(box.width) + 'px';
             b.style.height = Math.ceil(box.height) + 'px';
             b.style.maxHeight = Math.ceil(box.height) + 'px';
             b.style.minHeight = '0';
             b.style.overflow = 'hidden';
+            if (cls === 'bp-missions-bar') b.style.width = '100%';
         });
         var phantom = copy.querySelector('.bp-list-phantom');
         if (phantom) phantom.style.height = '0px';

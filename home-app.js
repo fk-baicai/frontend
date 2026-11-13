@@ -5709,7 +5709,14 @@
             }, AUTH_BUTTON_FEEDBACK_MS);
         }
 
-        initCommunityBoard();
-        initLoginSessionSelect();
-        syncAuthFloatFields();
-        bootHomeAfterAuth();
+        if (document.getElementById('homeHero')) {
+            initCommunityBoard();
+            initLoginSessionSelect();
+            syncAuthFloatFields();
+            bootHomeAfterAuth();
+        } else if (document.getElementById('loginDrawer')) {
+            initLoginSessionSelect();
+            syncAuthFloatFields();
+            refreshNavLoginState();
+            refreshLoginDrawerView();
+        }

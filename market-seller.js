@@ -45,7 +45,7 @@
                 if (emptyEl) emptyEl.hidden = true;
                 var sellerInfo = orders[0].seller || {};
                 if (profileEl && window.UssMarket && typeof window.UssMarket.renderSellerProfileHtml === 'function') {
-                    profileEl.innerHTML = window.UssMarket.renderSellerProfileHtml(sellerInfo, '出售者信息');
+                    profileEl.innerHTML = window.UssMarket.renderSellerProfileHtml(sellerInfo, '出售者信息', { compact: true });
                 }
                 if (window.UssMarket && typeof window.UssMarket.renderListingCardHtml === 'function') {
                     listEl.innerHTML = orders.map(function (order) {

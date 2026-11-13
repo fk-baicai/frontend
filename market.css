@@ -1187,16 +1187,18 @@ html:has(body.market-body) {
     background: var(--mkt-surface);
     overflow: hidden;
     cursor: pointer;
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+    border: 1px solid rgba(142, 224, 255, 0.42);
     transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 }
 
-.market-card:hover {
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
-    border-color: rgba(255, 255, 255, 0.14);
+.market-card:hover,
+.market-card:focus-visible {
+    border-color: #8ee0ff;
+    box-shadow: 0 0 0 1px rgba(142, 224, 255, 0.35), 0 10px 24px rgba(0, 0, 0, 0.32);
+    transform: translate3d(0, -3px, 0);
 }
 
 .market-card__media {
@@ -1631,6 +1633,12 @@ html:has(body.market-body) {
     box-sizing: border-box;
 }
 .market-modal-backdrop[hidden] { display: none; }
+
+#marketModalBackdrop .market-modal {
+    zoom: 0.85;
+    max-height: none;
+    overflow: visible;
+}
 
 .market-modal {
     width: min(760px, calc(100% - 2rem));
@@ -3135,8 +3143,13 @@ body.market-seller-body .market-card__manage-actions {
     display: none;
 }
 
+html:has(body.market-seller-body),
 body.market-seller-body {
-    background: #0b1c2e;
+    background: var(--home-page-bg, #122d48);
+}
+
+body.market-seller-body .market-seller-card__body {
+    padding: 0.65rem 0.85rem;
 }
 
 .market-seller-main {

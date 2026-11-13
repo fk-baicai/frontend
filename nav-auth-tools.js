@@ -22,14 +22,83 @@
         return !!(sess && sess.token);
     }
 
+    function defaultAvatarSrc() {
+        if (typeof window.ussDefaultAvatarSrc === 'function') return window.ussDefaultAvatarSrc();
+        return window.USS_DEFAULT_AVATAR || 'default-avatar.webp';
+    }
+
     function avatarSrc(sess) {
         var rel = sess && sess.avatarUrl;
+        var generic = window.ussIsGenericDefaultAvatarUrl;
         if (rel && window.UssAuthApi && typeof window.UssAuthApi.resolveAssetUrl === 'function') {
             var url = window.UssAuthApi.resolveAssetUrl(rel);
-            if (url) return url;
+            if (url && !(typeof generic === 'function' && generic(url))) return url;
         }
-        if (rel && /^https?:\/\//i.test(String(rel))) return String(rel);
-        return window.USS_DEFAULT_AVATAR || 'default-avatar.webp';
+        if (rel && /^https?:\/\//i.test(String(rel)) && !(typeof generic === 'function' && generic(rel))) {
+            return String(rel);
+        }
+        return defaultAvatarSrc();
+    }
+
+    function hasScript(name) {
+        var nodes = document.getElementsByTagName('script');
+        var i;
+        for (i = 0; i < nodes.length; i++) {
+            if ((nodes[i].getAttribute('src') || '').indexOf(name) >= 0) return true;
+        }
+        return false;
+    }
+
+    function mountLoginDrawer() {
+        if (document.getElementById('loginDrawer')) return;
+        try {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', 'login-drawer-snippet.html', false);
+            xhr.send(null);
+            if (xhr.status !== 200 || !xhr.responseText) return;
+            var tpl = document.createElement('template');
+            tpl.innerHTML = xhr.responseText.trim();
+            document.body.appendChild(tpl.content);
+        } catch (e) {
+            /* ignore */
+        }
+    }
+
+    var authStackLoading = false;
+    var authStackWaiters = [];
+    function ensureAuthStack(done) {
+        mountLoginDrawer();
+        if (typeof window.openLoginDrawer === 'function') {
+            if (done) done();
+            return;
+        }
+        if (done) authStackWaiters.push(done);
+        if (authStackLoading) return;
+        authStackLoading = true;
+        var urls = [];
+        if (!hasScript('auth-session-sync.js')) urls.push('auth-session-sync.js');
+        if (!hasScript('api-error.js')) urls.push('api-error.js');
+        if (!hasScript('auth-api.js')) urls.push('auth-api.js');
+        if (!hasScript('home-app.js')) urls.push('home-app.js?v=20261113a');
+        var index = 0;
+        function finish() {
+            authStackLoading = false;
+            var waiters = authStackWaiters.splice(0);
+            waiters.forEach(function (fn) { fn(); });
+            syncNavAccount();
+        }
+        function next() {
+            if (index >= urls.length) {
+                finish();
+                return;
+            }
+            var script = document.createElement('script');
+            script.src = urls[index++];
+            script.onload = next;
+            script.onerror = next;
+            document.body.appendChild(script);
+        }
+        next();
     }
 
     function ensureNavAccount() {
@@ -52,8 +121,9 @@
         var btn = wrap.querySelector('#navLoginBtn');
         if (btn) {
             btn.addEventListener('click', function () {
-                if (typeof window.openLoginDrawer === 'function') window.openLoginDrawer();
-                else window.location.href = 'index.html';
+                ensureAuthStack(function () {
+                    if (typeof window.openLoginDrawer === 'function') window.openLoginDrawer();
+                });
             });
         }
     }
@@ -73,6 +143,10 @@
             btn.setAttribute('aria-label', '账户');
             img.src = avatarSrc(sess);
             img.alt = '用户头像';
+            img.onerror = function () {
+                img.onerror = null;
+                img.src = defaultAvatarSrc();
+            };
         } else {
             guestWrap.classList.remove('is-hidden');
             avatarWrap.classList.add('is-hidden');
@@ -87,6 +161,7 @@
         syncNavAccount();
     }
 
+    ensureAuthStack();
     syncToolsNav();
 
     window.addEventListener('storage', syncToolsNav);
