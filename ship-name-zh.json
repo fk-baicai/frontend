@@ -1,6 +1,6 @@
 {
   "version": "localization-vehicle",
-  "count": 251,
+  "count": 256,
   "byName": {
     "F7A Hornet Mk II": "铁砧 F7A 大黄蜂 Mk II",
     "PTV": "灰猫 PTV",
@@ -223,7 +223,7 @@
     "Tyilui": "盖塔克 缇律",
     "600i Touring": "起源 600i 旅行版",
     "Prowler": "埃斯佩里亚 徘徊者",
-    "600i Explorer": "起源 600i",
+    "600i Explorer": "起源 600i 探索版",
     "Hull C": "武藏 货轮 C",
     "M2 Hercules": "大力神 M2",
     "Hull D": "武藏 货轮 D",
@@ -252,7 +252,12 @@
     "Idris-P": "圣盾 伊德里斯-P",
     "Kraken Privateer": "德雷克 海妖 私掠版",
     "Javelin": "圣盾 标枪",
-    "Odin": "铁砧 奥丁"
+    "Odin": "铁砧 奥丁",
+    "Orion": "RSI 猎户座",
+    "Genesis": "十字军 创世纪",
+    "Ranger CV": "盾博尔 游骑兵 CV",
+    "Ranger RC": "盾博尔 游骑兵 RC",
+    "Constellation Mk V Centaurus": "RSI 星座 半人马"
   },
   "byMakerName": {
     "ANVL|F7A Hornet Mk II": "铁砧 F7A 大黄蜂 Mk II",
@@ -476,7 +481,7 @@
     "GAMA|Tyilui": "盖塔克 缇律",
     "ORIG|600i Touring": "起源 600i 旅行版",
     "ESPR|Prowler": "埃斯佩里亚 徘徊者",
-    "ORIG|600i Explorer": "起源 600i",
+    "ORIG|600i Explorer": "起源 600i 探索版",
     "MISC|Hull C": "武藏 货轮 C",
     "CRUS|M2 Hercules": "大力神 M2",
     "MISC|Hull D": "武藏 货轮 D",
@@ -505,6 +510,11 @@
     "AEGS|Idris-P": "圣盾 伊德里斯-P",
     "DRAK|Kraken Privateer": "德雷克 海妖 私掠版",
     "AEGS|Javelin": "圣盾 标枪",
-    "ANVL|Odin": "铁砧 奥丁"
+    "ANVL|Odin": "铁砧 奥丁",
+    "RSI|Orion": "RSI 猎户座",
+    "CRUS|Genesis": "十字军 创世纪",
+    "TMBL|Ranger CV": "盾博尔 游骑兵 CV",
+    "TMBL|Ranger RC": "盾博尔 游骑兵 RC",
+    "RSI|Constellation Mk V Centaurus": "RSI 星座 半人马"
   }
 }
