@@ -73,6 +73,8 @@
     max-height: min(420px, 58vh);
     overflow: auto;
     overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     border-radius: 10px;
     border: 1px solid rgba(142, 224, 255, 0.48);
     background: rgba(6, 16, 30, 0.96);
@@ -444,6 +446,8 @@
     min-height: 0;
     overflow: auto;
     overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     background: rgba(5, 14, 26, 0.28);
 }
 
@@ -579,6 +583,8 @@
     min-height: 0;
     overflow: auto;
     overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
 }
 
 .st-list:has(.st-cards) {
@@ -746,6 +752,8 @@
     min-height: 0;
     overflow: auto;
     overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     border-left: 1px solid rgba(142, 224, 255, 0.18);
     padding: 1rem 1rem 1.2rem;
     background: rgba(5, 14, 26, 0.35);
@@ -994,10 +1002,12 @@
     }
 
     .st-cats {
-        height: auto;
+        height: 38vh;
         max-height: 38vh;
         min-height: 0;
         overflow: auto;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
         -webkit-overflow-scrolling: touch;
     }
 
@@ -1010,10 +1020,12 @@
     }
 
     .st-list {
-        height: auto;
+        height: min(62vh, 520px);
         max-height: min(62vh, 520px);
         min-height: 12rem;
         overflow: auto;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
         -webkit-overflow-scrolling: touch;
     }
 

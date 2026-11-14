@@ -57,6 +57,9 @@
     height: auto;
     min-height: 0;
     overflow: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: rgba(95, 184, 255, 0.35) transparent;
 }
@@ -382,6 +385,9 @@
     gap: 0.45rem;
     padding: 0.5rem;
     overflow: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     border: 1px solid var(--home-surface-border);
     border-radius: 10px;
     background: rgba(52, 98, 138, 0.94);
@@ -505,7 +511,7 @@
 
     .cg-side {
         width: 100%;
-        height: auto;
+        height: 30vh;
         max-height: 30vh;
     }
 

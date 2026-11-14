@@ -809,6 +809,9 @@
     margin-top: 0.22rem;
     max-height: min(50vh, 14rem);
     overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     overflow-x: hidden;
     padding: 0.2rem 0;
     border-radius: 8px;
@@ -1084,6 +1087,9 @@
     box-sizing: border-box;
     max-height: min(78vh, 48rem);
     overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     overflow-x: hidden;
     scrollbar-gutter: stable;
     scrollbar-width: thin;

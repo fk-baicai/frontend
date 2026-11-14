@@ -7575,7 +7575,9 @@ body.oopz-bind-open {
 .community-post-textarea {
  overflow-y: auto;
  overflow-x: hidden;
- overscroll-behavior: auto;
+ overscroll-behavior: contain;
+ touch-action: pan-y;
+ -webkit-overflow-scrolling: touch;
  scrollbar-width: thin;
  scrollbar-color: rgba(84, 173, 247, 0.45) rgba(0, 0, 0, 0.25);
 }
@@ -8429,7 +8431,7 @@ a.community-author-avatar-link:focus-visible {
  flex-direction: column;
  min-height: 0;
  min-width: 0;
- overscroll-behavior: auto;
+ overscroll-behavior: contain;
 }
 
 .community-chat-pin-bar {
@@ -8548,7 +8550,7 @@ a.community-author-avatar-link:focus-visible {
  flex-direction: column;
  overflow-y: auto;
  overflow-x: hidden;
- overscroll-behavior: auto;
+ overscroll-behavior: contain;
  touch-action: pan-y;
  -webkit-overflow-scrolling: touch;
 }

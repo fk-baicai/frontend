@@ -128,6 +128,9 @@
     max-height: 100%;
     overflow-x: hidden;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     padding: 12px 11px 12px 13px;
     background: var(--wd-bg);
     /* 相对原 1.1 缩放再缩小 10%（280×0.99 ≈ 277 对齐栅格列） */
@@ -865,6 +868,9 @@
     max-height: 120px;
     overflow-x: hidden;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     padding-right: 2px;
     scrollbar-width: thin;
     scrollbar-color: rgba(247, 143, 30, 0.55) var(--navbar-bg);

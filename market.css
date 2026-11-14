@@ -1021,6 +1021,9 @@ html:has(body.market-body) {
 .market-terms-modal__body {
     padding: 1rem 1.15rem;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     flex: 1 1 auto;
     min-height: 0;
 }
@@ -1648,6 +1651,8 @@ html:has(body.market-body) {
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
     --mkt-ctrl-h: 2.25rem;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
     flex-shrink: 0;
 }
@@ -1965,6 +1970,9 @@ html:has(body.market-body) {
     gap: 0.4rem;
     max-height: 14rem;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
 }
 
 .market-gift-links input {
@@ -2271,6 +2279,9 @@ html:has(body.market-body) {
     z-index: 20;
     max-height: 220px;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     border: 1px solid var(--mkt-border);
     background: #122a42;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -3515,6 +3526,9 @@ body.market-seller-body .market-card {
     padding: 0;
     max-height: 16rem;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
 }
 
 .market-seller-card__review {
@@ -4971,7 +4985,11 @@ body.market-trades-body .uss-site-footer {
 
 .market-chat-log {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     padding: 0.75rem;
     display: flex;
     flex-direction: column;

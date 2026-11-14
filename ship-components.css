@@ -285,6 +285,8 @@ button.sc-lead-item.is-active {
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: rgba(95, 184, 255, 0.45) transparent;
 }
@@ -1139,6 +1141,20 @@ button.sc-lead-item.is-active {
 .sc-acquire-col--shops .sc-loc-cell {
     overflow-wrap: anywhere;
     word-break: break-word;
+}
+
+.sc-acquire-col--shops .sc-loc-table {
+    border-collapse: separate;
+    border-spacing: 0 0.45rem;
+}
+
+.sc-acquire-col--shops .sc-loc-table td {
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+}
+
+.sc-acquire-col--shops .sc-loc-path {
+    gap: 0.4rem 0.28rem;
 }
 
 .sc-acquire-col--shops .sc-loc-path {
@@ -3109,6 +3125,12 @@ body.sc-img-desk-open {
     line-height: 1.35;
 }
 
+.sc-detail-page .sc-detail-mission-body > .sc-detail-locations-blueprint-row > .sc-blueprint-mission-section > .sc-blueprint-mission-section-title {
+    font-size: 0.74rem;
+    font-weight: 500;
+    margin-bottom: 0.45rem;
+}
+
 .sc-detail-page .sc-detail-mission-body > .sc-blueprint-mission-section > .sc-blueprint-mission-section-title::before,
 .sc-detail-page .sc-detail-mission-body > .sc-detail-locations-blueprint-row > .sc-blueprint-mission-section > .sc-blueprint-mission-section-title::before,
 .sc-detail-page .sc-detail-specs > .sc-blueprint-mission-section > .sc-blueprint-mission-section-title::before {
@@ -3341,15 +3363,15 @@ body.sc-img-desk-open {
 }
 
 .sc-detail-section--blueprint .sc-blueprint-mission-title {
-    font-size: 0.9375rem;
+    font-size: 0.82rem;
 }
 
 .sc-detail-page .sc-detail-section--blueprint .sc-blueprint-mission-table-wrap {
-    font-size: 0.9375rem;
+    font-size: 0.82rem;
 }
 
 .sc-detail-page .sc-detail-section--blueprint .sc-bp-mission-th {
-    font-size: 0.8125rem;
+    font-size: 0.74rem;
 }
 
 .sc-detail-page .sc-detail-section--blueprint .sc-blueprint-mission-reward.sc-price {
@@ -3436,15 +3458,15 @@ body.sc-img-desk-open {
 }
 
 .sc-detail-page .sc-loc-table {
-    font-size: 0.9375rem;
+    font-size: 0.82rem;
 }
 
 .sc-detail-page .sc-loc-table thead th {
-    font-size: 0.8125rem;
+    font-size: 0.74rem;
 }
 
 .sc-detail-page .sc-loc-table .sc-loc-level {
-    font-size: 0.9375rem;
+    font-size: 0.82rem;
 }
 
 .sc-detail-page .sc-loc-table tbody tr {
@@ -3680,6 +3702,11 @@ body.sc-img-desk-open {
         vertical-align: top;
     }
 
+    .sc-detail-page .sc-detail-locations-body .sc-detail-loc-table {
+        border-collapse: separate;
+        border-spacing: 0 0rem;
+    }
+
     .sc-detail-page .sc-loc-th-price,
     .sc-detail-page .sc-loc-price-cell {
         width: 7.4rem;
@@ -3801,6 +3828,11 @@ body.sc-img-desk-open {
     font-size: 0.82rem;
     border-collapse: collapse;
     table-layout: fixed;
+}
+
+.sc-detail-page .sc-detail-locations-body .sc-detail-loc-table {
+    border-collapse: separate;
+    border-spacing: 0 0rem;
 }
 
 .sc-loc-table th,
@@ -4719,6 +4751,9 @@ td.sc-stat-loadout-mod:hover {
     gap: 0.18rem;
     padding: 0.08rem 0.05rem 0.08rem 0;
     overflow: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     flex: 1 1 auto;
     min-height: 5.5rem;
     max-height: none;
