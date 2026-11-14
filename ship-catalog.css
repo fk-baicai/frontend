@@ -1,0 +1,395 @@
+.ship-catalog-body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--home-page-bg, #122d48);
+    color: #e8f4ff;
+}
+
+.scat-main {
+    box-sizing: border-box;
+    width: min(1920px, calc(100% - 1.25rem));
+    margin: 0 auto;
+    padding: 1.15rem 0 2.5rem;
+}
+
+.scat-pagehead {
+    margin: 0 0 0.85rem;
+}
+
+.scat-title {
+    margin: 0;
+    padding: 0;
+    color: #fff;
+    font-family: 'Raleway', 'Segoe UI', Arial, sans-serif;
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    text-align: left;
+}
+
+.scat-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1.35rem 1.6rem;
+    margin-bottom: 1.15rem;
+}
+
+.scat-search-wrap {
+    display: flex;
+    flex: 1 1 18rem;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: min(100%, 16rem);
+    padding: 0.45rem 0 0.55rem;
+    border-bottom: 1px solid rgba(95, 184, 255, 0.42);
+}
+
+.scat-search-wrap::before {
+    content: '';
+    flex: 0 0 1rem;
+    width: 1rem;
+    height: 1rem;
+    opacity: 0.45;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238ee0ff' stroke-width='2'%3E%3Cpath stroke-linecap='round' d='M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z'/%3E%3C/svg%3E")
+        center / contain no-repeat;
+    pointer-events: none;
+}
+
+.scat-search-wrap:focus-within {
+    border-bottom-color: #8ee0ff;
+}
+
+.scat-search-wrap:focus-within::before {
+    opacity: 0.9;
+}
+
+.scat-search,
+.scat-maker {
+    box-sizing: border-box;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #e8f4ff;
+    font: inherit;
+    font-size: 0.95rem;
+}
+
+.scat-search {
+    flex: 1;
+    min-width: 0;
+    height: 1.6rem;
+    padding: 0;
+}
+
+.scat-search::placeholder {
+    color: rgba(200, 220, 235, 0.55);
+}
+
+.scat-search::-webkit-search-decoration,
+.scat-search::-webkit-search-cancel-button {
+    appearance: none;
+}
+
+.scat-maker {
+    flex: 0 1 11rem;
+    min-width: 8.5rem;
+    height: auto;
+    padding: 0.45rem 1.35rem 0.55rem 0;
+    border-bottom: 1px solid rgba(95, 184, 255, 0.42);
+    color-scheme: dark;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238ee0ff' stroke-width='2'%3E%3Cpath stroke-linecap='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.05rem center;
+    background-size: 0.9rem;
+    cursor: pointer;
+}
+
+.scat-maker:focus {
+    border-bottom-color: #8ee0ff;
+    outline: none;
+}
+
+.scat-maker option {
+    background: #0e2943;
+    color: #e8f4ff;
+}
+
+.scat-search:focus,
+.scat-search:focus-visible {
+    outline: none;
+}
+
+.scat-filter:focus-visible,
+.scat-name a:focus-visible {
+    outline: 2px solid #8ee0ff;
+    outline-offset: 2px;
+}
+
+.scat-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.15rem;
+    padding-bottom: 0.15rem;
+}
+
+.scat-filter {
+    min-height: 2.35rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: rgba(200, 220, 235, 0.62);
+    padding: 0.4rem 0.7rem 0.45rem;
+    font: inherit;
+    font-size: 0.92rem;
+    cursor: pointer;
+    box-shadow: inset 0 -1px 0 rgba(95, 184, 255, 0.28);
+}
+
+.scat-filter:hover {
+    color: #e8f4ff;
+}
+
+.scat-filter.is-on {
+    color: #8ee0ff;
+    background: transparent;
+    box-shadow: inset 0 -2px 0 #8ee0ff;
+}
+
+.scat-sheet {
+    --scat-cols: 2;
+    background: transparent;
+    color: #e8f4ff;
+}
+
+.scat-head {
+    margin-bottom: 0.7rem;
+}
+
+.scat-head,
+.scat-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--scat-cols), minmax(0, 1fr));
+    gap: 0 12px;
+}
+
+.scat-colhead,
+.scat-ship {
+    display: grid;
+    grid-template-columns: 16.35fr 32.625fr 28.183fr 25.625fr 28.592fr;
+    min-width: 0;
+}
+
+.scat-colhead span,
+.scat-ship > * {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.45rem;
+    text-align: center;
+    line-height: 1.1;
+}
+
+.scat-colhead span {
+    color: rgba(200, 220, 235, 0.72);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.scat-ship {
+    height: 5.2rem;
+    max-height: 5.2rem;
+    grid-template-rows: minmax(0, 44fr) minmax(0, 11fr);
+    overflow: hidden;
+    border: 0;
+    border-bottom: 1px solid rgba(142, 224, 255, 0.13);
+    border-radius: 0;
+    background: rgba(14, 41, 67, 0.72);
+}
+
+.scat-ship > .scat-art {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: stretch;
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
+    background: transparent;
+}
+
+.scat-art img {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    object-fit: cover;
+}
+
+.scat-ship > .scat-name {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0 0.4rem;
+    text-align: left;
+}
+
+.scat-name a {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    max-width: 100%;
+    color: inherit;
+    text-decoration: none;
+}
+
+.scat-zh,
+.scat-en {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.scat-zh {
+    color: #e8f4ff;
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.05;
+}
+
+.scat-en {
+    margin-top: 0.12rem;
+    color: rgba(214, 228, 240, 0.82);
+    font-size: 0.82rem;
+    line-height: 1.05;
+}
+
+.scat-ship > .scat-logo {
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.2rem;
+}
+
+.scat-logo img {
+    width: auto;
+    height: 2.5rem;
+    max-width: 70%;
+    object-fit: contain;
+}
+
+.scat-logo img[src*="kruger"] {
+    height: 3.15rem;
+    max-width: 84%;
+}
+
+.scat-usd,
+.scat-auec {
+    align-items: center;
+    padding: 0 0.2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.scat-usd {
+    color: #e6d7a2;
+    font-size: 1.28rem;
+}
+
+.scat-auec {
+    color: #8ee0ff;
+    font-size: 1.35rem;
+}
+
+.scat-ship > .scat-role,
+.scat-ship > .scat-maker,
+.scat-ship > .scat-tags,
+.scat-ship > .scat-place {
+    grid-row: 2;
+    align-items: center;
+    padding: 0 0.28rem;
+    color: rgba(200, 220, 235, 0.72);
+    font-size: 0.68rem;
+    font-style: normal;
+    line-height: 1.15;
+    white-space: nowrap;
+}
+
+.scat-ship > .scat-role { grid-column: 2; justify-content: flex-start; text-align: left; }
+.scat-ship > .scat-maker {
+    grid-column: 3;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+.scat-ship > .scat-tags {
+    grid-column: 4;
+    gap: 0.35rem;
+}
+
+.scat-ship > .scat-tags .is-resident { color: #9aa8b5; }
+.scat-ship > .scat-tags .is-fly { color: #8ee0ff; }
+.scat-ship > .scat-tags .is-upgrade { color: #9ddeb0; }
+.scat-ship > .scat-tags .is-concept { color: #c084fc; }
+.scat-ship > .scat-place {
+    grid-column: 5;
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.scat-ship > .scat-place span {
+    min-width: 0;
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scat-ship > .scat-place .scat-place-sep {
+    flex: 0 0 auto;
+    color: rgba(200, 220, 235, 0.45);
+}
+
+.scat-ship > .scat-place .is-p0 { color: #8ee0ff; }
+.scat-ship > .scat-place .is-p1 { color: #e6d7a2; }
+.scat-ship > .scat-place .is-p2 { color: #9ddeb0; }
+.scat-ship > .scat-place .is-p3 { color: #ff9a6b; }
+
+.scat-ship > .scat-place span[hidden] {
+    display: none;
+}
+
+.scat-status {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 1.2rem;
+    text-align: center;
+    color: #fff;
+}
+
+@media (max-width: 1500px) {
+    .scat-sheet {
+        --scat-cols: 1;
+    }
+}
+
+@media (max-width: 680px) {
+    .scat-main {
+        width: calc(100% - 0.8rem);
+    }
+
+    .scat-zh,
+    .scat-usd,
+    .scat-auec {
+        font-size: 1rem;
+    }
+}
