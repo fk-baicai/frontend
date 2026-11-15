@@ -308,15 +308,24 @@
         return decodeURIComponent((location.hash || '').replace(/^#/, '')).trim();
     }
 
+    function makerKey(ship) {
+        var alias = {
+            南船座宇航: '南船座',
+            盖塔克制造: '盖塔克',
+        };
+        return alias[ship.makerZh] || ship.makerZh || '其他';
+    }
+
     function makerGroups() {
         var order = [];
         var map = {};
         ships.forEach(function (ship) {
-            var key = ship.makerZh || '其他';
+            var key = makerKey(ship);
             if (!map[key]) {
                 map[key] = { zh: key, en: ship.makerEn || '', ships: [] };
                 order.push(map[key]);
             }
+            if (!map[key].en && ship.makerEn) map[key].en = ship.makerEn;
             map[key].ships.push(ship);
         });
         return order;
@@ -383,7 +392,7 @@
                     '" data-maker="' +
                     escapeHtml(group.zh) +
                     '"><span class="cg-maker-logo">' +
-                    makerLogo(group.zh) +
+                    makerLogo(group.zh, group.en) +
                     '</span><span class="cg-maker-copy"><span class="cg-maker-name">' +
                     escapeHtml(group.zh) +
                     '</span><span class="cg-maker-en">' +
@@ -398,24 +407,42 @@
         if (selected && selected.scrollIntoView) selected.scrollIntoView({ block: 'nearest' });
     }
 
-    function makerLogo(name) {
-        var file = {
+    function makerLogo(name, nameEn) {
+        var files = {
             十字军工业: 'assets/makers/crusader.png',
+            'Crusader Industries': 'assets/makers/crusader.png',
             德雷克星际: 'assets/makers/drake.png',
+            'Drake Interplanetary': 'assets/makers/drake.png',
             罗伯茨太空工业: 'assets/makers/rsi.png',
+            'Roberts Space Industries': 'assets/makers/rsi.png',
+            RSI: 'assets/makers/rsi.png',
             武藏工业与星航: 'assets/makers/musashi.png',
+            'Musashi Industrial and Starflight Concern': 'assets/makers/musashi.png',
             铁砧航天: 'assets/makers/anvil.png',
+            'Anvil Aerospace': 'assets/makers/anvil.png',
             圣盾动力: 'assets/makers/aegis.png',
+            'Aegis Dynamics': 'assets/makers/aegis.png',
             起源跃迁: 'assets/makers/origin.png',
+            'Origin Jumpworks': 'assets/makers/origin.png',
             南船座: 'assets/makers/argo.png',
+            南船座宇航: 'assets/makers/argo.png',
+            'Argo Astronautics': 'assets/makers/argo.png',
             联合外域: 'assets/makers/cnou.png',
+            'Consolidated Outland': 'assets/makers/cnou.png',
             盖塔克: 'assets/makers/gatac.png',
+            盖塔克制造: 'assets/makers/gatac.png',
+            'Gatac Manufacture': 'assets/makers/gatac.png',
             埃斯佩里亚: 'assets/makers/esperia.png',
+            Esperia: 'assets/makers/esperia.png',
             灰猫工业: 'assets/makers/greycat.png',
+            'Greycat Industrial': 'assets/makers/greycat.png',
             盾博尔: 'assets/makers/tumbril.png',
+            'Tumbril Land Systems': 'assets/makers/tumbril.png',
             格雷黑市: 'assets/makers/grey.png',
+            "Grey's Market": 'assets/makers/grey.png',
             未来科技: 'assets/makers/mirai.png',
-        }[name];
+        };
+        var file = files[name] || files[nameEn];
         if (!file) return '';
         return '<img src="' + file + '" alt="" decoding="async">';
     }
@@ -438,9 +465,15 @@
             格雷黑市: '格雷',
         }[ship.makerZh];
         var zh = ship.nameZh || '';
-        if (!prefix || zh.indexOf(prefix) !== 0) return zh;
-        var rest = zh.slice(prefix.length).replace(/^[\s·\-]+/, '');
-        return rest || zh;
+        if (prefix && zh.indexOf(prefix) === 0) {
+            zh = zh.slice(prefix.length).replace(/^[\s·\-]+/, '') || zh;
+        }
+        var parts = zh.split(/\s+/);
+        var en = String(ship.nameEn || '').toLowerCase();
+        while (parts.length > 1 && !/[\u4e00-\u9fff]/.test(parts[parts.length - 1]) && en.indexOf(parts[parts.length - 1].toLowerCase()) !== -1) {
+            parts.pop();
+        }
+        return parts.join(' ') || zh;
     }
 
     function shipNameEn(ship) {
@@ -470,7 +503,7 @@
         })[0];
         if (!ship) return;
         selectedId = ship.id;
-        openMaker = ship.makerZh || '其他';
+        openMaker = makerKey(ship);
         shownKey = layoutKey(ship);
         panX = 0;
         panY = 0;
