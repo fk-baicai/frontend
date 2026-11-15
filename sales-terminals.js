@@ -283,7 +283,7 @@
         MISC: '武藏工业与星航',
         Mirai: '未来科技',
         Origin: '起源跃迁',
-        RSI: '罗伯茨空间工业',
+        RSI: '罗伯茨太空工业',
         Tumbril: '盾博尔陆地系统',
     };
     function isShipItem(item) {

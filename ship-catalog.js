@@ -226,14 +226,14 @@
 
     function usdText(ship) {
         var n = Number(ship.usd);
-        if (Number.isFinite(n) && n > 0) return '$ ' + n.toFixed(2) + 'USD';
+        if (Number.isFinite(n) && n > 0) return '$ ' + (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2)) + 'USD';
         return '—';
     }
 
     function auecText(ship) {
         var n = Number(ship.auec);
         if (!Number.isFinite(n) || n <= 0) return '-';
-        return (n / 10000).toFixed(2).replace(/0$/, '').replace(/\.0$/, '') + ' WaUEC';
+        return (n / 10000).toFixed(2).replace(/0$/, '').replace(/\.0$/, '') + 'W aUEC';
     }
 
     function visible() {
@@ -293,8 +293,8 @@
             '<div class="scat-logo">' + (makerLogo(ship) ? '<img src="' + escapeHtml(makerLogo(ship)) + '" alt="" onerror="this.remove()">' : '') + '</div>' +
             '<div class="scat-usd">' + escapeHtml(usdText(ship)) + '</div>' +
             '<div class="scat-auec">' + escapeHtml(auecText(ship)) + '</div>' +
-            '<div class="scat-role">' + escapeHtml(roleText(ship)) + '</div>' +
-            '<div class="scat-maker">' + escapeHtml(makerText(ship)) + '</div>' +
+            '<div class="scat-role"><span>' + escapeHtml(roleText(ship)) + '</span></div>' +
+            '<div class="scat-maker"><span>' + escapeHtml(makerText(ship)) + '</span></div>' +
             '<div class="scat-tags">' + tagsHtml(tags) + '</div>' +
             '<div class="scat-place" data-places="' + escapeHtml(placeList.join('\n')) + '" title="' + escapeHtml(placeList.join(' / ')) + '">' + places + '</div>' +
             '</article>'
@@ -304,25 +304,33 @@
     var placeStep = 0;
     var placeTimer = 0;
 
+    function placeWindow() {
+        return window.matchMedia('(max-width: 680px)').matches ? 1 : 2;
+    }
+
     function placeHtml(names, start) {
         if (!names.length) return '';
+        var count = Math.min(placeWindow(), names.length);
         var a = ((start % names.length) + names.length) % names.length;
         var html = '<span class="is-place is-p' + (a % 4) + '">' + escapeHtml(names[a]) + '</span>';
-        if (names.length < 2) return html;
-        var b = (a + 1) % names.length;
-        return html +
-            '<span class="scat-place-sep"> / </span>' +
-            '<span class="is-place is-p' + (b % 4) + '">' + escapeHtml(names[b]) + '</span>';
+        if (count > 1) {
+            var b = (a + 1) % names.length;
+            html += '<span class="scat-place-sep"> / </span>' +
+                '<span class="is-place is-p' + (b % 4) + '">' + escapeHtml(names[b]) + '</span>';
+        }
+        return '<span class="scat-place-track">' + html + '</span>';
     }
 
     function rotatePlaces() {
         placeStep += 1;
+        var step = placeWindow();
         var cells = grid.querySelectorAll('.scat-place');
         for (var i = 0; i < cells.length; i += 1) {
             var names = cells[i]._names || [];
-            if (names.length <= 2) continue;
-            cells[i].innerHTML = placeHtml(names, ((placeStep + i) * 2) % names.length);
+            if (names.length <= step) continue;
+            cells[i].innerHTML = placeHtml(names, ((placeStep + i) * step) % names.length);
         }
+        markMarquee();
     }
 
     function startPlaces() {
@@ -335,10 +343,10 @@
             var names = raw ? raw.split('\n').filter(Boolean) : [];
             cells[i]._names = names;
             cells[i].innerHTML = placeHtml(names, 0);
-            if (names.length > 2) needs = true;
+            if (names.length > placeWindow()) needs = true;
         }
         if (!needs) return;
-        placeTimer = setInterval(rotatePlaces, 2200);
+        placeTimer = setInterval(rotatePlaces, placeWindow() === 1 ? 8000 : 2200);
     }
 
     function fitNameLine(selector, base, floor) {
@@ -356,10 +364,47 @@
         }
     }
 
-    function fitNames() {
+    function markMarquee() {
         var narrow = window.matchMedia('(max-width: 680px)').matches;
-        fitNameLine('.scat-zh', narrow ? 1 : 1.35, 0.72);
-        fitNameLine('.scat-en', narrow ? 0.72 : 0.82, 0.58);
+        var cells = grid.querySelectorAll('.scat-role, .scat-maker, .scat-place');
+        for (var i = 0; i < cells.length; i += 1) {
+            var el = cells[i];
+            var span = el.classList.contains('scat-place')
+                ? el.querySelector('.scat-place-track')
+                : el.querySelector(':scope > span');
+            el.classList.remove('is-marquee');
+            if (!narrow || !span) continue;
+            var extra = span.scrollWidth - el.clientWidth;
+            if (extra > 2) {
+                el.style.setProperty('--scat-shift', (-extra) + 'px');
+                el.classList.add('is-marquee');
+            }
+        }
+    }
+
+    function fitWrapped(selector, base, floor) {
+        var nodes = grid.querySelectorAll(selector);
+        for (var i = 0; i < nodes.length; i += 1) {
+            var el = nodes[i];
+            var size = base;
+            el.style.fontSize = size + 'rem';
+            var guard = 0;
+            while (el.scrollHeight > el.clientHeight + 1 && size > floor && guard < 24) {
+                size = Math.max(floor, Math.round((size - 0.04) * 100) / 100);
+                el.style.fontSize = size + 'rem';
+                guard += 1;
+            }
+        }
+    }
+
+    function fitNames() {
+        if (window.matchMedia('(max-width: 680px)').matches) {
+            fitWrapped('.scat-zh', 0.78, 0.5);
+            fitWrapped('.scat-en', 0.58, 0.42);
+            return;
+        }
+        fitNameLine('.scat-zh', 1.35, 0.72);
+        fitNameLine('.scat-en', 0.82, 0.58);
     }
 
     // 价格序：先左列从上到下，再右列从上到下（列优先写入行优先网格）
@@ -386,6 +431,7 @@
         bindArt();
         startPlaces();
         fitNames();
+        markMarquee();
     }
 
     function setMaker(value, label, logo) {
@@ -462,7 +508,10 @@
     window.addEventListener('resize', function () {
         var next = readColumns();
         if (next !== columns) render();
-        else fitNames();
+        else {
+            fitNames();
+            markMarquee();
+        }
     });
 
     function applyNameZh(list, map) {

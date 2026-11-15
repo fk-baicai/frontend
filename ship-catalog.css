@@ -459,6 +459,10 @@
     display: none;
 }
 
+.scat-place-track {
+    display: contents;
+}
+
 .scat-status {
     grid-column: 1 / -1;
     margin: 0;
@@ -478,6 +482,35 @@
         width: calc(100% - 0.8rem);
     }
 
+    .scat-tools {
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 0.35rem 0.45rem;
+    }
+
+    .scat-search-wrap {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    .scat-maker {
+        flex: 1 1 6.5rem;
+        min-width: 0;
+    }
+
+    .scat-filters {
+        flex: 1 1 auto;
+        flex-wrap: nowrap;
+        gap: 0;
+        padding-bottom: 0;
+    }
+
+    .scat-filter {
+        min-height: 2.15rem;
+        padding: 0.35rem 0.38rem 0.4rem;
+        font-size: 0.82rem;
+    }
+
     .scat-ship {
         height: 3.7rem;
         max-height: 3.7rem;
@@ -485,7 +518,7 @@
 
     .scat-colhead,
     .scat-ship {
-        grid-template-columns: 6.4rem minmax(0, 1fr) 2.55rem minmax(4.7rem, auto) minmax(4.95rem, auto);
+        grid-template-columns: 6.4rem minmax(0, 1fr) minmax(0, 2.2rem) minmax(4.7rem, auto) minmax(0, 4.6rem);
         column-gap: 0.22rem;
     }
 
@@ -494,12 +527,40 @@
         white-space: nowrap;
     }
 
+    .scat-ship > .scat-name,
+    .scat-ship > .scat-role {
+        align-items: flex-start;
+        justify-content: flex-start;
+        padding-left: 0.12rem;
+        padding-right: 0.08rem;
+        text-align: left;
+    }
+
+    .scat-ship > .scat-name {
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .scat-name a {
+        width: 100%;
+    }
+
+    .scat-zh,
+    .scat-en {
+        white-space: normal;
+        word-break: break-word;
+        overflow: hidden;
+        line-height: 1.05;
+    }
+
     .scat-zh {
-        font-size: 0.82rem;
+        max-height: 2.4em;
+        font-size: 0.78rem;
     }
 
     .scat-en {
-        font-size: 0.62rem;
+        max-height: 2.4em;
+        font-size: 0.58rem;
     }
 
     .scat-usd,
@@ -528,11 +589,79 @@
         max-width: 100%;
     }
 
-    .scat-ship > .scat-role,
     .scat-ship > .scat-maker,
     .scat-ship > .scat-tags,
     .scat-ship > .scat-place {
         font-size: 0.58rem;
         padding: 0 0.1rem;
+    }
+
+    .scat-ship > .scat-logo,
+    .scat-ship > .scat-maker,
+    .scat-ship > .scat-place {
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .scat-ship > .scat-place {
+        justify-content: flex-start;
+    }
+
+    .scat-ship > .scat-place .scat-place-track,
+    .scat-ship > .scat-place .scat-place-track > span {
+        display: inline-block;
+        flex: none;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: nowrap;
+    }
+
+    .scat-ship > .scat-logo img {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .scat-ship > .scat-role,
+    .scat-ship > .scat-maker {
+        justify-content: flex-start;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: clip;
+    }
+
+    .scat-ship > .scat-role {
+        padding-left: 0.12rem;
+        font-size: 0.58rem;
+    }
+
+    .scat-ship > .scat-role > span,
+    .scat-ship > .scat-maker > span {
+        display: inline-block;
+        white-space: nowrap;
+    }
+
+    .scat-ship > .is-marquee > span {
+        animation: scat-marquee 5.5s ease-in-out infinite alternate;
+    }
+
+    .scat-ship > .is-marquee.scat-place > .scat-place-track {
+        animation: scat-marquee-place 8s linear infinite;
+    }
+}
+
+@keyframes scat-marquee {
+    0%, 18% { transform: translateX(0); }
+    82%, 100% { transform: translateX(var(--scat-shift, 0)); }
+}
+
+@keyframes scat-marquee-place {
+    0%, 10% { transform: translateX(0); }
+    62%, 100% { transform: translateX(var(--scat-shift, 0)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scat-ship > .is-marquee > span {
+        animation: none;
     }
 }
