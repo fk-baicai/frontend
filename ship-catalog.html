@@ -6,7 +6,7 @@
     <title>舰船价格表 · USSXC</title>
     <meta name="description" content="星际公民现金飞船表：官网飞船、美元价格、aUEC 与购买地点。">
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="ship-catalog.css?v=31">
+    <link rel="stylesheet" href="ship-catalog.css?v=40">
     <link rel="stylesheet" href="page-share.css?v=8">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
@@ -127,7 +127,13 @@
             <label class="scat-search-wrap">
                 <input class="scat-search" id="scatSearch" type="search" placeholder="搜索飞船、船厂、地点" aria-label="搜索飞船">
             </label>
-            <select class="scat-maker" id="scatMaker" aria-label="船厂"></select>
+            <div class="scat-maker" id="scatMaker">
+                <button type="button" class="scat-maker-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="船厂">
+                    <img class="scat-maker-logo" alt="" hidden>
+                    <span class="scat-maker-label">全部船厂</span>
+                </button>
+                <div class="scat-maker-menu" role="listbox" hidden></div>
+            </div>
             <div class="scat-filters" id="scatFilters">
                 <button type="button" class="scat-filter is-on" data-filter="all">全部</button>
                 <button type="button" class="scat-filter" data-filter="resident">常驻</button>
@@ -142,6 +148,6 @@
     </main>
     <script src="nav-dropdown.js" defer></script>
     <script src="nav-auth-tools.js?v=3" defer></script>
-    <script src="ship-catalog.js?v=24" defer></script>
+    <script src="ship-catalog.js?v=25" defer></script>
 </body>
 </html>

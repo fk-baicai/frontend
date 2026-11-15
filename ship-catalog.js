@@ -8,6 +8,11 @@
     var sheet = document.querySelector('.scat-sheet');
     var ships = [];
     var filter = 'all';
+    var makerValue = '';
+    var makerBtn = maker.querySelector('.scat-maker-btn');
+    var makerMenu = maker.querySelector('.scat-maker-menu');
+    var makerLabel = maker.querySelector('.scat-maker-label');
+    var makerFace = maker.querySelector('.scat-maker-logo');
     var columns = 3;
 
     var FOCUS_ZH = {
@@ -233,7 +238,7 @@
 
     function visible() {
         var q = String(search.value || '').trim().toLowerCase();
-        var who = maker.value;
+        var who = makerValue;
         return ships.filter(function (ship) {
             var ground = isGround(ship);
             if (who && ship.makerZh !== who && ship.makerEn !== who && makerText(ship) !== who) return false;
@@ -383,17 +388,44 @@
         fitNames();
     }
 
+    function setMaker(value, label, logo) {
+        makerValue = value || '';
+        makerLabel.textContent = label || '全部船厂';
+        if (logo) {
+            makerFace.hidden = false;
+            makerFace.src = logo;
+        } else {
+            makerFace.hidden = true;
+            makerFace.removeAttribute('src');
+        }
+        makerMenu.querySelectorAll('.scat-maker-item').forEach(function (item) {
+            item.classList.toggle('is-on', item.getAttribute('data-value') === makerValue);
+        });
+    }
+
+    function closeMaker() {
+        maker.classList.remove('is-open');
+        makerBtn.setAttribute('aria-expanded', 'false');
+        makerMenu.hidden = true;
+    }
+
     function fillMakers() {
         var seen = {};
         ships.forEach(function (ship) {
             var label = makerText(ship);
-            if (label) seen[label] = true;
+            if (!label || seen[label]) return;
+            seen[label] = makerLogo(ship);
         });
-        maker.innerHTML = '<option value="">全部船厂</option>' + Object.keys(seen).sort(function (a, b) {
+        var names = Object.keys(seen).sort(function (a, b) {
             return a.localeCompare(b, 'zh-CN');
-        }).map(function (name) {
-            return '<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</option>';
+        });
+        makerMenu.innerHTML = '<button type="button" class="scat-maker-item is-on" role="option" data-value="">全部船厂</button>' + names.map(function (name) {
+            var logo = seen[name];
+            return '<button type="button" class="scat-maker-item" role="option" data-value="' + escapeHtml(name) + '">' +
+                (logo ? '<img src="' + escapeHtml(logo) + '" alt="">' : '') +
+                '<span>' + escapeHtml(name) + '</span></button>';
         }).join('');
+        setMaker('', '全部船厂', '');
     }
 
     document.getElementById('scatFilters').addEventListener('click', function (event) {
@@ -406,7 +438,27 @@
         render();
     });
     search.addEventListener('input', render);
-    maker.addEventListener('change', render);
+    makerBtn.addEventListener('click', function () {
+        var open = makerMenu.hidden;
+        if (!open) {
+            closeMaker();
+            return;
+        }
+        maker.classList.add('is-open');
+        makerBtn.setAttribute('aria-expanded', 'true');
+        makerMenu.hidden = false;
+    });
+    makerMenu.addEventListener('click', function (event) {
+        var item = event.target.closest('.scat-maker-item');
+        if (!item) return;
+        var img = item.querySelector('img');
+        setMaker(item.getAttribute('data-value') || '', item.querySelector('span') ? item.querySelector('span').textContent : item.textContent, img ? img.getAttribute('src') : '');
+        closeMaker();
+        render();
+    });
+    document.addEventListener('click', function (event) {
+        if (!maker.contains(event.target)) closeMaker();
+    });
     window.addEventListener('resize', function () {
         var next = readColumns();
         if (next !== columns) render();

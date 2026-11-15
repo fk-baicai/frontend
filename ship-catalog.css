@@ -93,28 +93,103 @@
 }
 
 .scat-maker {
-    flex: 0 1 11rem;
-    min-width: 8.5rem;
+    position: relative;
+    flex: 0 1 14rem;
+    min-width: 10rem;
+}
+
+.scat-maker-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: 100%;
     height: auto;
     padding: 0.45rem 1.35rem 0.55rem 0;
+    border: 0;
     border-bottom: 1px solid rgba(95, 184, 255, 0.42);
-    color-scheme: dark;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238ee0ff' stroke-width='2'%3E%3Cpath stroke-linecap='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.05rem center;
-    background-size: 0.9rem;
+    background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238ee0ff' stroke-width='2'%3E%3Cpath stroke-linecap='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.05rem center / 0.9rem;
+    color: #e8f4ff;
+    font: inherit;
+    font-size: 0.95rem;
+    text-align: left;
     cursor: pointer;
 }
 
-.scat-maker:focus {
+.scat-maker-btn:focus,
+.scat-maker.is-open .scat-maker-btn {
     border-bottom-color: #8ee0ff;
     outline: none;
 }
 
-.scat-maker option {
+.scat-maker-label {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.scat-maker-btn .scat-maker-logo,
+.scat-maker-item img {
+    flex: 0 0 auto;
+    width: 1.35rem;
+    height: 1.35rem;
+    object-fit: contain;
+}
+
+.scat-maker-btn .scat-maker-logo[src*="rsi"],
+.scat-maker-item img[src*="rsi"] {
+    width: 2.15rem;
+    height: 0.95rem;
+    object-fit: fill;
+    object-view-box: inset(30% 8% 31% 8%);
+}
+
+.scat-maker-btn .scat-maker-logo[src*="origin"],
+.scat-maker-item img[src*="origin"] {
+    width: 1.7rem;
+    height: 1rem;
+    object-fit: fill;
+    object-view-box: inset(22% 3% 23% 4%);
+}
+
+.scat-maker-menu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 0.2rem);
+    left: 0;
+    min-width: 100%;
+    max-height: 18rem;
+    overflow: auto;
+    margin: 0;
+    padding: 0.2rem 0;
     background: #0e2943;
+    border: 1px solid rgba(95, 184, 255, 0.42);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.scat-maker-menu[hidden] {
+    display: none;
+}
+
+.scat-maker-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.38rem 0.7rem;
+    border: 0;
+    background: transparent;
     color: #e8f4ff;
+    font: inherit;
+    font-size: 0.92rem;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.scat-maker-item:hover,
+.scat-maker-item.is-on {
+    background: rgba(180, 196, 210, 0.28);
 }
 
 .scat-search:focus,
@@ -286,6 +361,22 @@
     max-width: 84%;
 }
 
+.scat-logo img[src*="rsi"] {
+    width: 55px;
+    height: 25px;
+    max-width: 100%;
+    object-fit: fill;
+    object-view-box: inset(30% 8% 31% 8%);
+}
+
+.scat-logo img[src*="origin"] {
+    width: 50px;
+    height: 29px;
+    max-width: 100%;
+    object-fit: fill;
+    object-view-box: inset(22% 3% 23% 4%);
+}
+
 .scat-usd,
 .scat-auec {
     align-items: center;
@@ -387,9 +478,61 @@
         width: calc(100% - 0.8rem);
     }
 
-    .scat-zh,
+    .scat-ship {
+        height: 3.7rem;
+        max-height: 3.7rem;
+    }
+
+    .scat-colhead,
+    .scat-ship {
+        grid-template-columns: 6.4rem minmax(0, 1fr) 2.55rem minmax(4.7rem, auto) minmax(4.95rem, auto);
+        column-gap: 0.22rem;
+    }
+
+    .scat-colhead span {
+        padding: 0 0.08rem;
+        white-space: nowrap;
+    }
+
+    .scat-zh {
+        font-size: 0.82rem;
+    }
+
+    .scat-en {
+        font-size: 0.62rem;
+    }
+
     .scat-usd,
     .scat-auec {
-        font-size: 1rem;
+        justify-content: flex-end;
+        padding: 0 0.15rem;
+        font-size: 0.64rem;
+        overflow: hidden;
+    }
+
+    .scat-logo img,
+    .scat-logo img[src*="kruger"] {
+        height: 1.45rem;
+        max-width: 100%;
+    }
+
+    .scat-logo img[src*="rsi"] {
+        width: 100%;
+        height: 1.2rem;
+        max-width: 100%;
+    }
+
+    .scat-logo img[src*="origin"] {
+        width: 100%;
+        height: 1.35rem;
+        max-width: 100%;
+    }
+
+    .scat-ship > .scat-role,
+    .scat-ship > .scat-maker,
+    .scat-ship > .scat-tags,
+    .scat-ship > .scat-place {
+        font-size: 0.58rem;
+        padding: 0 0.1rem;
     }
 }
