@@ -1217,9 +1217,9 @@
         ship_module: [
             {
                 title: '模组参数',
-                fields: ['type', 'item_type', 'charges', 'duration', 'power_modifier'],
+                fields: ['type', 'item_type', 'charges', 'duration'],
             },
-            { title: '属性修正', nested: 'modifier_map', fields: ['resistance', 'laser_instability', 'overcharge_rate', 'inert_materials', 'optimal_charge_rate', 'optimal_charge_window_size', 'all_charge_rates'] },
+            { title: '属性修正', nested: 'modifier_map', fields: ['laser_instability', 'optimal_charge_window_size', 'resistance', 'optimal_charge_rate', 'inert_materials', 'all_charge_rates', 'overcharge_rate', 'shatter_damage'] },
         ],
         weapon_pistol: [
             {
@@ -2357,12 +2357,48 @@
         return { label: meta.label || wikiFieldLabel(key), text: text, tone: tone, raw: num };
     }
 
-    function miningModifierCell(item, key) {
-        var map = getMiningLaserModifierMap(item);
+    function modifierCellFromMap(map, key) {
         if (!map || map[key] == null || map[key] === '') return null;
         var tag = formatMiningModifierPercent(key, map[key]);
         if (!tag || tag.tone === 'neutral') return null;
         return { text: tag.text, tone: tag.tone };
+    }
+
+    function miningModifierCell(item, key) {
+        return modifierCellFromMap(getMiningLaserModifierMap(item), key);
+    }
+
+    function moduleDescribedPowerRows(item) {
+        var rows = [];
+        var block = item && item.wiki_fields && item.wiki_fields.mining_modifier;
+        var power = block && block.power_modifier;
+        if (power != null && power !== '' && Number(power) !== 0) {
+            var pct = Number(power) * 100;
+            var text = (pct > 0 ? '+' : '') + formatFixedDecimal2(pct) + '%';
+            rows.push({ label: '采矿激光功率', value: text, text: text, tone: pct > 0 ? 'good' : 'bad' });
+        }
+        var desc = (item && item.wiki_fields && item.wiki_fields.description_data) || [];
+        desc.forEach(function (row) {
+            if (!row || row.name !== 'Extraction Laser Power') return;
+            var absolute = parseFloat(row.value);
+            if (!Number.isFinite(absolute) || absolute === 100) return;
+            var delta = absolute - 100;
+            var shown = (delta > 0 ? '+' : '') + formatFixedDecimal2(delta) + '%';
+            rows.push({ label: '开采激光功率', value: shown, text: shown, tone: delta > 0 ? 'good' : 'bad' });
+        });
+        return rows;
+    }
+
+    function moduleModifierCell(item, key) {
+        return modifierCellFromMap(getModuleModifierMap(item), key);
+    }
+
+    function chargeRateModifierCell(map) {
+        if (!map) return null;
+        var key = map.all_charge_rates != null && map.all_charge_rates !== '' && Number(map.all_charge_rates) !== 0
+            ? 'all_charge_rates'
+            : 'optimal_charge_rate';
+        return modifierCellFromMap(map, key);
     }
 
     function buildMiningModifierTags(item, typeKey) {
@@ -2978,12 +3014,7 @@
                 key: 'wiki_ml_charge',
                 label: '充能速率',
                 get: function (item) {
-                    var map = getMiningLaserModifierMap(item);
-                    if (!map) return null;
-                    var key = map.all_charge_rates != null && map.all_charge_rates !== '' && Number(map.all_charge_rates) !== 0
-                        ? 'all_charge_rates'
-                        : 'optimal_charge_rate';
-                    return miningModifierCell(item, key);
+                    return chargeRateModifierCell(getMiningLaserModifierMap(item));
                 },
             },
             {
@@ -3003,6 +3034,59 @@
                     if (!m || m.duration == null || m.duration === '') return null;
                     return formatWikiFieldDisplay('duration', m.duration);
                 },
+            },
+            {
+                key: 'wiki_sm_laser_power',
+                label: '采矿激光功率',
+                get: function (item) {
+                    var rows = moduleDescribedPowerRows(item);
+                    var hit = rows.filter(function (row) { return row.label === '采矿激光功率'; })[0];
+                    return hit ? { text: hit.text, tone: hit.tone } : null;
+                },
+            },
+            {
+                key: 'wiki_sm_extract_power',
+                label: '开采激光功率',
+                get: function (item) {
+                    var rows = moduleDescribedPowerRows(item);
+                    var hit = rows.filter(function (row) { return row.label === '开采激光功率'; })[0];
+                    return hit ? { text: hit.text, tone: hit.tone } : null;
+                },
+            },
+            {
+                key: 'wiki_sm_overcharge',
+                label: '过载速率',
+                get: function (item) { return moduleModifierCell(item, 'overcharge_rate'); },
+            },
+            {
+                key: 'wiki_sm_shatter',
+                label: '碎裂伤害',
+                get: function (item) { return moduleModifierCell(item, 'shatter_damage'); },
+            },
+            {
+                key: 'wiki_sm_instability',
+                label: '不稳定性',
+                get: function (item) { return moduleModifierCell(item, 'laser_instability'); },
+            },
+            {
+                key: 'wiki_sm_window',
+                label: '最佳窗口',
+                get: function (item) { return moduleModifierCell(item, 'optimal_charge_window_size'); },
+            },
+            {
+                key: 'wiki_sm_resist',
+                label: '抗性',
+                get: function (item) { return moduleModifierCell(item, 'resistance'); },
+            },
+            {
+                key: 'wiki_sm_charge',
+                label: '充能速率',
+                get: function (item) { return chargeRateModifierCell(getModuleModifierMap(item)); },
+            },
+            {
+                key: 'wiki_sm_inert',
+                label: '惰性过滤',
+                get: function (item) { return moduleModifierCell(item, 'inert_materials'); },
             },
         ],
         salvage_scraper: [
@@ -3496,6 +3580,7 @@
             var rows = [];
             if (def.nested === 'modifier_map') {
                 rows = rowsFromMiningModifierMap(block[def.nested], def.fields);
+                if (sectionKey === 'ship_module') rows = moduleDescribedPowerRows(item).concat(rows);
             } else if (def.nested === 'damages') {
                 rows = rowsFromPersonalWeaponDamages(block[def.nested], block.damage_per_shot);
             } else if (def.nested === 'modes') {
@@ -3637,6 +3722,7 @@
         formatWikiFieldDisplay: formatWikiFieldDisplay,
         formatMiningModifierPercent: formatMiningModifierPercent,
         buildMiningModifierTags: buildMiningModifierTags,
+        moduleDescribedPowerRows: moduleDescribedPowerRows,
         buildBarrelModifierTags: buildBarrelModifierTags,
         buildAttachmentModifierTags: buildAttachmentModifierTags,
         buildMeleeStatTags: buildMeleeStatTags,

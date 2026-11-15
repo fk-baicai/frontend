@@ -2049,6 +2049,15 @@
             'size',
             'type',
             'wiki_sm_duration',
+            'wiki_sm_laser_power',
+            'wiki_sm_extract_power',
+            'wiki_sm_overcharge',
+            'wiki_sm_shatter',
+            'wiki_sm_instability',
+            'wiki_sm_window',
+            'wiki_sm_resist',
+            'wiki_sm_charge',
+            'wiki_sm_inert',
             'mfg',
             'price',
             'loc',
@@ -4661,11 +4670,7 @@
         var wiki = window.ShipComponentWiki;
         if (!wiki) return '';
         var tags = [];
-        if (item.type === 'ship_module') {
-            if (typeof wiki.buildMiningModifierTags === 'function') {
-                tags = wiki.buildMiningModifierTags(item, item.type);
-            }
-        } else if (item.type === 'attachment_barrel') {
+        if (item.type === 'attachment_barrel') {
             tags = [];
         }
         if (!tags.length) return '';

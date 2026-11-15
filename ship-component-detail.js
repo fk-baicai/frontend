@@ -860,6 +860,9 @@
         if (!wiki || typeof wiki.buildMiningModifierTags !== 'function') return '';
         if (item.type !== 'mining_laser' && item.type !== 'ship_module') return '';
         var tags = wiki.buildMiningModifierTags(item, item.type);
+        if (item.type === 'ship_module' && typeof wiki.moduleDescribedPowerRows === 'function') {
+            tags = wiki.moduleDescribedPowerRows(item).concat(tags);
+        }
         if (!tags.length) return '';
         var inner =
             typeof wiki.renderMiningModifierTagsMarkup === 'function'
