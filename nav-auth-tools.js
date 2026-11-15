@@ -76,10 +76,10 @@
         if (authStackLoading) return;
         authStackLoading = true;
         var urls = [];
-        if (!hasScript('auth-session-sync.js')) urls.push('auth-session-sync.js');
+        if (!hasScript('auth-session-sync.js')) urls.push('auth-session-sync.js?v=20261115b');
         if (!hasScript('api-error.js')) urls.push('api-error.js');
         if (!hasScript('auth-api.js')) urls.push('auth-api.js');
-        if (!hasScript('home-app.js')) urls.push('home-app.js?v=20261113a');
+        if (!hasScript('home-app.js')) urls.push('home-app.js?v=20261115b');
         var index = 0;
         function finish() {
             authStackLoading = false;

@@ -367,6 +367,13 @@ code {
     margin: 0;
 }
 
+.sc-update-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
 .sc-update-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

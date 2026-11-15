@@ -398,4 +398,5 @@
         refreshAuthSessionFromServer: refreshAuthSessionFromServer,
         refreshAuthSessionFromServerWithRetry: refreshAuthSessionFromServerWithRetry,
     };
+    syncHtmlMemberGateClasses(loadAuthSession());
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -88,8 +88,8 @@
             if (action.sync === 'blueprints') return runScBlueprintSync();
             if (action.sync === 'localization_then_components') {
                 return runScLocalizationSync(false).then(function () {
-                    return runScSync('uex').then(function () {
-                        return runScSync('wiki');
+                    return runScSync('wiki').then(function () {
+                        return runScSync('uex');
                     });
                 });
             }
@@ -125,10 +125,12 @@
     var SC_SYNC_BUTTON_IDS = [
         'btnScSync',
         'btnScSyncWiki',
+        'btnScSmartUpdate',
         'btnScSyncLocalization',
         'btnScSyncLocalizationForce',
         'btnScSyncBlueprints',
         'btnScImageMissing',
+        'btnScImageMissingForce',
         'btnScImageRetry',
         'btnScImageForce',
     ];
@@ -492,6 +494,74 @@
         });
     }
 
+    async function runSmartUpdate() {
+        var s = loadSess();
+        var errEl = document.getElementById('scUpdateErr');
+        var summaryEl = document.getElementById('scUpdateSummary');
+        if (errEl) errEl.hidden = true;
+        setButtonsDisabled(SC_SYNC_BUTTON_IDS, true);
+        startSyncProgressPoll();
+        if (summaryEl) summaryEl.textContent = '正在按清单更新…';
+        try {
+            var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/sync-smart', {
+                method: 'POST',
+                headers: adminAuthHeaders(s.token, { 'Content-Type': 'application/json' }),
+                body: '{}',
+            });
+            var data = await r.json();
+            if (!r.ok || !data.ok) throw new Error((data && data.message) || '更新没有开始');
+            var status = await waitSmartUpdate(s.token);
+            if (summaryEl) {
+                summaryEl.textContent = status && status.success === false ? '更新结束，有步骤失败' : '更新结束';
+            }
+            loadScUpdateChecklist();
+            loadScLocalizationStatus();
+            loadScAdminStatus();
+            loadScSources();
+            loadScSyncLog();
+            loadScImageStatus();
+        } catch (e) {
+            if (errEl) {
+                errEl.textContent = (e && e.message) || '更新失败';
+                errEl.hidden = false;
+            }
+            if (summaryEl) summaryEl.textContent = (e && e.message) || '更新失败';
+        } finally {
+            setButtonsDisabled(SC_SYNC_BUTTON_IDS, false);
+            stopSyncProgressPoll(true);
+        }
+    }
+
+    function waitSmartUpdate(token) {
+        return new Promise(function (resolve, reject) {
+            var tries = 0;
+            function tick() {
+                tries += 1;
+                if (tries > 720) {
+                    reject(new Error('更新超过两小时，请刷新清单查看结果'));
+                    return;
+                }
+                fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/sync-smart', {
+                    headers: adminAuthHeaders(token),
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        var summaryEl = document.getElementById('scUpdateSummary');
+                        if (summaryEl && data && data.step) summaryEl.textContent = data.step;
+                        if (data && data.done && !data.active) {
+                            resolve(data);
+                            return;
+                        }
+                        setTimeout(tick, 2000);
+                    })
+                    .catch(function () {
+                        setTimeout(tick, 2000);
+                    });
+            }
+            setTimeout(tick, 800);
+        });
+    }
+
     async function loadScUpdateChecklist() {
         var s = loadSess();
         var errEl = document.getElementById('scUpdateErr');
@@ -737,6 +807,8 @@
         var btnLocForce = document.getElementById('btnScSyncLocalizationForce');
         var btnBpSync = document.getElementById('btnScSyncBlueprints');
         if (btnUpdateChecklist) btnUpdateChecklist.onclick = loadScUpdateChecklist;
+        var btnSmart = document.getElementById('btnScSmartUpdate');
+        if (btnSmart) btnSmart.onclick = runSmartUpdate;
         if (btnLocSync) btnLocSync.onclick = function () { runScLocalizationSync(false); };
         if (btnLocForce) {
             btnLocForce.onclick = function () {
@@ -751,6 +823,8 @@
         if (btnManual) btnManual.onclick = loadScManualLoc;
         if (btnApplySource) btnApplySource.onclick = applyScSource;
         if (btnImageMissing) btnImageMissing.onclick = function () { runScImageSync('missing'); };
+        var btnImageMissingForce = document.getElementById('btnScImageMissingForce');
+        if (btnImageMissingForce) btnImageMissingForce.onclick = function () { runScImageSync('missing_force'); };
         if (btnImageRetry) btnImageRetry.onclick = function () { runScImageSync('retry_failed'); };
         if (btnImageForce) {
             btnImageForce.onclick = function () {

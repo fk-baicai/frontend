@@ -1578,7 +1578,7 @@
                 const root = document.documentElement;
                 if (isLoggedIn()) root.classList.add('auth-session-cached');
                 else root.classList.remove('auth-session-cached');
-                const sess = getAuthSession();
+                const sess = loadAuthSession();
                 const isFleet = isLoggedIn() && sessionHasFleetUiAccess(sess);
                 if (isFleet) root.classList.add('auth-fleet-member');
                 else root.classList.remove('auth-fleet-member');
@@ -5154,7 +5154,7 @@
                 if (chkL) {
                     var fleetOk = canAccessFleetMemberAreas();
                     chkL.hidden = !fleetOk;
-                    chkL.style.display = fleetOk ? '' : 'none';
+                    chkL.style.display = fleetOk ? 'inline-block' : 'none';
                 }
                 var admL = document.getElementById('drawerAdminLink');
                 if (admL) {

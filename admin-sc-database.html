@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SC 数据库管理 · USSXC</title>
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
-    <link rel="stylesheet" href="admin-sc-database.css?v=4" />
+    <link rel="stylesheet" href="admin-sc-database.css?v=5" />
     <link rel="stylesheet" href="admin-step-up.css" />
     <script src="auth-config.js"></script>
 </head>
@@ -26,7 +26,10 @@
             <section id="secScUpdateChecklist" class="sc-update-section">
                 <div class="sc-update-head">
                     <h2>需要更新的数据</h2>
-                    <button type="button" id="btnReloadScUpdateChecklist" class="btn-secondary">刷新检查</button>
+                    <div class="sc-update-head-actions">
+                        <button type="button" id="btnScSmartUpdate">一键更新</button>
+                        <button type="button" id="btnReloadScUpdateChecklist" class="btn-secondary">刷新检查</button>
+                    </div>
                 </div>
                 <p id="scUpdateSummary" class="hint">加载中…</p>
                 <div id="scUpdateList" class="sc-update-list"></div>
@@ -92,10 +95,11 @@
 
             <section id="secScImages">
                 <h2>配件图片</h2>
-                <p class="hint">将 Wiki 图片下载到本地。新配件用「补齐缺失」，失败用「重试」。</p>
+                <p class="hint">一键更新和「补齐缺失」会跳过已经下载的，也会跳过上次下载失败的。还没有本地文件、又想再试失败记录时，用「强制下载未有图片」。</p>
                 <div id="scImageStatus" class="hint sc-image-status">加载中…</div>
                 <div class="row sc-image-actions">
                     <button type="button" id="btnScImageMissing">补齐缺失</button>
+                    <button type="button" id="btnScImageMissingForce" class="btn-secondary">强制下载未有图片</button>
                     <button type="button" id="btnScImageRetry" class="btn-secondary">重试失败</button>
                     <button type="button" id="btnScImageForce" class="btn-secondary">强制更新全部</button>
                     <button type="button" id="btnScImageRefreshStatus" class="btn-secondary">刷新统计</button>
@@ -190,6 +194,6 @@
     <script src="api-error.js"></script>
     <script src="auth-api.js?v=16"></script>
     <script src="admin-step-up.js?v=4"></script>
-    <script src="admin-sc-database.js?v=2" defer></script>
+    <script src="admin-sc-database.js?v=4" defer></script>
 </body>
 </html>
