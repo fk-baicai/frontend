@@ -1110,6 +1110,26 @@
         }
         pinBlueprintFrame(el, clone);
         pinKioskFrame(el, clone);
+        if (el.id === 'scDetailArticle') {
+            var detailPage = el.closest('.sc-detail-page');
+            var detailWrap = document.createElement('div');
+            detailWrap.className = 'sc-detail-page';
+            if (detailPage) {
+                var detailVars = getComputedStyle(detailPage);
+                for (var detailIndex = 0; detailIndex < detailVars.length; detailIndex++) {
+                    var detailProp = detailVars[detailIndex];
+                    if (detailProp.indexOf('--') === 0) detailWrap.style.setProperty(detailProp, detailVars.getPropertyValue(detailProp));
+                }
+            }
+            var detailSpecs = clone.querySelector('.sc-detail-specs');
+            if (detailSpecs) {
+                detailSpecs.style.display = 'flex';
+                detailSpecs.style.flexDirection = 'column';
+                detailSpecs.style.width = '100%';
+            }
+            detailWrap.appendChild(clone);
+            clone = detailWrap;
+        }
         clone.style.margin = '0';
         clone.style.width = w + 'px';
         clone.style.maxWidth = w + 'px';
@@ -1131,7 +1151,7 @@
             var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + sh + '">' +
                 '<foreignObject x="0" y="0" width="' + w + '" height="' + sh + '">' +
                 '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + w + 'px;height:' + h + 'px;background:#122d48;transform:translateY(-' + y + 'px);' + rootVarCss() + '">' +
-                '<style><![CDATA[' + css + ']]></style>' + inner +
+                '<style><![CDATA[' + css + '*[hidden]{display:none!important}]]></style>' + inner +
                 '</div></foreignObject></svg>';
             var image = await loadSvgImage(svg);
             ctx.drawImage(image, 0, 0, w, sh, 0, Math.round(y * scale), Math.round(w * scale), Math.round(sh * scale));

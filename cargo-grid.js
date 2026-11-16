@@ -468,12 +468,7 @@
         if (prefix && zh.indexOf(prefix) === 0) {
             zh = zh.slice(prefix.length).replace(/^[\s·\-]+/, '') || zh;
         }
-        var parts = zh.split(/\s+/);
-        var en = String(ship.nameEn || '').toLowerCase();
-        while (parts.length > 1 && !/[\u4e00-\u9fff]/.test(parts[parts.length - 1]) && en.indexOf(parts[parts.length - 1].toLowerCase()) !== -1) {
-            parts.pop();
-        }
-        return parts.join(' ') || zh;
+        return zh;
     }
 
     function shipNameEn(ship) {

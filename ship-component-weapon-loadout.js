@@ -136,7 +136,32 @@
         return slotDef && slotDef.type === 'attachment_bottom';
     }
 
+    function portRangeForSlot(weaponItem, slotDef) {
+        var ports = weaponItem && weaponItem.wiki_fields && weaponItem.wiki_fields.attachment_ports;
+        if (!Array.isArray(ports) || !slotDef) return null;
+        for (var i = 0; i < ports.length; i++) {
+            if (ports[i] && ports[i].sub_type === slotDef.subType) {
+                var min = Number(ports[i].min);
+                var max = Number(ports[i].max);
+                if (Number.isFinite(min) && Number.isFinite(max)) return { min: min, max: max };
+            }
+        }
+        return null;
+    }
+
+    function formatSizeRange(range) {
+        if (!range) return '';
+        if (range.min === range.max) return 'S' + range.min;
+        return 'S' + range.min + '–S' + range.max;
+    }
+
     function getWeaponSizeLabel(weaponItem) {
+        var ranged = null;
+        if (weaponItem && weaponItem.wiki_fields && weaponItem.wiki_fields.personal_weapon) {
+            ranged = portRangeForSlot(weaponItem, { subType: 'IronSight' });
+            if (ranged) return formatSizeRange(ranged);
+            return '';
+        }
         if (!weaponItem) return '';
         var label = String(weaponItem.size_label || '').trim();
         if (label) return label;
@@ -146,12 +171,16 @@
     }
 
     function getSlotSizeHint(weaponItem, slotDef) {
+        var range = portRangeForSlot(weaponItem, slotDef);
+        if (range) return formatSizeRange(range);
+        if (weaponItem && weaponItem.wiki_fields && weaponItem.wiki_fields.personal_weapon) return '';
         if (isBottomAttachmentSlot(slotDef)) return '通用';
         return getWeaponSizeLabel(weaponItem) || '—';
     }
 
     function formatSlotLabelHtml(slot, weaponItem) {
         var sizeHint = getSlotSizeHint(weaponItem, slot);
+        if (!sizeHint) return escapeHtml(slot.label);
         return (
             escapeHtml(slot.label) +
             ' <span class="sc-size-badge sc-loadout-slot-size" title="默认适配 ' +
@@ -163,11 +192,12 @@
     }
 
     async function fetchAttachmentsForSlot(slotDef, weaponItem) {
-        var skipSizeFilter = isBottomAttachmentSlot(slotDef);
+        var skipSizeFilter = isBottomAttachmentSlot(slotDef) && !portRangeForSlot(weaponItem, slotDef);
+        var range = portRangeForSlot(weaponItem, slotDef);
         var cacheKey =
             slotDef.type +
             '_' +
-            String(weaponItem.size_num || weaponItem.size || '') +
+            (range ? range.min + '-' + range.max : String(weaponItem.size_num || weaponItem.size || '')) +
             (skipSizeFilter ? '_all' : '');
         if (attachmentCache[cacheKey]) return attachmentCache[cacheKey];
         var url =
@@ -176,10 +206,16 @@
         if (!res.ok) return [];
         var data = await res.json();
         var weaponSize = weaponItem.size_num != null ? Number(weaponItem.size_num) : Number(weaponItem.size);
+        var personal = !!(weaponItem.wiki_fields && weaponItem.wiki_fields.personal_weapon);
         var list = (data.items || []).filter(function (att) {
             if (!att) return false;
             if (skipSizeFilter) return true;
+            var cls = att.wiki_fields && att.wiki_fields.class_name;
+            var classSize = String(cls || '').match(/_s(\d+)$/i);
             var attSize = att.size_num != null ? Number(att.size_num) : Number(att.size);
+            if (classSize && Number.isFinite(attSize) && Number(classSize[1]) !== attSize) return false;
+            if (range) return Number.isFinite(attSize) && attSize >= range.min && attSize <= range.max;
+            if (personal) return false;
             if (Number.isFinite(weaponSize) && Number.isFinite(attSize) && weaponSize !== attSize) return false;
             return true;
         });
@@ -661,16 +697,45 @@
         );
     }
 
+    function liveLoadoutAnchor() {
+        function usable(node) {
+            if (!node || !node.isConnected || (node.closest && node.closest('.sc-loadout-modal'))) return false;
+            var box = node.getBoundingClientRect();
+            return box.width > 1 && box.height > 1;
+        }
+        if (usable(activeAnchor)) return activeAnchor;
+        if (activeSlotId) {
+            var nodes = document.querySelectorAll('[data-slot-id="' + activeSlotId + '"]');
+            for (var i = 0; i < nodes.length; i++) {
+                if (usable(nodes[i])) {
+                    activeAnchor = nodes[i];
+                    return nodes[i];
+                }
+            }
+        }
+        var slots = document.getElementById('bpLoadoutSlots') || document.getElementById('scDetailLoadout');
+        if (usable(slots)) return slots;
+        return null;
+    }
+
     function positionLoadoutPanel() {
-        if (!overlayEl || overlayEl.hidden || !activeAnchor) return;
+        if (!overlayEl || overlayEl.hidden) return;
         var modal = overlayEl.querySelector('.sc-loadout-modal');
         if (!modal) return;
-        var rect = activeAnchor.getBoundingClientRect();
+        var anchor = liveLoadoutAnchor();
+        if (!anchor) return;
+        var rect = anchor.getBoundingClientRect();
         var gap = 10;
         var margin = 10;
         var width = modal.offsetWidth || 400;
         var height = modal.offsetHeight || 360;
-        var left = rect.left;
+        var onBlueprint = document.body.classList.contains('bp-craft-body');
+        var slots = onBlueprint ? document.getElementById('bpLoadoutSlots') : null;
+        if (slots) {
+            var slotsRect = slots.getBoundingClientRect();
+            if (slotsRect.width > 1 && slotsRect.height > 1) rect = slotsRect;
+        }
+        var left = onBlueprint ? rect.right - width : rect.left;
         var top = rect.bottom + gap;
 
         if (left + width > window.innerWidth - margin) {
@@ -679,7 +744,8 @@
         if (left < margin) left = margin;
 
         if (top + height > window.innerHeight - margin) {
-            top = Math.max(margin, window.innerHeight - height - margin);
+            var above = rect.top - height - gap;
+            top = above >= margin ? above : Math.max(margin, window.innerHeight - height - margin);
         }
 
         modal.style.top = Math.round(top) + 'px';
@@ -687,6 +753,7 @@
     }
 
     function scrollAnchorIntoPopoverView() {
+        if (document.body.classList.contains('bp-craft-body')) return;
         if (!activeAnchor) return;
         var modal = overlayEl && overlayEl.querySelector('.sc-loadout-modal');
         var panelH = (modal && modal.offsetHeight) || 380;
@@ -923,7 +990,7 @@
         schedulePositionLoadoutPanel();
 
         var searchEl = overlayEl.querySelector('#scLoadoutSearch');
-        if (searchEl) searchEl.focus();
+        if (searchEl) searchEl.focus({ preventScroll: true });
     }
 
     async function openModal(weaponItem, anchorEl, initialSlotId) {

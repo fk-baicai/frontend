@@ -54,51 +54,58 @@
         var hit = byName(name);
         return (hit && hit.name_zh) || name;
     }
-    function clusterText(cluster) {
-        return cluster.ores.map(zhName).join(" + ");
+    var SCAN = {
+        "quantainium-raw": 3170,
+        "stileron-ore": 3185,
+        "savrilium-ore": 3200,
+        "raw-ouratite": 3370,
+        "riccite-ore": 3385,
+        "lindinium-ore": 3400,
+        "beryl-raw": 3540,
+        "taranite-raw": 3555,
+        "borase-ore": 3570,
+        "gold-ore": 3585,
+        "bexalite-raw": 3600,
+        "laranite-raw": 3825,
+        "aslarite-raw": 3840,
+        "titanium-ore": 3855,
+        "tungsten-ore": 3870,
+        "agricium-ore": 3885,
+        "torite-ore": 3900,
+        "hephaestanite-r": 4180,
+        "tin-ore": 4195,
+        "quartz-raw": 4210,
+        "corundum-raw": 4225,
+        "copper-ore": 4240,
+        "raw-silicon": 4255,
+        "iron-ore": 4270,
+        "aluminum-ore": 4285,
+        "raw-ice": 4300
+    };
+    function scanBase(item) {
+        return SCAN[item.slug] || 0;
     }
-    function signatureHits(item, q) {
-        if (String(item.signature == null ? "" : item.signature) === q) return true;
-        return (item.clusters || []).some(function (cluster) {
-            return cluster.ores.some(function (name) {
-                var other = byName(name);
-                return other && String(other.signature) === q;
-            });
-        });
+    function formatSig(n) {
+        return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
-    function clustersForSignature(q) {
-        var seen = {};
-        var rows = [];
-        data.forEach(function (item) {
-            (item.clusters || []).forEach(function (cluster) {
-                var key = cluster.ores.slice().sort().join("|");
-                if (seen[key]) return;
-                var hit = cluster.ores.some(function (name) {
-                    var other = byName(name);
-                    return other && String(other.signature) === q;
-                });
-                if (!hit) return;
-                seen[key] = true;
-                rows.push(cluster);
-            });
-        });
-        return rows;
+    function signalMatch(item, q) {
+        var base = scanBase(item);
+        var n = Number(q);
+        if (!base || !n || n % base !== 0) return 0;
+        var count = n / base;
+        return count >= 1 && count <= 6 ? count : 0;
     }
-    function renderClusters(box, clusters) {
-        clusters.forEach(function (cluster, index) {
-            var row = el("div", "min-same");
-            row.appendChild(el("span", "min-same-label", index === 0 ? "矿群" : ""));
-            cluster.ores.forEach(function (name, oreIndex) {
-                if (oreIndex) row.appendChild(document.createTextNode(" + "));
-                var hit = byName(name);
-                var chip = el("button", "min-chip", zhName(name));
-                chip.type = "button";
-                if (hit) chip.setAttribute("data-slug", hit.slug);
-                row.appendChild(chip);
-            });
-            row.appendChild(el("span", "min-meta", cluster.count + " 处"));
-            box.appendChild(row);
-        });
+    function renderSignals(box, item) {
+        var base = scanBase(item);
+        if (!base) return;
+        var row = el("div", "min-signals");
+        for (var i = 1; i <= 6; i++) {
+            var cell = el("div", "min-signal");
+            cell.appendChild(el("span", "min-signal-k", "×" + i));
+            cell.appendChild(el("span", "min-signal-v", formatSig(base * i)));
+            row.appendChild(cell);
+        }
+        box.appendChild(row);
     }
     function methodLabel(list) {
         return (list || []).map(function (m) { return METHOD[m] || m; }).join(" · ") || "未标注";
@@ -116,7 +123,7 @@
     function matches(item, q) {
         if (method && (item.methods || []).indexOf(method) < 0) return false;
         if (!q) return true;
-        if (/^\d+$/.test(q)) return signatureHits(item, q);
+        if (/^\d+$/.test(q)) return signalMatch(item, q) > 0;
         var bag = (text(item.name_zh) + " " + text(item.name) + " " + text(item.signature)).toLowerCase();
         return bag.indexOf(q.toLowerCase()) >= 0;
     }
@@ -167,10 +174,10 @@
         if (listPage < 0) listPage = 0;
         grid.textContent = "";
         if (/^\d+$/.test(q)) {
-            var packs = clustersForSignature(q);
-            status.textContent = !packs.length
-                ? "没有矿群的扫描信号是 " + q + "。"
-                : "信号 " + q + " 的矿群：" + packs.map(clusterText).join("；");
+            var hits = list.map(function (item) {
+                return zhName(item.name) + " " + signalMatch(item, q) + " 颗";
+            });
+            status.textContent = hits.length ? "信号 " + formatSig(Number(q)) + "：" + hits.join("；") : "没有矿的扫描信号是 " + q + "。";
         } else {
             status.innerHTML = "<strong>" + list.length + "</strong> / " + data.length + " 种";
         }
@@ -184,7 +191,7 @@
             main.appendChild(el("span", "min-zh", item.name_zh || item.name));
             main.appendChild(el("span", "min-en", item.name));
             var side = el("span", "min-row-side");
-            side.appendChild(el("span", "min-sig", item.signature == null ? "—" : String(item.signature)));
+            side.appendChild(el("span", "min-sig", scanBase(item) ? formatSig(scanBase(item)) : "—"));
             side.appendChild(el("span", "min-meta", methodLabel(item.methods)));
             btn.appendChild(main);
             btn.appendChild(side);
@@ -203,13 +210,13 @@
         titles.appendChild(el("h2", "", item.name_zh || item.name));
         titles.appendChild(el("span", "min-en", item.name));
         var sig = el("div", "min-sig-block");
-        sig.appendChild(el("span", "min-sig-label", "扫描信号"));
-        sig.appendChild(el("span", "min-sig-num", item.signature == null ? "—" : String(item.signature)));
+        sig.appendChild(el("span", "min-sig-label", "单颗信号"));
+        sig.appendChild(el("span", "min-sig-num", scanBase(item) ? formatSig(scanBase(item)) : "—"));
         head.appendChild(titles);
         head.appendChild(sig);
         box.appendChild(head);
 
-        renderClusters(box, item.clusters || []);
+        renderSignals(box, item);
 
         var groups = groupsOf(item);
         var keys = Object.keys(groups);

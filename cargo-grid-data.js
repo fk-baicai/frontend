@@ -10871,7 +10871,7 @@
     },
     {
         "id": "anvl-carrack",
-        "nameZh": "铁砧 卡拉克",
+        "nameZh": "铁砧 克拉克",
         "nameEn": "Carrack",
         "makerZh": "铁砧航天",
         "makerEn": "Anvil Aerospace",
@@ -15651,7 +15651,7 @@
     {
         "id": "orig-600i",
         "nameZh": "起源 600i",
-        "nameEn": "600i",
+        "nameEn": "600i Explorer",
         "makerZh": "起源跃迁",
         "makerEn": "Origin Jumpworks",
         "wikiScu": 44,
@@ -16799,24 +16799,8 @@
         ]
     },
     {
-        "id": "argo-mole-btala",
-        "nameZh": "南船座 鼹鼠",
-        "nameEn": "MOLE Alliance",
-        "makerZh": "南船座",
-        "makerEn": "Argo Astronautics",
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 4,
-                "h": 2,
-                "l": 4,
-                "maxBox": 16
-            }
-        ]
-    },
-    {
         "id": "argo-csv-cargo",
-        "nameZh": "南船座 CSV 支援",
+        "nameZh": "南船座 CSV-SM",
         "nameEn": "CSV-SM",
         "makerZh": "南船座",
         "makerEn": "Argo Astronautics",
@@ -17579,44 +17563,6 @@
         ]
     },
     {
-        "id": "idris-p-wikelo-war-special",
-        "nameZh": "圣盾 伊德里斯-P Wikelo War Special",
-        "nameEn": "Idris-P Wikelo War Special",
-        "makerZh": "圣盾动力",
-        "makerEn": "Aegis Dynamics",
-        "wikiScu": 1374,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 18,
-                "h": 1,
-                "l": 80,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "reclaimer-2949-best-in-show-edition",
-        "nameZh": "圣盾 回收者 2949 Best In Show Edition",
-        "nameEn": "Reclaimer 2949 Best In Show Edition",
-        "makerZh": "圣盾动力",
-        "makerEn": "Aegis Dynamics",
-        "wikiScu": 420,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 6,
-                "h": 1,
-                "l": 80,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
         "id": "redeemer",
         "nameZh": "圣盾 救赎者",
         "nameEn": "Redeemer",
@@ -17648,25 +17594,6 @@
                 "w": 1,
                 "h": 1,
                 "l": 64,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "asgard-wikelo-war-special",
-        "nameZh": "铁砧 阿斯加德 Wikelo War Special",
-        "nameEn": "Asgard Wikelo War Special",
-        "makerZh": "铁砧航天",
-        "makerEn": "Anvil Aerospace",
-        "wikiScu": 180,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 3,
-                "h": 1,
-                "l": 80,
                 "boxes": [
 
                 ]
@@ -17712,160 +17639,8 @@
         ]
     },
     {
-        "id": "raft-wikelo-work-special",
-        "nameZh": "南船座 木筏 Wikelo Work Special",
-        "nameEn": "RAFT Wikelo Work Special",
-        "makerZh": "南船座宇航",
-        "makerEn": "Argo Astronautics",
-        "wikiScu": 192,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 3,
-                "h": 1,
-                "l": 80,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "corsair-pyam-exec",
-        "nameZh": "德雷克 海盗船 PYAM Exec",
-        "nameEn": "Corsair PYAM Exec",
-        "makerZh": "德雷克星际",
-        "makerEn": "Drake Interplanetary",
-        "wikiScu": 72,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 1,
-                "h": 1,
-                "l": 72,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "a2-hercules-starlifter-wikelo-war-special",
-        "nameZh": "十字军 大力神 A2 星际运输船 Wikelo War Special",
-        "nameEn": "A2 Hercules Starlifter Wikelo War Special",
-        "makerZh": "十字军工业",
-        "makerEn": "Crusader Industries",
-        "wikiScu": 216,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 3,
-                "h": 1,
-                "l": 80,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "c1-spirit-wikelo-special",
-        "nameZh": "十字军 星灵 C1 Wikelo Special",
-        "nameEn": "C1 Spirit Wikelo Special",
-        "makerZh": "十字军工业",
-        "makerEn": "Crusader Industries",
-        "wikiScu": 64,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 1,
-                "h": 1,
-                "l": 64,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "intrepid-wikelo-work-special",
-        "nameZh": "十字军 无畏 Wikelo Work Special",
-        "nameEn": "Intrepid Wikelo Work Special",
-        "makerZh": "十字军工业",
-        "makerEn": "Crusader Industries",
-        "wikiScu": 8,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 1,
-                "h": 1,
-                "l": 8,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "cutlass-black-pyam-exec",
-        "nameZh": "德雷克 黑弯刀 PYAM Exec",
-        "nameEn": "Cutlass Black PYAM Exec",
-        "makerZh": "德雷克星际",
-        "makerEn": "Drake Interplanetary",
-        "wikiScu": 46,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 1,
-                "h": 1,
-                "l": 46,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "clipper-wikelo-war-special",
-        "nameZh": "德雷克 快帆 Wikelo War Special",
-        "nameEn": "Clipper Wikelo War Special",
-        "makerZh": "德雷克星际",
-        "makerEn": "Drake Interplanetary",
-        "wikiScu": 12,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 1,
-                "h": 1,
-                "l": 12,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "prowler-utility-wikelo-work-special",
-        "nameZh": "埃斯佩里亚 徘徊者 多功能 Wikelo Work Special",
-        "nameEn": "Prowler Utility Wikelo Work Special",
-        "makerZh": "埃斯佩里亚",
-        "makerEn": "Esperia",
-        "wikiScu": 32,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 1,
-                "h": 1,
-                "l": 32,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
         "id": "hyun",
-        "nameZh": "Hyun",
+        "nameZh": "盖塔克 Hyun",
         "nameEn": "Hyun",
         "makerZh": "盖塔克制造",
         "makerEn": "Gatac Manufacture",
@@ -17876,139 +17651,6 @@
                 "w": 1,
                 "h": 1,
                 "l": 32,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "misc-fortune-wikelo-special",
-        "nameZh": "武藏 财运 Wikelo Special",
-        "nameEn": "MISC Fortune Wikelo Special",
-        "makerZh": "武藏工业与星航",
-        "makerEn": "Musashi Industrial and Starflight Concern",
-        "wikiScu": 16,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 1,
-                "h": 1,
-                "l": 16,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "misc-starlancer-max-wikelo-work-special",
-        "nameZh": "武藏 星际枪骑兵 MAX Wikelo Work Special",
-        "nameEn": "MISC Starlancer MAX Wikelo Work Special",
-        "makerZh": "武藏工业与星航",
-        "makerEn": "Musashi Industrial and Starflight Concern",
-        "wikiScu": 224,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 3,
-                "h": 1,
-                "l": 80,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "misc-starlancer-tac-wikelo-war-special",
-        "nameZh": "武藏 星际枪骑兵 TAC Wikelo War Special",
-        "nameEn": "MISC Starlancer TAC Wikelo War Special",
-        "makerZh": "武藏工业与星航",
-        "makerEn": "Musashi Industrial and Starflight Concern",
-        "wikiScu": 96,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 2,
-                "h": 1,
-                "l": 80,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "600i-2951-bis",
-        "nameZh": "600i 2951 BIS",
-        "nameEn": "600i 2951 BIS",
-        "makerZh": "起源跃迁",
-        "makerEn": "Origin Jumpworks",
-        "wikiScu": 44,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 1,
-                "h": 1,
-                "l": 44,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "600i-executive-edition",
-        "nameZh": "600i Executive Edition",
-        "nameEn": "600i Executive Edition",
-        "makerZh": "起源跃迁",
-        "makerEn": "Origin Jumpworks",
-        "wikiScu": 44,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 1,
-                "h": 1,
-                "l": 44,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "apollo-triage-wikelo-sneak-special",
-        "nameZh": "RSI 阿波罗 分诊 Wikelo Sneak Special",
-        "nameEn": "Apollo Triage Wikelo Sneak Special",
-        "makerZh": "罗伯茨太空工业",
-        "makerEn": "Roberts Space Industries",
-        "wikiScu": 32,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 1,
-                "h": 1,
-                "l": 32,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "constellation-mk-iv-taurus-wikelo-war-special",
-        "nameZh": "RSI 星座 金牛座 Wikelo War Special",
-        "nameEn": "Constellation Mk IV Taurus Wikelo War Special",
-        "makerZh": "罗伯茨太空工业",
-        "makerEn": "Roberts Space Industries",
-        "wikiScu": 174,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 3,
-                "h": 1,
-                "l": 80,
                 "boxes": [
 
                 ]
@@ -18028,44 +17670,6 @@
                 "w": 1,
                 "h": 1,
                 "l": 68,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "zeus-mk-ii-es-wikelo-work-special",
-        "nameZh": "RSI 宙斯 MK II ES Wikelo Work Special",
-        "nameEn": "Zeus Mk II ES Wikelo Work Special",
-        "makerZh": "罗伯茨太空工业",
-        "makerEn": "Roberts Space Industries",
-        "wikiScu": 32,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 1,
-                "h": 1,
-                "l": 32,
-                "boxes": [
-
-                ]
-            }
-        ]
-    },
-    {
-        "id": "syulen-pyam-exec",
-        "nameZh": "盖塔克 速伦 PYAM Exec",
-        "nameEn": "Syulen PYAM Exec",
-        "makerZh": "盖塔克制造",
-        "makerEn": "Gatac Manufacture",
-        "wikiScu": 6,
-        "bays": [
-            {
-                "name": "货舱",
-                "w": 1,
-                "h": 1,
-                "l": 6,
                 "boxes": [
 
                 ]

@@ -231,6 +231,41 @@
     letter-spacing: 0.08em;
 }
 
+.min-signals {
+    display: flex;
+    align-items: baseline;
+    margin-top: 0.7rem;
+}
+
+.min-signal {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 0.7rem 0 0;
+    border: 0;
+    background: none;
+    text-align: left;
+}
+
+.min-signal:first-child {
+    padding-left: 0;
+}
+
+.min-signal-k {
+    display: block;
+    color: rgba(148, 186, 212, 0.62);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+}
+
+.min-signal-v {
+    display: block;
+    margin-top: 0.12rem;
+    color: #d7ecff;
+    font-size: 0.92rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
 .min-sig-num {
     display: block;
     color: #8ee0ff;

@@ -987,6 +987,8 @@ html:has(body.bp-craft-body) {
     align-items: flex-start;
     gap: 0.06rem;
     font-family: var(--bp-font-digit);
+    background: transparent;
+    border-color: rgba(0, 240, 255, 0.28);
 }
 
 .bp-loadout-slots .sc-loadout-detail-chip--label-only {
@@ -1002,7 +1004,7 @@ html:has(body.bp-craft-body) {
     letter-spacing: 0.04em;
     line-height: 1.25;
     white-space: nowrap;
-    color: rgba(168, 120, 255, 0.88);
+    color: #8ee0ff;
 }
 
 .bp-loadout-slots .sc-loadout-detail-chip__value {

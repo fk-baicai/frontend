@@ -3086,13 +3086,15 @@ body.sc-img-desk-open {
 }
 
 .sc-detail-page .sc-loadout-detail.sc-panel {
-    background: var(--home-page-bg, #122d48);
+    background: var(--navbar-bg);
     background-image: none;
+    border: var(--sc-detail-card-border);
+    border-radius: var(--sc-detail-card-radius);
 }
 
 .sc-detail-page .sc-loadout-detail-chip {
     border-color: var(--sc-detail-inner-line);
-    background: var(--home-page-bg, #122d48);
+    background: transparent;
 }
 
 /* Top-level mission sections only — nested blueprint task blocks stay flush left */
@@ -4700,8 +4702,10 @@ td.sc-stat-loadout-mod:hover {
     padding: 0.22rem 0.45rem;
     border: 1.5px solid rgba(95, 184, 255, 0.5);
     border-radius: 999px;
-    background: var(--home-page-bg, #122d48);
+    background: var(--navbar-bg, #0e2943);
 }
+
+.sc-loadout-search__icon {
     flex-shrink: 0;
     font-size: 0.72rem;
     color: rgba(148, 186, 212, 0.78);
@@ -4711,10 +4715,21 @@ td.sc-stat-loadout-mod:hover {
     width: 100%;
     min-width: 0;
     border: 0;
+    outline: none;
+    box-shadow: none;
+    appearance: none;
+    -webkit-appearance: none;
     background: transparent;
     color: #e8f4ff;
     font-size: 0.86rem;
-    outline: none;
+}
+
+.sc-loadout-search__input::-webkit-search-decoration,
+.sc-loadout-search__input::-webkit-search-results-button,
+.sc-loadout-search__input::-webkit-search-cancel-button {
+    appearance: none;
+    -webkit-appearance: none;
+    display: none;
 }
 
 .sc-loadout-search__input::placeholder {
