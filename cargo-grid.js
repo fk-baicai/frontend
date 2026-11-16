@@ -1463,6 +1463,24 @@
     if (window.ResizeObserver) new ResizeObserver(function () { draw(); }).observe(viewEl);
     else window.addEventListener('resize', draw);
 
+    function redeemBaseName(nameEn) {
+        var raw = String(nameEn || '').trim();
+        var stripped = raw.replace(/\s+Wikelo(?:\s+[A-Za-z]+)*\s+Special$/i, '').trim();
+        stripped = stripped.replace(/\s+(?:\d{4}\s+)?(?:BIS|Best In Show(?:\s+Edition)?|Executive Edition|PYAM Exec|Alliance)$/i, '').trim();
+        return stripped && stripped !== raw ? stripped : '';
+    }
+
+    function dropRedeemDuplicates() {
+        var names = {};
+        ships.forEach(function (ship) {
+            names[String(ship.nameEn || '').toLowerCase()] = true;
+        });
+        for (var i = ships.length - 1; i >= 0; i--) {
+            var base = redeemBaseName(ships[i].nameEn);
+            if (base && names[base.toLowerCase()]) ships.splice(i, 1);
+        }
+    }
+
     function applySavedShips(list) {
         if (!Array.isArray(list)) return;
         list.forEach(function (saved) {
@@ -1475,6 +1493,7 @@
             }
             ships.push(saved);
         });
+        dropRedeemDuplicates();
     }
 
     function layoutKey(ship) {
