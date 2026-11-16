@@ -17663,6 +17663,25 @@
         "nameEn": "Galaxy",
         "makerZh": "罗伯茨太空工业",
         "makerEn": "Roberts Space Industries",
+        "wikiScu": 64,
+        "bays": [
+            {
+                "name": "货舱",
+                "w": 1,
+                "h": 1,
+                "l": 64,
+                "boxes": [
+
+                ]
+            }
+        ]
+    },
+    {
+        "id": "galaxy-medical",
+        "nameZh": "RSI 银河 医疗",
+        "nameEn": "Galaxy Medical",
+        "makerZh": "罗伯茨太空工业",
+        "makerEn": "Roberts Space Industries",
         "wikiScu": 68,
         "bays": [
             {
@@ -17670,6 +17689,25 @@
                 "w": 1,
                 "h": 1,
                 "l": 68,
+                "boxes": [
+
+                ]
+            }
+        ]
+    },
+    {
+        "id": "galaxy-cargo",
+        "nameZh": "RSI 银河 货运",
+        "nameEn": "Galaxy Cargo",
+        "makerZh": "罗伯茨太空工业",
+        "makerEn": "Roberts Space Industries",
+        "wikiScu": 720,
+        "bays": [
+            {
+                "name": "货舱",
+                "w": 9,
+                "h": 1,
+                "l": 80,
                 "boxes": [
 
                 ]
