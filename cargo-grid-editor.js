@@ -815,7 +815,7 @@
                 headers: authHeaders(),
             });
             var data = await response.json();
-            if (response.ok && data && typeof data.cargo === 'number') {
+            if (response.ok && data && typeof data.cargo === 'number' && current.wikiScu == null) {
                 current.wikiScu = data.cargo;
                 api.refresh();
                 refreshReadout();

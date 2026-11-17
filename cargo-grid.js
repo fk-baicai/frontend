@@ -1485,6 +1485,7 @@
         if (!Array.isArray(list)) return;
         list.forEach(function (saved) {
             if (!saved || !saved.id || !Array.isArray(saved.bays)) return;
+            if (saved.id === 'galaxy' && saved.wikiScu === 720) saved.wikiScu = 64;
             var i;
             for (i = 0; i < ships.length; i++) {
                 if (ships[i].id !== saved.id) continue;
