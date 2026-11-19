@@ -246,10 +246,7 @@
             if (filter === 'flyable' && (!ship.flyable || ground)) return false;
             if (filter === 'ground' && (!ship.flyable || !ground)) return false;
             if (!q) return true;
-            return [ship.name, ship.nameZh, ship.makerZh, ship.makerEn, makerText(ship), roleText(ship), (ship.places || []).join(' ')]
-                .join(' ')
-                .toLowerCase()
-                .indexOf(q) >= 0;
+            return (ship._q || '').indexOf(q) >= 0;
         });
     }
 
@@ -531,6 +528,11 @@
         var data = parts[0] || {};
         ships = data.ships || [];
         applyNameZh(ships, parts[1]);
+        ships.forEach(function (ship) {
+            ship._q = [ship.name, ship.nameZh, ship.makerZh, ship.makerEn, makerText(ship), roleText(ship), (ship.places || []).join(' ')]
+                .join(' ')
+                .toLowerCase();
+        });
         fillMakers();
         render();
     }).catch(function () {

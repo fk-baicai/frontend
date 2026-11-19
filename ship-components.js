@@ -1988,6 +1988,13 @@
             'name',
             'type',
             'size',
+            'wiki_emp_dmg',
+            'wiki_emp_radius',
+            'wiki_emp_min_radius',
+            'wiki_emp_charge',
+            'wiki_emp_unleash',
+            'wiki_emp_cd',
+            'wiki_comp_dur',
             'mfg',
             'mass',
             'volume',
@@ -2033,6 +2040,7 @@
             'wiki_ml_maxrange',
             'wiki_m_throughput',
             'wiki_m_slots',
+            'wiki_ml_power',
             'wiki_ml_power_transfer',
             'wiki_ml_instability',
             'wiki_ml_window',
@@ -2068,6 +2076,7 @@
             'type',
             'grade',
             'size',
+            'wiki_ss_type',
             'wiki_ss_eff',
             'wiki_ss_radius',
             'wiki_ss_speed',
@@ -2189,10 +2198,16 @@
             'name',
             'type',
             'wiki_att_damage',
+            'wiki_att_fire_rate',
             'wiki_att_recoil',
+            'wiki_att_recoil_decay',
             'wiki_att_spread',
             'wiki_att_sound',
             'wiki_att_muzzle',
+            'wiki_att_proj_speed',
+            'wiki_att_heat',
+            'wiki_att_ammo_cost',
+            'wiki_att_charge_time',
             'mfg',
             'price',
             'loc',
@@ -3443,6 +3458,10 @@
         'green-quikflarepro': '绿色 快燃荧光棒 Pro',
         'orange-quikflarepro': '橙色 快燃荧光棒 Pro',
         'yellow-quikflarepro': '黄色 快燃荧光棒 Pro',
+        'tromag-burst-generator': '盾博尔 旋风 EMP设备',
+        'tromag-burst-generator-2': '疾磁 脉冲发生器',
+        'tromag-burst-generator-4': '盾博尔 旋风 EMP设备',
+        'magstrand-emp-generator': '磁链 EMP发生器',
     };
 
     var ITEM_EN_NAME_ZH = {
@@ -3492,12 +3511,30 @@
         'Scalpel "Permafrost" Sniper Rifle': '手术刀 狙击步枪「永冻」',
         'Cambio-Lite SRT Canister': '转化宝-Lite 打捞罐',
         'Cambio SRT Canister': '转化宝 打捞罐',
+        'ReadyGrip Tractor Module': '迅握 牵引模块',
+        'Abrade Scraper Module': '研磨 刮削模块',
+        'Cinch Scraper Module': '紧固刮削 模块',
+        'Trawler Scraper Module': '拖网 刮削模块',
+        'Hart Scraper Module': '拯救 刮削模块（小号）',
+        'Comer Scraper Module': '拯救 刮削模块（中号）',
         'PC2 Dual S4 Mount': 'PC2 双联 S4 挂点',
         'Drake Caterpillar Weapon Mount': '德雷克 毛虫号 武器挂点',
         'Vanduul Cleaver': '梵杜尔 劈砍导弹',
         'Sion "Tweaker" Compensator1': '锡安「微调」补偿器',
         "6SA 'Arbiter'": '6SA「仲裁者」',
         "7SA 'Concord'": '7SA「和谐」',
+        Marlin: '枪鱼',
+        Lindstrom: '林斯特龙',
+        Ezra: '以斯拉',
+        Bendix: '奔德士',
+        Harkin: '哈金',
+        Norfield: '诺菲尔德',
+        Torrez: '托雷斯',
+        'RN-7s': 'RN-7s 燃料喷嘴',
+        'TroMag Burst Generator': '盾博尔 旋风 EMP设备',
+        'Magstrand EMP Generator': '磁链 EMP发生器',
+        'REP-8 EMP Generator': 'REP-8 EMP生成器',
+        'REP-VS EMP Generator': 'REP-VS EMP发生器',
     };
 
     var TYPE_NAME_SUFFIX = {
@@ -3530,6 +3567,9 @@
             .replace(/\bFire Extinguisher\b/gi, '灭火器')
             .replace(/\bWeapon Mount\b/gi, '武器挂点')
             .replace(/\bGimbal Mount\b/gi, '可动挂点')
+            .replace(/\bTractor Module\b/gi, '牵引模块')
+            .replace(/\bScraper Module\b/gi, '刮削模块')
+            .replace(/\bFuel Nozzle\b/gi, '燃料喷嘴')
             .replace(/\s*\(Modified\)/gi, '（改装）')
             .replace(/\s*\(Used\)/gi, '（旧）')
             .replace(/\bRed Alert\b/gi, '红色警报')
@@ -4980,6 +5020,32 @@
         container.innerHTML = '<p class="sc-acquire-empty">蓝图模块未加载</p>';
     }
 
+    function loadPurchaseLocationsIntoRow(row, item) {
+        var body = row.querySelector('[data-acquire-shops]');
+        if (!body || !item) return;
+        if (Array.isArray(item.purchase_locations)) return;
+        var id = resolveComponentId(item);
+        if (!id) {
+            body.innerHTML = renderAcquireLocationsHtml([]);
+            return;
+        }
+        body.innerHTML = '<p class="sc-acquire-loading">正在读取购买地点…</p>';
+        fetchJsonWithRetry(apiUrl('/api/sc/components/' + encodeURIComponent(id)))
+            .then(function (data) {
+                var full = data && data.item;
+                item.purchase_locations = (full && full.purchase_locations) || [];
+                if (full && full.cheapest_location) item.cheapest_location = full.cheapest_location;
+                if (full && full.purchase_count != null) item.purchase_count = full.purchase_count;
+                if (!row.isConnected) return;
+                body.innerHTML = renderAcquireLocationsHtml(item.purchase_locations);
+                fixExpandedDetailRowLayout();
+            })
+            .catch(function () {
+                if (!row.isConnected) return;
+                body.innerHTML = '<p class="sc-acquire-empty">购买地点没有读到。</p>';
+            });
+    }
+
     function renderDetailRow(item) {
         var tr = document.createElement('tr');
         tr.className = 'sc-detail-row';
@@ -4991,6 +5057,7 @@
         inner.innerHTML = buildAcquirePanelHtml(item);
         td.appendChild(inner);
         tr.appendChild(td);
+        loadPurchaseLocationsIntoRow(tr, item);
         loadBlueprintMissionsIntoRow(tr, item);
         return tr;
     }

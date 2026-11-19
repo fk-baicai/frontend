@@ -2058,11 +2058,23 @@
     }
 
     function fetchBlueprintDetail(id) {
-        return fetchJson('/api/sc/blueprints/' + encodeURIComponent(id)).then(function (data) {
-            if (!data || !data.blueprint) return null;
-            normalizeBlueprintIngredients(data.blueprint);
-            cacheBlueprintDetail(data.blueprint);
-            return data.blueprint;
+        function once() {
+            return fetchJson('/api/sc/blueprints/' + encodeURIComponent(id)).then(function (data) {
+                if (!data || !data.blueprint) return null;
+                normalizeBlueprintIngredients(data.blueprint);
+                cacheBlueprintDetail(data.blueprint);
+                return data.blueprint;
+            });
+        }
+        function again(wait) {
+            return new Promise(function (resolve) { setTimeout(resolve, wait); }).then(once);
+        }
+        return once().catch(function (err) {
+            if (!(err && (err.status === 502 || err.status === 503 || err.status === 504 || /^RLY_/.test(String(err.code || ''))))) throw err;
+            return again(400);
+        }).catch(function (err) {
+            if (!(err && (err.status === 502 || err.status === 503 || err.status === 504 || /^RLY_/.test(String(err.code || ''))))) throw err;
+            return again(1000);
         });
     }
 
@@ -2205,7 +2217,7 @@
             })
             .catch(function (err) {
                 if (seq !== state.selectBlueprintSeq) return;
-                showGate(err.message || '蓝图详情加载失败');
+                showGate(/FRP|隧道|RLY_|没有连上/.test(String(err.message || '')) ? '蓝图详情暂时没有连上，请再试一次。' : (err.message || '蓝图详情加载失败'));
             })
             .finally(function () {
                 if (seq !== state.selectBlueprintSeq) return;

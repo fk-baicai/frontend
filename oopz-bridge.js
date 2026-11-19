@@ -515,6 +515,14 @@
         return shanghaiDateKey(new Date(t)) === shanghaiDateKey(new Date());
     }
 
+    function keepLogItem(item) {
+        if (!item) return false;
+        if (item.type === 'checkin' && item.date && item.date === shanghaiDateKey(new Date())) {
+            return true;
+        }
+        return isWithinLogRetention(item.at);
+    }
+
     function buildLogsFromState(data) {
         var logs = [];
         if (Array.isArray(data.logs) && data.logs.length) {
@@ -535,7 +543,7 @@
             });
         }
         return logs.filter(function (item) {
-            return item && isWithinLogRetention(item.at);
+            return item && keepLogItem(item);
         });
     }
 
@@ -575,7 +583,7 @@
         list = (list || [])
             .map(normalizeLogItem)
             .filter(function (item) {
-                return item && isWithinLogRetention(item.at);
+                return item && keepLogItem(item);
             });
         var logsSig = list
             .map(function (item) {

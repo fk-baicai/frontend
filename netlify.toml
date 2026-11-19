@@ -70,6 +70,30 @@
     Cache-Control = "no-store, no-cache, must-revalidate"
     Netlify-CDN-Cache-Control = "no-store"
 
+[[headers]]
+  for = "/api/sc/components"
+  [headers.values]
+    Cache-Control = "public, max-age=60, stale-while-revalidate=120"
+    Netlify-CDN-Cache-Control = "no-store"
+
+[[headers]]
+  for = "/api/sc/components/*"
+  [headers.values]
+    Cache-Control = "public, max-age=60, stale-while-revalidate=120"
+    Netlify-CDN-Cache-Control = "no-store"
+
+[[headers]]
+  for = "/api/sc/sales-terminals"
+  [headers.values]
+    Cache-Control = "public, max-age=600, stale-while-revalidate=3600"
+    Netlify-CDN-Cache-Control = "no-store"
+
+[[headers]]
+  for = "/api/sc/sales-terminals/*"
+  [headers.values]
+    Cache-Control = "public, max-age=600, stale-while-revalidate=3600"
+    Netlify-CDN-Cache-Control = "no-store"
+
 [[redirects]]
   from = "/index.html"
   to = "/"

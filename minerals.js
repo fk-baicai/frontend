@@ -196,7 +196,7 @@
         var grid = document.getElementById("minGrid");
         var status = document.getElementById("minStatus");
         var q = document.getElementById("minQuery").value.trim();
-        var size = capacity(grid, 40, 46);
+        var size = window.innerWidth <= 980 ? 8 : capacity(grid, 40, 46);
         var pages = Math.max(1, Math.ceil(list.length / size));
         if (listPage >= pages) listPage = pages - 1;
         if (listPage < 0) listPage = 0;
@@ -447,8 +447,15 @@
         button.classList.add("is-on");
         var pop = el("div", "min-craft-pop");
         pop.id = "minCraftPop";
-        pop.appendChild(el("p", "min-craft-title", (item.name_zh || item.name) + " · 可制造武器"));
+        pop.appendChild(el("p", "min-craft-title", (item.name_zh || item.name) + " · 可制造蓝图"));
+        var lastGroup = "";
         crafts.forEach(function (craft) {
+            var group = craft.group_zh || "其他";
+            if (group !== lastGroup) {
+                lastGroup = group;
+                var count = crafts.filter(function (row) { return (row.group_zh || "其他") === group; }).length;
+                pop.appendChild(el("p", "min-craft-group", group + " " + count));
+            }
             var link = document.createElement("a");
             link.className = "min-craft-link";
             link.href = "/blueprint-crafting?blueprint=" + encodeURIComponent(craft.uuid);
@@ -745,20 +752,22 @@
         fetch("minerals-data.json?v=20261116k").then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); }),
         fetch("minerals-loc.json?v=20261116l").then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); }),
         fetch("minerals-signatures.json?v=20261117a").then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); }).catch(function () { return null; }),
-        fetch("minerals-craft.json?v=20261117b").then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); }).catch(function () { return null; }),
         fetch("/api/minerals/notes/summary").then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); }).catch(function () { return { counts: {} }; })
     ])
         .then(function (parts) {
             var body = parts[0];
             LOC = (parts[1] && parts[1].names) || {};
             sigRows = (parts[2] && parts[2].minerals) || [];
-            craftMap = (parts[3] && parts[3].ores) || {};
-            noteCounts = (parts[4] && parts[4].counts) || {};
+            noteCounts = (parts[3] && parts[3].counts) || {};
             data = body.minerals || [];
             renderChart();
             var hash = decodeURIComponent(location.hash || "").replace(/^#/, "");
             var hit = data.filter(function (row) { return row.slug === hash; })[0];
             select((hit || data[0] || {}).slug || "");
+            fetch("minerals-craft.json?v=20261119b").then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); }).then(function (craft) {
+                craftMap = (craft && craft.ores) || {};
+                renderGrid();
+            }).catch(function () {});
         })
         .catch(function () {
             document.getElementById("minStatus").textContent = "矿物数据没有读到。";

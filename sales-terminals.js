@@ -249,6 +249,7 @@
     }
     function sectionsFor(shop) {
         var ids = {};
+        if (!shop || !Array.isArray(shop.items)) return [];
         shop.items.forEach(function (item) { ids[item[2]] = true; });
         var sections = [];
         var map = {};
@@ -382,6 +383,20 @@
     }
     function renderKiosk() {
         var shop = shopByCode(state.shop);
+        if (shop && !Array.isArray(shop.items)) {
+            els.shopName.innerHTML = biHtml(shop.nameZh, shop.name);
+            els.shopPath.hidden = true;
+            els.shopCount.textContent = '…';
+            els.cats.innerHTML = '';
+            els.list.innerHTML = '<p class="st-empty">正在读取这个星系的在售物品。</p>';
+            renderDetail(null, null);
+            ensureSystem(shop.system).then(function () {
+                if (shopByCode(state.shop) === shop) renderKiosk();
+            }).catch(function () {
+                els.list.innerHTML = '<p class="st-empty">这个星系的在售物品没有读到。</p>';
+            });
+            return;
+        }
         if (!shop) {
             els.shopName.textContent = '未接入终端';
             els.shopPath.hidden = false;
@@ -549,6 +564,23 @@
             hideHits();
             return;
         }
+        var pendingSystems = systemsNeeded();
+        if (pendingSystems.length && !searchLoad) {
+            var nextSystem = state.system && pendingSystems.indexOf(state.system) >= 0 ? state.system : pendingSystems[0];
+            searchLoad = ensureSystem(nextSystem).then(function () {
+                searchLoad = null;
+                if (els.superInput && els.superInput.value.trim().toLowerCase() === needle) renderHits();
+            }).catch(function () {
+                searchLoad = null;
+                if (els.superInput && els.superInput.value.trim().toLowerCase() === needle) renderHits();
+            });
+        }
+        if (!catalog.length) {
+            els.results.innerHTML = '<p class="st-hit-empty">' + (pendingSystems.length ? '正在读取已打开星系的在售物品。' : '搜索索引还在准备，稍等一下。') + '</p>';
+            els.results.hidden = false;
+            els.superInput.setAttribute('aria-expanded', 'true');
+            return;
+        }
         var found = [];
         catalog.forEach(function (row) {
             var at = row.blob.indexOf(needle);
@@ -582,7 +614,7 @@
         } else {
             els.results.innerHTML = filters + hits.map(function (row, index) {
                 return '<button type="button" class="st-hit' + (index === hitIndex ? ' is-active' : '') + '" role="option" data-hit="' + index + '"><span class="st-hit-top"><span class="st-hit-name">' + biHtml(row.nameZh, row.name) + '</span><span class="st-hit-price">' + money(row.price) + '</span></span><span class="st-hit-loc">' + locLine(row) + '</span></button>';
-            }).join('') + (extra ? '<p class="st-hit-empty">还有 ' + extra + ' 条，继续输入可以缩小范围。</p>' : '');
+            }).join('') + (extra ? '<p class="st-hit-empty">还有 ' + extra + ' 条，继续输入可以缩小范围。</p>' : '') + (pendingSystems.length || indexQueue.length ? '<p class="st-hit-empty">其余星系还在读取，结果会继续补上。</p>' : '');
         }
         els.results.hidden = false;
         els.superInput.setAttribute('aria-expanded', 'true');
@@ -723,9 +755,93 @@
         return fetch(primary).then(function (res) {
             if (!res.ok) throw new Error('status');
             return res.json();
-        }).catch(function () {
-            return fetch(fallback).then(function (res) { return res.json(); });
+        }).catch(function (err) {
+            if (!fallback) throw err;
+            return fetch(fallback).then(function (res) {
+                if (!res.ok) throw err;
+                return res.json();
+            });
         });
+    }
+    var indexedShop = {};
+    var indexQueue = [];
+    var indexTimer = 0;
+    var systemLoads = {};
+    var searchLoad = null;
+    function pushCatalogItem(shop, item) {
+        catalog.push({
+            name: item[0],
+            nameZh: item[3] || '',
+            price: item[1],
+            key: item[0] + '@' + item[1] + '@' + item[2],
+            code: shopToken(shop),
+            shop: shop.name,
+            shopZh: shop.nameZh || '',
+            system: shop.system,
+            systemZh: shop.systemZh || '',
+            planet: planetLabel(planetKey(shop)),
+            planetKey: planetKey(shop),
+            place: shop.place,
+            placeZh: shop.placeZh || '',
+            blob: [item[0], item[3], shop.name, shop.nameZh, shop.system, shop.systemZh, shop.planet, shop.planetZh, shop.place, shop.placeZh].filter(Boolean).join(' ').toLowerCase(),
+        });
+    }
+    function drainIndex() {
+        var budget = 0;
+        while (indexQueue.length && budget < 3000) {
+            var shop = indexQueue[0];
+            var items = shop.items || [];
+            var at = shop._indexAt || 0;
+            while (at < items.length && budget < 3000) {
+                pushCatalogItem(shop, items[at++]);
+                budget++;
+            }
+            shop._indexAt = at;
+            if (at >= items.length) indexQueue.shift();
+        }
+        if (indexQueue.length) {
+            indexTimer = setTimeout(drainIndex, 0);
+            if (els.superInput && els.superInput.value.trim().length >= 2) renderHits();
+            return;
+        }
+        indexTimer = 0;
+        if (els.superInput && els.superInput.value.trim().length >= 2) renderHits();
+    }
+    function queueIndex(shop) {
+        if (!shop || indexedShop[shop.id] || !Array.isArray(shop.items)) return;
+        indexedShop[shop.id] = true;
+        indexQueue.push(shop);
+        if (!indexTimer) indexTimer = setTimeout(drainIndex, 0);
+    }
+    function systemsNeeded() {
+        var names = [];
+        (data && data.shops || []).forEach(function (shop) {
+            if (!shop.system || Array.isArray(shop.items) || names.indexOf(shop.system) >= 0) return;
+            names.push(shop.system);
+        });
+        return names;
+    }
+    function catalogSearchReady() {
+        return !systemsNeeded().length && !indexQueue.length && !indexTimer;
+    }
+    function ensureSystem(name) {
+        if (!name) return Promise.resolve();
+        if (!systemsNeeded().length || systemsNeeded().indexOf(name) < 0) return Promise.resolve();
+        if (systemLoads[name]) return systemLoads[name];
+        systemLoads[name] = fetchJson(apiUrl('/api/sc/sales-terminals/system/' + encodeURIComponent(name))).then(function (json) {
+            var rows = (json && json.shops) || [];
+            var byId = {};
+            rows.forEach(function (row) { byId[row.id] = row.items || []; });
+            (data.shops || []).forEach(function (shop) {
+                if (shop.system !== name || Array.isArray(shop.items)) return;
+                shop.items = byId[shop.id] || [];
+                queueIndex(shop);
+            });
+        }).catch(function (err) {
+            delete systemLoads[name];
+            throw err;
+        });
+        return systemLoads[name];
     }
     fetchJson(apiUrl('/api/sc/ship-card-map'), 'ship-cards.json?v=2')
         .then(function (json) {
@@ -733,6 +849,7 @@
             if (data) renderKiosk();
         })
         .catch(function () {});
+    var catalogReady = false;
     fetchJson(apiUrl('/api/sc/sales-terminals'), 'sales-terminals-data.json?v=28')
         .then(function (json) {
             data = json;
@@ -740,29 +857,13 @@
             codeUses = {};
             (data.shops || []).forEach(function (shop) { codeUses[shop.code] = (codeUses[shop.code] || 0) + 1; });
             (data.categories || []).forEach(function (cat) { catById[cat.id] = cat; });
-            data.shops.forEach(function (shop) {
-                shop.items.forEach(function (item) {
-                    catalog.push({
-                        name: item[0],
-                        nameZh: item[3] || '',
-                        price: item[1],
-                        key: item[0] + '@' + item[1] + '@' + item[2],
-                        code: shopToken(shop),
-                        shop: shop.name,
-                        shopZh: shop.nameZh || '',
-                        system: shop.system,
-                        systemZh: shop.systemZh || '',
-                        planet: planetLabel(planetKey(shop)),
-                        planetKey: planetKey(shop),
-                        place: shop.place,
-                        placeZh: shop.placeZh || '',
-                        blob: [item[0], item[3], shop.name, shop.nameZh, shop.system, shop.systemZh, shop.planet, shop.planetZh, shop.place, shop.placeZh].filter(Boolean).join(' ').toLowerCase(),
-                    });
-                });
-            });
             els.status.hidden = true;
             readQuery();
+            (data.shops || []).forEach(function (shop) {
+                if (Array.isArray(shop.items)) queueIndex(shop);
+            });
             render();
+            if (state.system) ensureSystem(state.system).then(render);
         })
         .catch(function () {
             els.status.textContent = '终端数据加载失败。';

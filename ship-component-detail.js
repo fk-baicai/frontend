@@ -96,6 +96,10 @@
         'green-quikflarepro': '绿色 快燃荧光棒 Pro',
         'orange-quikflarepro': '橙色 快燃荧光棒 Pro',
         'yellow-quikflarepro': '黄色 快燃荧光棒 Pro',
+        'tromag-burst-generator': '盾博尔 旋风 EMP设备',
+        'tromag-burst-generator-2': '疾磁 脉冲发生器',
+        'tromag-burst-generator-4': '盾博尔 旋风 EMP设备',
+        'magstrand-emp-generator': '磁链 EMP发生器',
     };
 
     var TYPE_NAME_SUFFIX = {
@@ -108,9 +112,24 @@
         jump: '跳跃驱动器',
     };
 
+    var ITEM_EN_NAME_ZH = {
+        'ReadyGrip Tractor Module': '迅握 牵引模块',
+        'Abrade Scraper Module': '研磨 刮削模块',
+        'Cinch Scraper Module': '紧固刮削 模块',
+        'Trawler Scraper Module': '拖网 刮削模块',
+        'Hart Scraper Module': '拯救 刮削模块（小号）',
+        'Comer Scraper Module': '拯救 刮削模块（中号）',
+        'RN-7s': 'RN-7s 燃料喷嘴',
+        'TroMag Burst Generator': '盾博尔 旋风 EMP设备',
+        'Magstrand EMP Generator': '磁链 EMP发生器',
+        'REP-8 EMP Generator': 'REP-8 EMP生成器',
+        'REP-VS EMP Generator': 'REP-VS EMP发生器',
+    };
+
     function fallbackLocalizeItemEn(en, typeKey) {
         var raw = String(en || '').trim();
         if (!raw || /[\u4e00-\u9fff]/.test(raw)) return raw;
+        if (ITEM_EN_NAME_ZH[raw]) return ITEM_EN_NAME_ZH[raw];
         var typeZh = TYPE_NAME_SUFFIX[typeKey];
         if (typeZh && /^[A-Za-z0-9][A-Za-z0-9._'-]{1,16}$/.test(raw)) return raw + ' ' + typeZh;
         var s = raw
@@ -125,6 +144,9 @@
             .replace(/\bMagazine\b/gi, '弹匣')
             .replace(/\bMulti-Tool\b/gi, '多用工具')
             .replace(/\bFire Extinguisher\b/gi, '灭火器')
+            .replace(/\bTractor Module\b/gi, '牵引模块')
+            .replace(/\bScraper Module\b/gi, '刮削模块')
+            .replace(/\bFuel Nozzle\b/gi, '燃料喷嘴')
             .replace(/\s*\(Modified\)/gi, '（改装）')
             .replace(/\s*\(Used\)/gi, '（旧）')
             .replace(/\bRed Alert\b/gi, '红色警报')
@@ -2194,20 +2216,38 @@
         bindBackLinkRestore();
     }
 
+    function detailFailureText(message) {
+        var text = String(message || '');
+        if (/FRP|隧道|RLY_|Worker 连接失败|没有连上/.test(text)) return '详情暂时没有连上，请再试一次。';
+        return text || '加载失败';
+    }
+
     async function load() {
         var id = getItemId();
         if (!id) {
             showGate('缺少配件 ID', true);
             return;
         }
-        try {
-            var res = await fetch(apiUrl('/api/sc/components/' + encodeURIComponent(id)));
-            var data = await res.json();
-            if (!res.ok || !data.ok) throw new Error((data && data.message) || '加载失败');
-            renderItem(data, id);
-            rememberLoadedId(data.item);
-        } catch (e) {
-            showGate((e && e.message) || '加载失败', true);
+        var lastMessage = '加载失败';
+        for (var attempt = 0; attempt < 3; attempt++) {
+            if (attempt) await new Promise(function (resolve) { setTimeout(resolve, attempt === 1 ? 400 : 1000); });
+            try {
+                var res = await fetch(apiUrl('/api/sc/components/' + encodeURIComponent(id)));
+                var data = await res.json();
+                if (!res.ok || !data.ok) {
+                    lastMessage = (data && data.message) || '加载失败';
+                    if (attempt < 2 && (res.status === 502 || res.status === 503 || res.status === 504 || (data && /^RLY_/.test(String(data.code || ''))))) continue;
+                    showGate(detailFailureText(lastMessage), true);
+                    return;
+                }
+                renderItem(data, id);
+                rememberLoadedId(data.item);
+                return;
+            } catch (e) {
+                lastMessage = (e && e.message) || lastMessage;
+                if (attempt < 2) continue;
+                showGate(detailFailureText(lastMessage), true);
+            }
         }
     }
 

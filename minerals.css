@@ -215,7 +215,7 @@
     position: fixed;
     z-index: 40;
     width: min(22rem, calc(100vw - 1.5rem));
-    max-height: min(18rem, calc(100vh - 1.5rem));
+    max-height: min(28rem, calc(100vh - 1.5rem));
     overflow: auto;
     box-sizing: border-box;
     padding: 0.65rem 0.35rem 0.4rem;
@@ -407,6 +407,14 @@
     color: #8ee0ff;
     font-size: 0.75rem;
     letter-spacing: 0.06em;
+}
+
+.min-craft-group {
+    margin: 0.45rem 0.7rem 0.15rem;
+    color: #e8d5a0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
 }
 
 .min-craft-link {
@@ -745,6 +753,6 @@
         min-height: 0;
     }
     .min-layout { grid-template-columns: 1fr; }
-    .min-grid { max-height: 22rem; }
+    .min-grid { max-height: 36rem; }
     .min-loc-grid { grid-template-columns: 1fr; }
 }
