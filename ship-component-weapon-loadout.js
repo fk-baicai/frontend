@@ -5,7 +5,7 @@
     var STORAGE_KEY = 'uss_sc_weapon_loadout_v1';
     var SLOT_DEFS = [
         { id: 'ironsight', label: '瞄具附件', short: '瞄', type: 'attachment_ironsight', subType: 'IronSight' },
-        { id: 'barrel', label: '枪管附件', short: '枪', type: 'attachment_barrel', subType: 'Barrel' },
+        { id: 'barrel', label: '枪口附件', short: '口', type: 'attachment_barrel', subType: 'Barrel' },
         { id: 'bottom', label: '枪管下挂件', short: '挂', type: 'attachment_bottom', subType: 'BottomAttachment' },
     ];
 
@@ -86,11 +86,20 @@
     }
 
     function getSlotDefsForWeapon(item) {
+        var ports = portsForWeapon(item);
+        if (ports.length) {
+            return SLOT_DEFS.filter(function (slot) {
+                return ports.some(function (port) {
+                    return port && port.sub_type === slot.subType;
+                });
+            });
+        }
         var w = wiki();
         var count = w && w.getWeaponAttachmentSlotCount ? w.getWeaponAttachmentSlotCount(item) : 0;
         if (!count || count <= 0) return [];
-        if (count >= 3) return SLOT_DEFS.slice();
-        return SLOT_DEFS.slice(0, 2);
+        if (count === 1) return [SLOT_DEFS[0]];
+        if (count === 2) return SLOT_DEFS.slice(0, 2);
+        return SLOT_DEFS.slice();
     }
 
     function getLoadout(weaponItem) {
@@ -136,9 +145,72 @@
         return slotDef && slotDef.type === 'attachment_bottom';
     }
 
+    function weaponSizeNum(weaponItem) {
+        var n = weaponItem && (weaponItem.size_num != null ? weaponItem.size_num : weaponItem.size);
+        n = Number(n);
+        return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1;
+    }
+
+    function fallbackPortsForWeapon(weaponItem) {
+        var wf = weaponItem && weaponItem.wiki_fields;
+        var count = Number(wf && wf.attachment_slot_count);
+        if (!Number.isFinite(count) || count <= 0) {
+            var w = wiki();
+            count = w && w.getWeaponAttachmentSlotCount ? w.getWeaponAttachmentSlotCount(weaponItem) : 0;
+        }
+        if (!count || count <= 0) return [];
+        var size = weaponSizeNum(weaponItem);
+        var opticMax = Math.max(1, Math.min(4, size));
+        var all = [
+            { sub_type: 'IronSight', min: 1, max: opticMax },
+            { sub_type: 'Barrel', min: size, max: size },
+            { sub_type: 'BottomAttachment', min: 1, max: Math.max(1, size) },
+        ];
+        if (count === 1) return [all[0]];
+        if (count === 2) return all.slice(0, 2);
+        return all;
+    }
+
+    function portsForWeapon(weaponItem) {
+        var wf = weaponItem && weaponItem.wiki_fields;
+        if (!wf) return fallbackPortsForWeapon(weaponItem);
+        if (Array.isArray(wf.attachment_ports) && wf.attachment_ports.length) return wf.attachment_ports;
+        var desc = Array.isArray(wf.description_data) ? wf.description_data : [];
+        var row = null;
+        for (var i = 0; i < desc.length; i++) {
+            if (desc[i] && desc[i].name === 'Attachments' && desc[i].value) {
+                row = desc[i];
+                break;
+            }
+        }
+        if (row) {
+            var ports = [];
+            var re = /([A-Za-z][A-Za-z ]*?)\s*\(S(\d+)\)/g;
+            var text = String(row.value);
+            var match;
+            while ((match = re.exec(text))) {
+                var label = match[1].replace(/^\s+|\s+$/g, '');
+                var size = Number(match[2]);
+                if (!isFinite(size)) continue;
+                var spec = null;
+                if (/underbarrel|bottom/i.test(label)) spec = { sub_type: 'BottomAttachment', min: 1, max: size };
+                else if (/barrel/i.test(label)) spec = { sub_type: 'Barrel', min: size, max: size };
+                else if (/optic|sight/i.test(label)) spec = { sub_type: 'IronSight', min: 1, max: size };
+                if (!spec) continue;
+                var seen = false;
+                for (var p = 0; p < ports.length; p++) {
+                    if (ports[p].sub_type === spec.sub_type) seen = true;
+                }
+                if (!seen) ports.push(spec);
+            }
+            if (ports.length) return ports;
+        }
+        return fallbackPortsForWeapon(weaponItem);
+    }
+
     function portRangeForSlot(weaponItem, slotDef) {
-        var ports = weaponItem && weaponItem.wiki_fields && weaponItem.wiki_fields.attachment_ports;
-        if (!Array.isArray(ports) || !slotDef) return null;
+        var ports = portsForWeapon(weaponItem);
+        if (!ports.length || !slotDef) return null;
         for (var i = 0; i < ports.length; i++) {
             if (ports[i] && ports[i].sub_type === slotDef.subType) {
                 var min = Number(ports[i].min);
@@ -192,12 +264,12 @@
     }
 
     async function fetchAttachmentsForSlot(slotDef, weaponItem) {
-        var skipSizeFilter = isBottomAttachmentSlot(slotDef) && !portRangeForSlot(weaponItem, slotDef);
         var range = portRangeForSlot(weaponItem, slotDef);
+        var skipSizeFilter = !range && isBottomAttachmentSlot(slotDef);
         var cacheKey =
             slotDef.type +
             '_' +
-            (range ? range.min + '-' + range.max : String(weaponItem.size_num || weaponItem.size || '')) +
+            (range ? range.min + '-' + range.max : 'open') +
             (skipSizeFilter ? '_all' : '');
         if (attachmentCache[cacheKey]) return attachmentCache[cacheKey];
         var url =
@@ -205,8 +277,6 @@
         var res = await fetch(url);
         if (!res.ok) return [];
         var data = await res.json();
-        var weaponSize = weaponItem.size_num != null ? Number(weaponItem.size_num) : Number(weaponItem.size);
-        var personal = !!(weaponItem.wiki_fields && weaponItem.wiki_fields.personal_weapon);
         var list = (data.items || []).filter(function (att) {
             if (!att) return false;
             if (skipSizeFilter) return true;
@@ -215,9 +285,7 @@
             var attSize = att.size_num != null ? Number(att.size_num) : Number(att.size);
             if (classSize && Number.isFinite(attSize) && Number(classSize[1]) !== attSize) return false;
             if (range) return Number.isFinite(attSize) && attSize >= range.min && attSize <= range.max;
-            if (personal) return false;
-            if (Number.isFinite(weaponSize) && Number.isFinite(attSize) && weaponSize !== attSize) return false;
-            return true;
+            return Number.isFinite(attSize);
         });
         list.sort(function (a, b) {
             return String(a.name_zh || a.name_en || '').localeCompare(String(b.name_zh || b.name_en || ''), 'zh-CN');
