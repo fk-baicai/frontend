@@ -212,7 +212,7 @@
 }
 
 .min-craft-pop {
-    position: fixed;
+    position: absolute;
     z-index: 40;
     width: min(22rem, calc(100vw - 1.5rem));
     max-height: min(28rem, calc(100vh - 1.5rem));
@@ -425,6 +425,17 @@
     text-decoration: none;
 }
 
+.min-craft-link .min-place-en { display: block; }
+
+.min-craft-spec {
+    margin-left: 0.45rem;
+    color: #8ee0ff;
+    font-size: 0.72rem;
+    font-weight: 650;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
 .min-craft-link:hover { background: rgba(95, 184, 255, 0.12); }
 
 .min-craft-link:focus-visible {
@@ -592,7 +603,7 @@
     font-size: 0.72rem;
 }
 
-.min-place-zh { color: #ffffff; font-weight: 650; line-height: 1.15; }
+.min-place-zh { display: block; color: #ffffff; font-weight: 650; line-height: 1.15; }
 .min-place-en,
 .min-parent { color: rgba(148, 186, 212, 0.72); font-size: 0.72rem; line-height: 1.15; }
 .min-type { color: #5fb8ff; }

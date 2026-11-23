@@ -25,6 +25,22 @@
     var locPage = 0;
 
     function text(s) { return String(s == null ? "" : s); }
+    function craftSpec(craft) {
+        var size = text(craft && craft.size).trim();
+        var klass = text(craft && craft.class_short_zh).trim();
+        var grade = text(craft && craft.grade_letter).trim().toUpperCase();
+        var group = text(craft && craft.group_zh).trim();
+        var parts = [];
+        if (group !== "武器" && group !== "护甲") {
+            if (/^\d+$/.test(size)) parts.push("S" + size);
+            else if (size) parts.push(size);
+        }
+        if (group !== "舰船武器" && group !== "护甲" && group !== "武器" && group !== "武器配件") {
+            if (klass && /^[A-F]$/.test(grade)) parts.push(klass + grade);
+            else if (klass) parts.push(klass);
+        }
+        return parts.join(" ");
+    }
     function el(tag, cls, content) {
         var n = document.createElement(tag);
         if (cls) n.className = cls;
@@ -460,6 +476,8 @@
             link.className = "min-craft-link";
             link.href = "/blueprint-crafting?blueprint=" + encodeURIComponent(craft.uuid);
             var label = el("span", "min-place-zh", craft.name_zh || craft.name_en);
+            var specText = craftSpec(craft);
+            if (specText) label.appendChild(el("span", "min-craft-spec", specText));
             var sub = el("span", "min-place-en", [craft.type_label_zh, craft.name_en].filter(Boolean).join(" · "));
             link.appendChild(label);
             link.appendChild(sub);
@@ -467,12 +485,18 @@
         });
         document.body.appendChild(pop);
         var rect = button.getBoundingClientRect();
+        var scrollX = window.scrollX || window.pageXOffset || 0;
+        var scrollY = window.scrollY || window.pageYOffset || 0;
         var width = pop.offsetWidth;
-        var left = Math.min(rect.left, window.innerWidth - width - 12);
-        var top = rect.bottom + 6;
-        if (top + pop.offsetHeight > window.innerHeight - 8) top = Math.max(8, rect.top - pop.offsetHeight - 6);
-        pop.style.left = Math.max(8, left) + "px";
-        pop.style.top = top + "px";
+        var height = pop.offsetHeight;
+        var left = rect.left + scrollX;
+        var viewRight = scrollX + window.innerWidth - 12;
+        if (left + width > viewRight) left = viewRight - width;
+        var top = rect.bottom + scrollY + 6;
+        if (rect.bottom + height + 6 > window.innerHeight - 8) top = rect.top + scrollY - height - 6;
+        pop.style.position = "absolute";
+        pop.style.left = Math.max(scrollX + 8, left) + "px";
+        pop.style.top = Math.max(8, top) + "px";
     }
     function noteButton(slug, label) {
         var btn = el("button", "min-craft min-note");
@@ -748,10 +772,19 @@
         });
         box.appendChild(chart);
     }
+    function fetchJson(url, fallback) {
+        return fetch(url).then(function (res) {
+            if (!res.ok) throw new Error("bad");
+            return res.json();
+        }).catch(function () {
+            if (!fallback) return null;
+            return fetch(fallback).then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); });
+        });
+    }
     Promise.all([
-        fetch("minerals-data.json?v=20261116k").then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); }),
-        fetch("minerals-loc.json?v=20261116l").then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); }),
-        fetch("minerals-signatures.json?v=20261117a").then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); }).catch(function () { return null; }),
+        fetchJson("/api/minerals/catalog", "minerals-data.json"),
+        fetchJson("/api/minerals/locations", "minerals-loc.json"),
+        fetchJson("/api/minerals/signatures", "minerals-signatures.json"),
         fetch("/api/minerals/notes/summary").then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); }).catch(function () { return { counts: {} }; })
     ])
         .then(function (parts) {
@@ -764,7 +797,7 @@
             var hash = decodeURIComponent(location.hash || "").replace(/^#/, "");
             var hit = data.filter(function (row) { return row.slug === hash; })[0];
             select((hit || data[0] || {}).slug || "");
-            fetch("minerals-craft.json?v=20261119b").then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); }).then(function (craft) {
+            fetchJson("/api/minerals/craft", "minerals-craft.json").then(function (craft) {
                 craftMap = (craft && craft.ores) || {};
                 renderGrid();
             }).catch(function () {});

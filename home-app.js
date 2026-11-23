@@ -52,11 +52,13 @@
             const locked = body.classList.contains('page-scroll-locked');
             if (needLock && !locked) {
                 savedPageScrollY = window.scrollY || html.scrollTop || 0;
+                html.style.setProperty('--scroll-lock-y', savedPageScrollY + 'px');
                 body.classList.add('page-scroll-locked');
                 html.classList.add('page-scroll-locked');
             } else if (!needLock && locked) {
                 body.classList.remove('page-scroll-locked');
                 html.classList.remove('page-scroll-locked');
+                html.style.removeProperty('--scroll-lock-y');
                 window.scrollTo(0, savedPageScrollY);
             }
         }

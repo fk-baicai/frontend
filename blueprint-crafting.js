@@ -2643,8 +2643,8 @@
         health_maxhealth: ['max_health'],
         itemresource_coolantgeneration: ['coolant_segment_generation', 'cooling_rate'],
         itemresource_powergeneration: ['power_segment_generation'],
-        shield_maxshieldhealth: ['max_health'],
-        shield_maxhealth: ['max_health'],
+        shield_maxshieldhealth: ['max_shield_health'],
+        shield_maxhealth: ['max_shield_health'],
         shield_shieldregen: ['regen_rate', 'max_shield_regen'],
         quantum_quantumspeed: ['quantum_speed', 'drive_speed'],
         quantum_speed: ['quantum_speed', 'drive_speed'],
@@ -2669,7 +2669,7 @@
         Damage: ['damage_per_shot'],
         'Weapon Damage': ['damage_per_shot'],
         Integrity: ['max_health'],
-        'Max Health': ['max_health'],
+        'Max Health': ['max_shield_health'],
         Durability: ['max_health'],
         'Coolant Rating': ['coolant_segment_generation', 'cooling_rate'],
         'Power Generation': ['power_segment_generation'],
@@ -2681,7 +2681,7 @@
         'Recoil Kick': ['weapon_recoil_kick'],
         'Quantum Speed': ['quantum_speed', 'drive_speed'],
         'Quantum Fuel Burn': ['quantum_fuel_requirement'],
-        'Max. Shield Strength': ['max_health'],
+        'Max. Shield Strength': ['max_shield_health'],
         'Damage Mitigation': ['damage_mitigation'],
         'Max Temp': ['temp_resistance_max'],
         'Min Temp': ['temp_resistance_min'],
@@ -2694,6 +2694,7 @@
         effective_range: '有效射程',
         magazine_size: '弹匣容量',
         max_health: '组件耐久',
+        max_shield_health: '最大护盾强度',
         weapon_recoil_smoothness: '后坐力平滑度',
         weapon_recoil_handling: '后坐力控制',
         weapon_recoil_kick: '枪口上跳',
@@ -2780,7 +2781,7 @@
         '枪口上跳': ['weapon_recoil_kick'],
         '组件耐久': ['max_health'],
         '结构完整性': ['max_health'],
-        '最大护盾强度': ['max_health'],
+        '最大护盾强度': ['max_shield_health'],
         '冷却效率': ['coolant_segment_generation', 'cooling_rate'],
         '能量点': ['power_segment_generation'],
         '量子速度': ['quantum_speed', 'drive_speed'],
@@ -3055,6 +3056,8 @@
     }
 
     function resolveCraftOutputLabelZh(statKey, fallback) {
+        var typed = normalizeBlueprintStatLabelZh(fallback || '');
+        if (typed && typed !== statKey) return typed;
         if (STAT_KEY_LABEL_ZH[statKey]) {
             return normalizeBlueprintStatLabelZh(STAT_KEY_LABEL_ZH[statKey]);
         }

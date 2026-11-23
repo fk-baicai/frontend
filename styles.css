@@ -12,8 +12,17 @@ body {
  color: #ffffff;
 }
 
-html.page-scroll-locked,
+html.page-scroll-locked {
+ overflow: hidden !important;
+ overscroll-behavior: none;
+}
+
 body.page-scroll-locked {
+ position: fixed !important;
+ top: calc(-1 * var(--scroll-lock-y, 0px));
+ left: 0;
+ right: 0;
+ width: 100%;
  overflow: hidden !important;
  overscroll-behavior: none;
  touch-action: none;
@@ -10433,9 +10442,11 @@ a.community-author-avatar-link:focus-visible {
  .login-drawer.sidebar-modal {
  width: min(18.5rem, calc(100vw - 1rem));
  right: calc(-1 * min(18.5rem, calc(100vw - 1rem)));
- top: var(--navbar-height);
+ top: 0;
+ top: env(safe-area-inset-top, 0px);
  height: auto;
- max-height: calc(100dvh - var(--navbar-height));
+ max-height: 100dvh;
+ max-height: calc(100dvh - env(safe-area-inset-top, 0px));
  min-height: 0;
  padding: 0.75rem 0.65rem 0.85rem;
  border-radius: 0;
@@ -10443,10 +10454,17 @@ a.community-author-avatar-link:focus-visible {
  border-top: none;
  box-shadow: -8px 12px 36px rgba(0, 0, 0, 0.48);
  overflow: hidden;
+ z-index: 1200;
  }
 
  .login-drawer.sidebar-modal.active {
  right: 0;
+ }
+
+ .overlay.overlay--login-only {
+ top: 0;
+ height: 100vh;
+ height: 100dvh;
  }
 
  .login-drawer.active {

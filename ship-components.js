@@ -3873,6 +3873,17 @@
         if (camo) return { base: camo[1].trim(), suffix: camo[2].trim() + ' Camo', explicit: true, speculative: '' };
         var zhQuoted = s.match(/^(.+?)\s+[“"](.+?)[”"]\s*$/);
         if (zhQuoted) return { base: zhQuoted[1].trim(), suffix: zhQuoted[2].trim(), explicit: true, speculative: '' };
+        var zhQuotedBeforeType = s.match(
+            new RegExp('^(.+?)\\s*[“"](.+?)[”"]\\s*(' + WEAPON_TYPE_ZH_FOR_NAME + '|步枪)\\s*$')
+        );
+        if (zhQuotedBeforeType) {
+            return {
+                base: zhQuotedBeforeType[1].trim() + ' ' + zhQuotedBeforeType[3].trim(),
+                suffix: zhQuotedBeforeType[2].trim(),
+                explicit: true,
+                speculative: '',
+            };
+        }
         var enQuoted = s.match(/^(.+?)\s+"(.+?)"\s+(\S+)$/i);
         if (enQuoted) return { base: enQuoted[1].trim() + ' ' + enQuoted[3].trim(), suffix: enQuoted[2].trim(), explicit: true, speculative: '' };
         var zhTypeTail = s.match(new RegExp('^(.+?)\\s+(.+)\\s+(' + WEAPON_TYPE_ZH_FOR_NAME + ')\\s*$'));
@@ -3979,6 +3990,13 @@
             if (normalized.indexOf(label + ' ') === 0) best = label;
         });
         if (best) return best;
+        var quotedType = normalized.match(
+            new RegExp('^(.+?)\\s+\\S+\\s+(' + WEAPON_TYPE_ZH_FOR_NAME + '|步枪)$')
+        );
+        if (quotedType) {
+            var line = quotedType[1].trim() + ' ' + quotedType[2].trim();
+            if (labels[line]) return line;
+        }
         var prefix = normalized + ' ';
         var extended = Object.keys(labels).some(function (label) {
             return label.indexOf(prefix) === 0;
