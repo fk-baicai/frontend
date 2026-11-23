@@ -327,10 +327,22 @@ body.home-page-body .community-post-card {
 
 #navMegaTools .nav-mega-list {
  display: grid;
- grid-template-columns: repeat(3, minmax(12.5rem, max-content));
- column-gap: 5rem;
- row-gap: 1.15rem;
+ grid-template-columns: repeat(3, 15.5rem);
+ column-gap: 2.25rem;
+ row-gap: 1.25rem;
  align-items: start;
+}
+
+#navMegaTools .nav-mega-link {
+ min-width: 0;
+ max-width: none;
+}
+
+#navMegaTools .nav-mega-link-title,
+#navMegaTools .nav-mega-link-desc {
+ overflow: hidden;
+ white-space: nowrap;
+ text-overflow: ellipsis;
 }
 
 .nav-mega-tools-row {
@@ -351,7 +363,7 @@ body.home-page-body .community-post-card {
   grid-template-columns: 1fr;
  }
  #navMegaTools a[href*="server-ip"] {
-  order: 1;
+  order: 10;
  }
 }
 
@@ -369,6 +381,7 @@ body.home-page-body .community-post-card {
  font-weight: 700;
  letter-spacing: 0.02em;
  color: #8ee0ff;
+ text-decoration: none;
  text-shadow: none;
  transition: color 0.2s ease;
 }

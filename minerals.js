@@ -16,6 +16,7 @@
     var sigRows = [];
     var craftMap = {};
     var craftOpen = "";
+    var locOpen = "";
     var noteCounts = {};
     var NOTE_ICON = '<svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M777.6 829.6c0 14.2-11.9 25.8-26.6 25.8H198.7c-14.7 0-26.6-11.6-26.6-25.8V284.3c0-14.2 11.9-25.8 26.6-25.8h354.7v-68H198.7c-52.2 0-94.6 42.1-94.6 93.8v545.3c0 51.7 42.4 93.8 94.6 93.8H751c52.2 0 94.6-42.1 94.6-93.8V478.2h-68v351.4z"></path><path d="M914.4 216.3L864.2 165l-21.1-21.6-29.1-29.8c-6.4-6.5-15.2-10.2-24.3-10.2-9.2 0-17.9 3.7-24.3 10.3l-27.8 28.5-2.5 2.6-304.8 312.7c-0.4 0.4-0.8 0.8-1.2 1.3-0.4 0.5-0.8 0.9-1.2 1.4-0.1 0.1-0.1 0.2-0.2 0.3-0.3 0.4-0.6 0.8-0.9 1.3-0.1 0.1-0.1 0.2-0.2 0.3-0.3 0.5-0.6 0.9-0.9 1.4 0 0.1-0.1 0.1-0.1 0.2l-1.2 2.1-117.3 222.8c-7 13.3-4.4 29.6 6.3 40.1 6.5 6.4 15.1 9.7 23.8 9.7 5.6 0 11.3-1.4 16.5-4.3l217.7-120.5c0.1-0.1 0.3-0.2 0.4-0.2 0.4-0.2 0.7-0.4 1.1-0.7 0.2-0.1 0.4-0.3 0.6-0.4 0.3-0.2 0.6-0.4 1-0.6 0.2-0.1 0.4-0.3 0.6-0.4 0.3-0.2 0.6-0.4 0.9-0.7 0.2-0.2 0.4-0.3 0.6-0.5 0.3-0.2 0.6-0.5 0.9-0.7 0.2-0.2 0.4-0.3 0.5-0.5l0.9-0.9 0.4-0.4L870.4 309l16.3-16.7 27.8-28.5c12.8-13.2 12.8-34.3-0.1-47.5z m-92.7 45.3c-0.3 0.3-1.2 1.1-2.9 1.1-1.1 0-3.2-0.3-5.3-2.5l-42.1-43.1c-3.4-3.5-3.5-8.5-1.3-10.8l16.3-16.7c0.3-0.3 1.1-1.2 2.9-1.2 1.1 0 3.2 0.3 5.3 2.5l42.1 43.1c3.4 3.5 3.5 8.5 1.3 10.8l-1.6 1.6-14.7 15.2z m-103.5-2c1.4 1.7 2.9 3.5 4.5 5.1l42.1 43.1c2 2 4.1 3.9 6.2 5.7L554.9 535.2l-52.8-54 216.1-221.6z m-298 360l42.7-81.2 36.5 37.4-79.2 43.8z"></path></svg>';
     var method = "";
@@ -293,8 +294,9 @@
         box.appendChild(tabs);
 
         var locs = groups[systemKey].slice().sort(function (a, b) {
-            var diff = (chanceOf(b) || 0) - (chanceOf(a) || 0);
-            if (diff) return diff;
+            var av = a.pct != null ? a.pct : (chanceOf(a) || 0);
+            var bv = b.pct != null ? b.pct : (chanceOf(b) || 0);
+            if (bv !== av) return bv - av;
             return text(a.name).localeCompare(text(b.name));
         });
         var size = capacity(box, 250, 78) * 2;
@@ -306,32 +308,51 @@
             var place = placeOf(loc.name);
             var parent = placeOf(loc.parent);
             var card = el("article", "min-loc");
+            card.setAttribute("data-name", loc.name || "");
+            card.setAttribute("data-system", loc.system || "");
+            card.tabIndex = 0;
+            card.setAttribute("role", "button");
             var zhLine = [];
-            if (place.translated) zhLine.push(place.zh);
-            if (parent.translated) zhLine.push(parent.zh);
+        if (place.translated) zhLine.push(place.zh);
+        if (parent.translated) zhLine.push(parent.zh);
+        (loc.aliases || []).forEach(function (alias) {
+            var label = alias.name_zh || locZh(alias.name);
+            if (label && zhLine.indexOf(label) < 0) zhLine.push(label);
+        });
+            if (!zhLine.length && loc.name_zh) zhLine.push(loc.name_zh);
             var enLine = [];
             if (place.en) enLine.push(place.en);
             if (loc.parent && parent.en && parent.en !== place.en) enLine.push(parent.en);
             if (zhLine.length) {
                 card.appendChild(el("div", "min-place-zh", zhLine.join(" · ")));
-                if (enLine.length) card.appendChild(el("div", "min-place-en", enLine.join(" · ")));
             } else {
                 card.appendChild(el("div", "min-place-zh", enLine.join(" · ") || "—"));
             }
             var meta = el("div", "min-loc-meta");
             meta.appendChild(el("span", "min-type", TYPE[loc.type] || loc.type || "—"));
-            var spawn = el("span", "min-loc-stat");
-            spawn.appendChild(el("span", "min-loc-k", "刷新"));
-            spawn.appendChild(el("span", "min-spawn", pct(loc.spawn)));
-            var occur = el("span", "min-loc-stat");
-            occur.appendChild(el("span", "min-loc-k", "出现"));
-            occur.appendChild(el("span", "min-occur", pct(loc.occurrence)));
-            var chance = el("span", "min-loc-stat is-chance");
-            chance.appendChild(el("span", "min-loc-k", "参考"));
-            chance.appendChild(el("span", "min-chance", chanceText(chanceOf(loc))));
-            meta.appendChild(spawn);
-            meta.appendChild(occur);
-            meta.appendChild(chance);
+            if (loc.pct != null) {
+                var share = el("span", "min-loc-stat is-chance");
+                var cap = !!loc.pct_cap;
+                share.title = cap
+                    ? "这种矿在该处矿点里的最高含量，不是挖到它的概率。"
+                    : "这种矿在该处同一采矿组里的构成，不是挖到它的概率。";
+                share.appendChild(el("span", "min-loc-k", cap ? "含量" : "构成"));
+                share.appendChild(el("span", "min-chance", (cap ? "≤" : "") + chanceText(loc.pct)));
+                meta.appendChild(share);
+            } else {
+                var spawn = el("span", "min-loc-stat");
+                spawn.appendChild(el("span", "min-loc-k", "刷新"));
+                spawn.appendChild(el("span", "min-spawn", pct(loc.spawn)));
+                var occur = el("span", "min-loc-stat");
+                occur.appendChild(el("span", "min-loc-k", "出现"));
+                occur.appendChild(el("span", "min-occur", pct(loc.occurrence)));
+                var chance = el("span", "min-loc-stat is-chance");
+                chance.appendChild(el("span", "min-loc-k", "参考"));
+                chance.appendChild(el("span", "min-chance", chanceText(chanceOf(loc))));
+                meta.appendChild(spawn);
+                meta.appendChild(occur);
+                meta.appendChild(chance);
+            }
             card.appendChild(meta);
             grid.appendChild(card);
         });
@@ -394,11 +415,14 @@
     });
     document.addEventListener("click", function (ev) {
         if (ev.target.closest(".min-craft") || ev.target.closest(".min-craft-pop")) return;
+        if (ev.target.closest(".min-loc") || ev.target.closest(".min-loc-pop")) return;
         closeCraft();
+        closeLoc();
     });
     document.addEventListener("keydown", function (ev) {
         if (ev.key === "Escape") {
             closeCraft();
+            closeLoc();
             closeNotes();
         }
     });
@@ -416,11 +440,19 @@
             return;
         }
         var tab = ev.target.closest(".min-system");
-        if (!tab) return;
-        systemKey = tab.getAttribute("data-system");
-        locPage = 0;
-        var item = data.filter(function (row) { return row.slug === selected; })[0];
-        if (item) renderDetail(item);
+        if (tab) {
+            systemKey = tab.getAttribute("data-system");
+            locPage = 0;
+            closeLoc();
+            var item = data.filter(function (row) { return row.slug === selected; })[0];
+            if (item) renderDetail(item);
+            return;
+        }
+        var locCard = ev.target.closest(".min-loc");
+        if (locCard) {
+            ev.stopPropagation();
+            toggleLoc(locCard);
+        }
     });
     document.getElementById("minQuery").addEventListener("input", function () {
         listPage = 0;
@@ -485,6 +517,73 @@
         });
         document.body.appendChild(pop);
         var rect = button.getBoundingClientRect();
+        var scrollX = window.scrollX || window.pageXOffset || 0;
+        var scrollY = window.scrollY || window.pageYOffset || 0;
+        var width = pop.offsetWidth;
+        var height = pop.offsetHeight;
+        var left = rect.left + scrollX;
+        var viewRight = scrollX + window.innerWidth - 12;
+        if (left + width > viewRight) left = viewRight - width;
+        var top = rect.bottom + scrollY + 6;
+        if (rect.bottom + height + 6 > window.innerHeight - 8) top = rect.top + scrollY - height - 6;
+        pop.style.position = "absolute";
+        pop.style.left = Math.max(scrollX + 8, left) + "px";
+        pop.style.top = Math.max(8, top) + "px";
+    }
+    function closeLoc() {
+        locOpen = "";
+        var pop = document.getElementById("minLocPop");
+        if (pop) pop.remove();
+        Array.prototype.forEach.call(document.querySelectorAll(".min-loc.is-on"), function (node) {
+            node.classList.remove("is-on");
+        });
+    }
+    function oresAt(name, system) {
+        var rows = [];
+        data.forEach(function (item) {
+            (item.locations || []).forEach(function (loc) {
+                if (loc.name === name && (loc.system || "") === system) rows.push({ item: item, loc: loc });
+            });
+        });
+        rows.sort(function (a, b) { return (b.loc.pct || 0) - (a.loc.pct || 0); });
+        return rows;
+    }
+    function toggleLoc(card) {
+        var name = card.getAttribute("data-name") || "";
+        var system = card.getAttribute("data-system") || "";
+        var key = system + "|" + name;
+        if (locOpen === key) {
+            closeLoc();
+            return;
+        }
+        closeLoc();
+        closeCraft();
+        var rows = oresAt(name, system);
+        if (!rows.length) return;
+        locOpen = key;
+        card.classList.add("is-on");
+        var place = placeOf(name);
+        var title = (rows[0].loc.name_zh || (place.translated ? place.zh : "") || name);
+        var pop = el("div", "min-craft-pop min-loc-pop");
+        pop.id = "minLocPop";
+        pop.appendChild(el("p", "min-craft-title", title + " · 可挖矿物"));
+        rows.forEach(function (row) {
+            var btn = el("button", "min-craft-link");
+            btn.type = "button";
+            var cap = !!row.loc.pct_cap;
+            var label = el("span", "min-place-zh", row.item.name_zh || row.item.name);
+            if (row.loc.pct != null) label.appendChild(el("span", "min-craft-spec", (cap ? "≤" : "") + chanceText(row.loc.pct)));
+            btn.appendChild(label);
+            btn.appendChild(el("span", "min-place-en", cap ? "含量上限" : "组内构成"));
+            btn.addEventListener("click", function (ev) {
+                ev.stopPropagation();
+                closeLoc();
+                select(row.item.slug);
+            });
+            pop.appendChild(btn);
+        });
+        document.body.appendChild(pop);
+        var rect = card.getBoundingClientRect();
         var scrollX = window.scrollX || window.pageXOffset || 0;
         var scrollY = window.scrollY || window.pageYOffset || 0;
         var width = pop.offsetWidth;
@@ -793,6 +892,15 @@
             sigRows = (parts[2] && parts[2].minerals) || [];
             noteCounts = (parts[3] && parts[3].counts) || {};
             data = body.minerals || [];
+            return fetchJson("/api/minerals/scmdb-locations", "minerals-scmdb-locations.json").then(function (mine) {
+                var ores = (mine && mine.ores) || {};
+                data.forEach(function (item) {
+                    var key = text(item.name).replace(/\s*\((Ore|Raw)\)$/i, "").replace(/^Raw\s+/i, "").trim().toLowerCase();
+                    if (ores[key] && ores[key].length) item.locations = ores[key];
+                });
+            }).catch(function () {});
+        })
+        .then(function () {
             renderChart();
             var hash = decodeURIComponent(location.hash || "").replace(/^#/, "");
             var hit = data.filter(function (row) { return row.slug === hash; })[0];

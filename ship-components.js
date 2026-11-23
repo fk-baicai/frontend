@@ -14,106 +14,95 @@
     var PAGE_SIZE = 20;
     var ARMOR_PAGE_SIZE = 1000;
     var LOAD_MORE_ROOT_MARGIN = 240;
-    var GROUP_META = IS_EQUIPMENT_PAGE
-        ? {
-              fps_weapon: {
-                  label_zh: '武器',
-                  kicker: 'WEAPONS',
-                  lead: ['手枪', '冲锋枪', '突击步枪', '狙击枪', '霰弹枪', '机枪', '发射器', '十字弩', '投掷物', '近战', '工具/杂项'],
-              },
-              fps_armor: {
-                  label_zh: '护甲',
-                  kicker: 'ARMOR',
-                  lead: ['头盔', '胸甲', '腿甲', '臂甲', '背包', '基底服'],
-              },
-              fps_magazine: {
-                  label_zh: '武器配件',
-                  kicker: 'ATTACHMENTS',
-                  lead: ['弹匣', '瞄具', '枪口', '下挂', '实用配件', '其他配件'],
-              },
-          }
-        : {
-              component: {
-                  label_zh: '舰船组件',
-                  kicker: 'COMPONENTS',
-                  lead: ['散热', '电源', '护盾', '量子驱动器', '跳跃驱动器', '雷达'],
-              },
-              weapon: {
-                  label_zh: '舰船武器',
-                  kicker: 'WEAPONS',
-                  lead: ['舰炮', '导弹', '导弹架', '舰船炮台', 'EMP'],
-              },
-              mining: {
-                  label_zh: '舰船矿头',
-                  kicker: 'MINING',
-                  lead: ['矿头', '模组'],
-              },
-              salvage: {
-                  label_zh: '打捞模组',
-                  kicker: 'SALVAGE',
-                  lead: ['刮削模块'],
-              },
-              fuel_nozzle: {
-                  label_zh: '燃料喷嘴',
-                  kicker: 'FUEL NOZZLES',
-                  lead: ['燃料喷嘴'],
-              },
-          };
-    var DEFAULT_TYPE_BY_GROUP = IS_EQUIPMENT_PAGE
-        ? {
-              fps_weapon: 'weapon_pistol',
-              fps_armor: 'armor_helmet',
-              fps_magazine: 'magazine',
-          }
-        : {
-              component: 'cooling',
-              weapon: 'ship_weapon',
-              mining: 'mining_laser',
-              salvage: 'salvage_scraper',
-              fuel_nozzle: 'fuel_nozzle',
-          };
-    var GROUP_ORDER = IS_EQUIPMENT_PAGE
-        ? ['fps_weapon', 'fps_magazine', 'fps_armor']
-        : ['component', 'weapon', 'mining', 'salvage', 'fuel_nozzle'];
-    var TYPE_ORDER_BY_GROUP = IS_EQUIPMENT_PAGE
-        ? {
-              fps_weapon: [
-                  'weapon_pistol',
-                  'weapon_smg',
-                  'weapon_rifle',
-                  'weapon_sniper',
-                  'weapon_shotgun',
-                  'weapon_lmg',
-                  'weapon_launcher',
-                  'weapon_crossbow',
-                  'weapon_throwable',
-                  'weapon_melee',
-                  'weapon_misc',
-              ],
-              fps_armor: [
-                  'armor_helmet',
-                  'armor_torso',
-                  'armor_legs',
-                  'armor_arms',
-                  'armor_backpack',
-                  'armor_undersuit',
-              ],
-              fps_magazine: [
-                  'magazine',
-                  'attachment_ironsight',
-                  'attachment_barrel',
-                  'attachment_bottom',
-                  'attachment_utility',
-                  'attachment_other',
-              ],
-          }
-        : {
-              component: ['cooling', 'power', 'shield', 'quantum', 'jump', 'radar'],
-              weapon: ['ship_weapon', 'ship_missile', 'missile_rack', 'ship_turret', 'ship_emp'],
-              mining: ['mining_laser', 'ship_module'],
-              salvage: ['salvage_scraper'],
-              fuel_nozzle: ['fuel_nozzle'],
-          };
+    var GROUP_META = {
+        component: {
+            label_zh: '舰船组件',
+            kicker: 'COMPONENTS',
+            lead: ['散热', '电源', '护盾', '量子驱动器', '跳跃驱动器', '雷达'],
+        },
+        weapon: {
+            label_zh: '舰船武器',
+            kicker: 'WEAPONS',
+            lead: ['舰炮', '导弹', '导弹架', '舰船炮台', 'EMP'],
+        },
+        mining: {
+            label_zh: '舰船矿头',
+            kicker: 'MINING',
+            lead: ['矿头', '模组'],
+        },
+        salvage: {
+            label_zh: '打捞模组',
+            kicker: 'SALVAGE',
+            lead: ['刮削模块'],
+        },
+        fuel_nozzle: {
+            label_zh: '燃料喷嘴',
+            kicker: 'FUEL NOZZLES',
+            lead: ['燃料喷嘴'],
+        },
+        fps_weapon: {
+            label_zh: '个人武器',
+            kicker: 'WEAPONS',
+            lead: ['手枪', '冲锋枪', '突击步枪', '狙击枪', '霰弹枪', '机枪', '发射器', '十字弩', '投掷物', '近战', '工具/杂项'],
+        },
+        fps_magazine: {
+            label_zh: '武器配件',
+            kicker: 'ATTACHMENTS',
+            lead: ['弹匣', '瞄具', '枪口', '下挂', '实用配件', '其他配件'],
+        },
+        fps_armor: {
+            label_zh: '个人护甲',
+            kicker: 'ARMOR',
+            lead: ['头盔', '胸甲', '腿甲', '臂甲', '背包', '基底服'],
+        },
+    };
+    var DEFAULT_TYPE_BY_GROUP = {
+        component: 'cooling',
+        weapon: 'ship_weapon',
+        mining: 'mining_laser',
+        salvage: 'salvage_scraper',
+        fuel_nozzle: 'fuel_nozzle',
+        fps_weapon: 'weapon_pistol',
+        fps_armor: 'armor_helmet',
+        fps_magazine: 'magazine',
+    };
+    var GROUP_ORDER = ['component', 'weapon', 'mining', 'salvage', 'fuel_nozzle', 'fps_weapon', 'fps_magazine', 'fps_armor'];
+    var TYPE_ORDER_BY_GROUP = {
+        component: ['cooling', 'power', 'shield', 'quantum', 'jump', 'radar'],
+        weapon: ['ship_weapon', 'ship_missile', 'missile_rack', 'ship_turret', 'ship_emp'],
+        mining: ['mining_laser', 'ship_module'],
+        salvage: ['salvage_scraper'],
+        fuel_nozzle: ['fuel_nozzle'],
+        fps_weapon: [
+            'weapon_pistol',
+            'weapon_smg',
+            'weapon_rifle',
+            'weapon_sniper',
+            'weapon_shotgun',
+            'weapon_lmg',
+            'weapon_launcher',
+            'weapon_crossbow',
+            'weapon_throwable',
+            'weapon_melee',
+            'weapon_misc',
+        ],
+        fps_armor: [
+            'armor_helmet',
+            'armor_torso',
+            'armor_legs',
+            'armor_arms',
+            'armor_backpack',
+            'armor_undersuit',
+        ],
+        fps_magazine: [
+            'magazine',
+            'attachment_ironsight',
+            'attachment_barrel',
+            'attachment_bottom',
+            'attachment_utility',
+            'attachment_other',
+        ],
+    };
     var TYPE_FALLBACK_LABELS = {
         cooling: '散热',
         power: '电源',
@@ -165,7 +154,7 @@
 
     function isBrowsableTypeKey(typeKey) {
         if (LEGACY_AGGREGATE_TYPES[typeKey]) return false;
-        if (IS_EQUIPMENT_PAGE && typeKey === 'attachment_missile') return false;
+        if (isFpsGroupKey(state.group) && typeKey === 'attachment_missile') return false;
         return true;
     }
 
@@ -176,7 +165,7 @@
     function isGroupForCurrentPage(groupKey) {
         var key = String(groupKey || '').trim();
         if (!key || key === 'other' || key === 'module') return false;
-        return IS_EQUIPMENT_PAGE ? isFpsGroupKey(key) : !isFpsGroupKey(key);
+        return Object.prototype.hasOwnProperty.call(GROUP_META, key);
     }
 
     function resolveTypeLabel(typeKey, typeObj) {
@@ -221,8 +210,9 @@
                 state.group = 'fps_magazine';
             else if (state.type === 'personal_weapon') state.type = 'weapon_pistol';
         }
+        if (state.group === 'ship_catalog') return;
         if (GROUP_ORDER.indexOf(state.group) < 0) {
-            state.group = IS_EQUIPMENT_PAGE ? 'fps_weapon' : 'component';
+            state.group = 'component';
         }
     }
 
@@ -241,10 +231,10 @@
         var nextGroups = Object.assign({}, GROUP_META);
         Object.keys(groups || {}).forEach(function (key) {
             if (!isGroupForCurrentPage(key)) return;
-            nextGroups[key] = groups[key];
+            nextGroups[key] = Object.assign({}, groups[key], GROUP_META[key] ? { label_zh: GROUP_META[key].label_zh } : {});
         });
         delete nextGroups.module;
-        if (!IS_EQUIPMENT_PAGE && !nextGroups.mining) {
+        if (!nextGroups.mining) {
             nextGroups.mining = GROUP_META.mining;
         }
         Object.keys(nextGroups).forEach(function (key) {
@@ -517,11 +507,11 @@
     }
 
     function showDamageTypeFacet() {
-        return IS_EQUIPMENT_PAGE && state.group === 'fps_weapon';
+        return state.group === 'fps_weapon';
     }
 
     function showSignalTypeFacet() {
-        return !IS_EQUIPMENT_PAGE && state.type === 'ship_missile';
+        return state.type === 'ship_missile';
     }
 
     function itemMissileSignalTypeRaw(item) {
@@ -1261,15 +1251,10 @@
         return isShipComponentsListPath(pathname) || isEquipmentListPath(pathname);
     }
 
-    function catalogListPathnameForGroup(groupKey) {
-        var wantEquip = isFpsGroupKey(groupKey);
+    function catalogListPathnameForGroup() {
         var p = String(window.location.pathname || '');
-        var html = /\.html$/i.test(p);
-        if (wantEquip) {
-            if (isEquipmentListPath(p)) return p;
-            return html ? p.replace(/[^/]+$/, 'personal-equipment.html') : '/personal-equipment';
-        }
         if (isShipComponentsListPath(p)) return p;
+        var html = /\.html$/i.test(p);
         return html ? p.replace(/[^/]+$/, 'ship-components.html') : '/ship-components';
     }
 
@@ -2361,7 +2346,7 @@
     }
 
     function getPageSize() {
-        if (IS_EQUIPMENT_PAGE && (state.group === 'fps_armor' || state.group === 'fps_weapon' || state.group === 'fps_magazine')) {
+        if (state.group === 'fps_armor' || state.group === 'fps_weapon' || state.group === 'fps_magazine') {
             return ARMOR_PAGE_SIZE;
         }
         return PAGE_SIZE;
@@ -2467,11 +2452,12 @@
                 group === 'equipment' ||
                 group === 'fps_weapon' ||
                 group === 'fps_armor' ||
-                group === 'fps_magazine'
+                group === 'fps_magazine' ||
+                group === 'ship_catalog'
             ) {
                 state.group = group === 'equipment' ? 'fps_weapon' : group;
             }
-            if (type && group !== 'module') state.type = type;
+            if (type && group !== 'module' && group !== 'ship_catalog') state.type = type;
             if (!type && state.group && DEFAULT_TYPE_BY_GROUP[state.group]) {
                 state.type = DEFAULT_TYPE_BY_GROUP[state.group];
             }
@@ -2503,6 +2489,7 @@
     }
 
     function ensureTypeInGroup() {
+        if (state.group === 'ship_catalog') return;
         var filtered = typesForGroup(state.group);
         var keys = typeKeysForGroup(state.group, filtered);
         if (!keys.length) {
@@ -2591,6 +2578,13 @@
     }
 
     function updateHero() {
+        if (state.group === 'ship_catalog') {
+            if (els.heroKicker) els.heroKicker.textContent = 'SHIPS';
+            if (els.heroTitle) els.heroTitle.textContent = '舰船价格表';
+            document.title = '舰船价格表 · USSXC';
+            if (els.leadNav) els.leadNav.innerHTML = '';
+            return;
+        }
         var meta = GROUP_META[state.group] || GROUP_META.component;
         if (els.heroKicker) els.heroKicker.textContent = meta.kicker;
         if (els.heroTitle) els.heroTitle.textContent = meta.label_zh;
@@ -2683,6 +2677,22 @@
             });
             els.groupTabs.appendChild(btn);
         });
+        var catalog = document.createElement('button');
+        catalog.type = 'button';
+        catalog.className = 'sc-tab' + (state.group === 'ship_catalog' ? ' is-active' : '');
+        catalog.setAttribute('role', 'tab');
+        catalog.setAttribute('aria-selected', state.group === 'ship_catalog' ? 'true' : 'false');
+        catalog.textContent = '舰船价格表';
+        catalog.addEventListener('click', function () {
+            if (state.group === 'ship_catalog') return;
+            state.group = 'ship_catalog';
+            updateHero();
+            updateUrlState();
+            syncBodyMode();
+            renderGroupTabs();
+            renderTabs();
+        });
+        els.groupTabs.appendChild(catalog);
     }
 
     function renderTabs() {
@@ -2730,9 +2740,11 @@
     }
 
     function syncBodyMode() {
-        var cls = (IS_EQUIPMENT_PAGE ? 'personal-equipment-body' : 'ship-components-body') + ' sc-group-' + state.group + ' sc-type-' + state.type;
+        var cls = (isFpsGroupKey(state.group) ? 'personal-equipment-body' : 'ship-components-body') + ' sc-group-' + state.group + ' sc-type-' + state.type;
         if (isWikiMode()) cls += ' sc-source-wiki';
         document.body.className = cls;
+        var shipCatalog = document.getElementById('scShipCatalog');
+        if (shipCatalog) shipCatalog.hidden = state.group !== 'ship_catalog';
         applyCatalogView();
         rebuildTableStructure();
         syncTableColumns();
@@ -2981,7 +2993,7 @@
         probeWrap.className = 'sc-row-actions';
         probeWrap.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;pointer-events:none;';
         document.body.appendChild(probeWrap);
-        if (IS_EQUIPMENT_PAGE) {
+        if (isFpsGroupKey(state.group)) {
             var loadoutProbe = document.createElement('button');
             loadoutProbe.type = 'button';
             loadoutProbe.className = 'sc-loadout-btn';
@@ -3611,7 +3623,7 @@
     }
 
     function isArmorVariantGroupingEnabled() {
-        return IS_EQUIPMENT_PAGE && (state.group === 'fps_armor' || state.group === 'fps_weapon');
+        return state.group === 'fps_armor' || state.group === 'fps_weapon';
     }
 
     var ARMOR_SLUG_BASE_ANCHORS = [
@@ -4812,7 +4824,7 @@
             }
             wireNameCellImagePreview(td, item);
             if (
-                IS_EQUIPMENT_PAGE &&
+                isFpsGroupKey(state.group) &&
                 window.ShipComponentWeaponLoadout &&
                 window.ShipComponentWeaponLoadout.isWeaponLoadoutEligible(item)
             ) {
@@ -4895,7 +4907,7 @@
             var actions = document.createElement('div');
             actions.className = 'sc-row-actions';
             if (
-                IS_EQUIPMENT_PAGE &&
+                isFpsGroupKey(state.group) &&
                 window.ShipComponentWeaponLoadout &&
                 window.ShipComponentWeaponLoadout.isWeaponLoadoutEligible(item)
             ) {
@@ -4947,7 +4959,7 @@
             tr.appendChild(renderRowCell(structItem.key, item, tr, expanded));
         });
         if (
-            IS_EQUIPMENT_PAGE &&
+            isFpsGroupKey(state.group) &&
             window.ShipComponentWeaponLoadout &&
             window.ShipComponentWeaponLoadout.isWeaponLoadoutEligible(item)
         ) {
@@ -5041,7 +5053,7 @@
     function loadPurchaseLocationsIntoRow(row, item) {
         var body = row.querySelector('[data-acquire-shops]');
         if (!body || !item) return;
-        if (Array.isArray(item.purchase_locations)) return;
+        if (Array.isArray(item.purchase_locations) && item.purchase_locations.length) return;
         var id = resolveComponentId(item);
         if (!id) {
             body.innerHTML = renderAcquireLocationsHtml([]);
@@ -5049,7 +5061,8 @@
         }
         body.innerHTML = '<p class="sc-acquire-loading">正在读取购买地点…</p>';
         fetchJsonWithRetry(apiUrl('/api/sc/components/' + encodeURIComponent(id)))
-            .then(function (data) {
+            .then(function (result) {
+                var data = result && result.data ? result.data : result;
                 var full = data && data.item;
                 item.purchase_locations = (full && full.purchase_locations) || [];
                 if (full && full.cheapest_location) item.cheapest_location = full.cheapest_location;
@@ -5363,6 +5376,12 @@
     }
 
     async function loadList() {
+        if (state.group === 'ship_catalog') {
+            updateUrlState();
+            syncBodyMode();
+            updateHero();
+            return;
+        }
         if (!els.body && !els.cardGrid) return;
         abortPendingFetches();
         updateUrlState();

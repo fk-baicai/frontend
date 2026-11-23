@@ -42,15 +42,9 @@
                     <span class="nav-dropdown-caret" aria-hidden="true"></span>
                 </button>
             </div>
-            <div class="nav-dropdown nav-tools-gated" id="navToolsWrap">
-                <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true" data-mega-target="navMegaTools" aria-controls="navMegaTools">
-                    工具
-                    <span class="nav-dropdown-caret" aria-hidden="true"></span>
-                </button>
-            </div>
-            <div class="nav-dropdown" id="navSalesWrap">
-                <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true" data-mega-target="navMegaSales" aria-controls="navMegaSales">
-                    终端
+            <div class="nav-dropdown">
+                <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true" data-mega-target="navMegaBlueprint" aria-controls="navMegaBlueprint">
+                    蓝图
                     <span class="nav-dropdown-caret" aria-hidden="true"></span>
                 </button>
             </div>
@@ -66,17 +60,18 @@
                     <span class="nav-dropdown-caret" aria-hidden="true"></span>
                 </button>
             </div>
-            
+            <div class="nav-dropdown nav-tools-gated" id="navToolsWrap">
+                <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true" data-mega-target="navMegaTools" aria-controls="navMegaTools">
+                    工具
+                    <span class="nav-dropdown-caret" aria-hidden="true"></span>
+                </button>
+            </div>
         </div>
         </div>
         <div class="nav-right">
             <button type="button" class="nav-login-trigger" id="navLoginBtn" onclick="openLoginDrawer()" aria-label="登录或注册">
                 <span id="navLoginGuestWrap" class="nav-login-guest-inner">
-                    <span class="nav-login-label">
-                        <svg class="nav-login-icon" viewBox="0 0 1024 1024" aria-hidden="true" focusable="false">
-                            <path d="M324.224 497.707a213.333 213.333 0 1 1 145.11 56.96 298.667 298.667 0 0 0-298.667 298.666H85.333a384.128 384.128 0 0 1 238.891-355.626z m145.11-28.374a128 128 0 1 0 0-256 128 128 0 0 0 0 256z m213.333 213.334v-128H768v128h128V768H768v128h-85.333V768h-128v-85.333h128z"></path>
-                        </svg>
-                    </span>
+                    <span class="nav-login-label">登录/注册</span>
                 </span>
                 <span id="navLoginAvatarWrap" class="nav-login-avatar-inner is-hidden">
                     <img id="navUserAvatarImg" class="nav-user-avatar" src="" alt="">
@@ -93,22 +88,12 @@
             </div>
         </div>
     </div>
-    <div id="navMegaSales" class="nav-mega-panel" role="region" aria-label="终端" hidden>
-        <div class="nav-mega-inner">
-            <div class="nav-mega-col">
-                <ul class="nav-mega-list">
-                    <li><a href="/sales-terminals" class="nav-mega-link"><span class="nav-mega-link-title">终端</span><span class="nav-mega-link-desc">星系 · 区域 · 站点 · 在售物品</span></a></li>
-                </ul>
-            </div>
-        </div>
-    </div>
     <div id="navMegaShip" class="nav-mega-panel" role="region" aria-label="舰船" hidden>
         <div class="nav-mega-inner">
             <div class="nav-mega-col">
                 <ul class="nav-mega-list">
                     <li class="nav-mega-link-row"><a href="ship-components?group=component" class="nav-mega-link" data-nav-ship-group="component"><span class="nav-mega-link-title">舰船组件</span><span class="nav-mega-link-desc">散热 · 电源 · 护盾 · 量子驱动器 · 跳跃驱动器 · 雷达</span></a><a href="ship-components?group=weapon" class="nav-mega-link" data-nav-ship-group="weapon"><span class="nav-mega-link-title">舰船武器</span><span class="nav-mega-link-desc">舰炮 · 导弹 · 导弹架 · 舰船炮台</span></a><a href="ship-components?group=fuel_nozzle" class="nav-mega-link" data-nav-ship-group="fuel_nozzle"><span class="nav-mega-link-title">燃料喷嘴</span><span class="nav-mega-link-desc">氢燃料 · 量子燃料</span></a></li>
                     <li class="nav-mega-link-row"><a href="ship-components?group=mining" class="nav-mega-link" data-nav-ship-group="mining"><span class="nav-mega-link-title">舰船矿头</span><span class="nav-mega-link-desc">矿头 · 模组</span></a><a href="ship-components?group=salvage" class="nav-mega-link" data-nav-ship-group="salvage"><span class="nav-mega-link-title">打捞模组</span><span class="nav-mega-link-desc">刮削模块</span></a></li>
-                    <li><a href="ship-catalog" class="nav-mega-link" id="navMegaLinkShipCatalog"><span class="nav-mega-link-title">舰船价格表</span><span class="nav-mega-link-desc">现金 · aUEC · 购买地点</span></a></li>
                 </ul>
             </div>
         </div>
@@ -117,31 +102,34 @@
         <div class="nav-mega-inner">
             <div class="nav-mega-col">
                 <ul class="nav-mega-list">
-                    <li class="nav-mega-link-row"><a href="personal-equipment?group=fps_weapon" class="nav-mega-link" data-nav-equipment-group="fps_weapon"><span class="nav-mega-link-title">个人武器</span><span class="nav-mega-link-desc">手枪 · 冲锋枪 · 突击步枪 · 狙击枪 · 霰弹枪 · 机枪 · ...</span></a><a href="personal-equipment?group=fps_magazine" class="nav-mega-link" data-nav-equipment-group="fps_magazine"><span class="nav-mega-link-title">武器配件</span><span class="nav-mega-link-desc">弹匣 · 瞄具 · 枪口 · 下挂 · 实用配件</span></a></li>
+                    <li class="nav-mega-link-row"><a href="personal-equipment?group=fps_weapon" class="nav-mega-link" data-nav-equipment-group="fps_weapon"><span class="nav-mega-link-title">个人武器</span><span class="nav-mega-link-desc">手枪 · 冲锋枪 · 突击步枪 · 狙击枪 · 霰弹枪 · 机枪 · ...</span></a><a href="personal-equipment?group=fps_magazine" class="nav-mega-link" data-nav-equipment-group="fps_magazine"><span class="nav-mega-link-title">武器配件</span><span class="nav-mega-link-desc">弹匣 · 瞄具 · 枪口 · 下挂 · 实用配件 · 发射器导弹</span></a></li>
                     <li><a href="personal-equipment?group=fps_armor" class="nav-mega-link" data-nav-equipment-group="fps_armor"><span class="nav-mega-link-title">个人护甲</span><span class="nav-mega-link-desc">头盔 · 胸甲 · 腿甲 · 臂甲 · 背包 · 基底服</span></a></li>
                 </ul>
             </div>
         </div>
     </div>
-    
+    <div id="navMegaBlueprint" class="nav-mega-panel" role="region" aria-label="蓝图" hidden>
+        <div class="nav-mega-inner">
+            <div class="nav-mega-col">
+                <ul class="nav-mega-list">
+                    <li><a href="blueprint-crafting.html" class="nav-mega-link" data-nav-blueprint-page><span class="nav-mega-link-title">蓝图制造</span><span class="nav-mega-link-desc">选择蓝图 · 配置材料品质 · 模拟成品属性</span></a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
     <div id="navMegaTools" class="nav-mega-panel" role="region" aria-label="工具" hidden>
         <div class="nav-mega-inner">
             <div class="nav-mega-col">
                 <ul class="nav-mega-list">
                     <li class="nav-mega-tools-row">
-                        <a href="blueprint-crafting.html" class="nav-mega-link" data-nav-blueprint-page><span class="nav-mega-link-title">蓝图制造</span><span class="nav-mega-link-desc">选择蓝图 · 配置材料品质 · 模拟成品属性</span></a>
                         <a href="executive-hangar.html" class="nav-mega-link"><span class="nav-mega-link-title">行政机库</span><span class="nav-mega-link-desc">Pyro 行政机库周期与插卡窗口</span></a>
-                    </li>
-                    <li class="nav-mega-tools-row">
                         <a href="server-ip.html" class="nav-mega-link"><span class="nav-mega-link-title">服务器 IP</span><span class="nav-mega-link-desc">服务器运行状态/IP地址</span></a>
-                        <a class="nav-mega-link" href="/minerals"><span class="nav-mega-link-title">矿物扫描</span><span class="nav-mega-link-desc">矿种 · 扫描信号 · 可挖位置</span></a>
-                        <a class="nav-mega-link" href="cargo-grid.html"><span class="nav-mega-link-title">货物网格</span><span class="nav-mega-link-desc">货舱格子 · 按 SCU 查看摆放</span></a>
                     </li>
-                    </ul>
+                    <li><a href="rsi-funding.html" class="nav-mega-link"><span class="nav-mega-link-title">资金统计</span><span class="nav-mega-link-desc">RSI 众筹资金与玩家数量</span></a></li>
+                </ul>
             </div>
         </div>
     </div>
-    
     </header>
     <script>
         (function () {
@@ -190,6 +178,7 @@
                 <button type="button" class="market-trades-tab" data-tab="purchases" role="tab">我的购买</button>
                 <button type="button" class="market-trades-tab" data-tab="incoming" role="tab">收到订单</button>
                 <button type="button" class="market-trades-tab" data-tab="reviews" role="tab">评价</button>
+                <button type="button" class="market-trades-tab" data-tab="chat" role="tab">聊天</button>
             </div>
 
             <div class="market-trades-panel market-trades-grid" id="marketTradesPanel" role="tabpanel"></div>
@@ -234,23 +223,6 @@
                                     <textarea id="marketItemInfoInput" rows="3" maxlength="500" placeholder="成色、改装、备注…"></textarea>
                                 </label>
                             </div>
-
-                            <div class="market-field" id="marketContactField">
-                                <label class="market-inline-field" for="marketContactInput">
-                                    <span class="market-field__label">联系方式</span>
-                                    <input type="text" id="marketContactInput" maxlength="120" placeholder="邮箱、QQ 或其他联系方式" autocomplete="off">
-                                </label>
-                                <div class="market-contact-visibility">
-                                    <span class="market-field__label">详情页展示</span>
-                                    <div class="market-contact-switch-row">
-                                        <button type="button" class="market-switch" id="marketContactPublicSwitch" role="switch" aria-checked="false" aria-label="公开展示联系方式">
-                                            <span class="market-switch__track" aria-hidden="true"><span class="market-switch__thumb"></span></span>
-                                        </button>
-                                        <span class="market-contact-switch-label" id="marketContactPublicSwitchLabel">脱敏</span>
-                                    </div>
-                                </div>
-                                <p class="market-field__hint market-field__hint--compact" id="marketContactHint">脱敏展示；确认购买后可见完整信息</p>
-                            </div>
                         </div>
 
                         <div class="market-form__col market-form__col--details">
@@ -277,13 +249,10 @@
                                 <div id="marketLocSuggest" class="market-suggest" hidden></div>
                             </div>
 
-                            <div class="market-cat-block" id="marketCategoryRow">
-                                <div class="market-field">
+                            <div class="market-field">
+                                <label class="market-inline-field" for="marketCategorySelect">
                                     <span class="market-field__label">物品分类</span>
-                                    <div class="market-seg market-seg--chips" id="marketCategorySeg" role="group" aria-label="物品分类"></div>
-                                </div>
-                                <label class="market-select-proxy" for="marketCategorySelect">
-                                    <select id="marketCategorySelect" tabindex="-1" aria-hidden="true">
+                                    <select id="marketCategorySelect">
                                         <option value="">请选择分类</option>
                                         <option value="component">舰船组件</option>
                                         <option value="weapon">舰船武器</option>
@@ -294,13 +263,6 @@
                                         <option value="gift" id="marketGiftCategoryOption" hidden>礼物</option>
                                     </select>
                                 </label>
-                                <div class="market-field" id="marketTypeField" hidden>
-                                    <span class="market-field__label">子分类</span>
-                                    <div class="market-seg market-seg--chips" id="marketTypeSeg" role="group" aria-label="子分类"></div>
-                                    <select id="marketTypeSelect" class="market-select-proxy" tabindex="-1" aria-hidden="true">
-                                        <option value="">请选择子分类</option>
-                                    </select>
-                                </div>
                             </div>
 
                             <div class="market-field" id="marketGiftLinkField" hidden>
@@ -320,29 +282,29 @@
                             <div class="market-row-2 market-row-2--controls" id="marketQtyPriceRow">
                                 <label class="market-inline-field" id="marketPriceField">
                                     <span class="market-field__label">报价 (aUEC)</span>
-                                    <input type="number" id="marketPriceInput" class="market-control" min="0" step="1" inputmode="numeric">
+                                    <input type="number" id="marketPriceInput" class="market-control" min="0" step="1" placeholder="120">
+                                </label>
+                                <label class="market-inline-field" id="marketStockField" hidden>
+                                    <span class="market-field__label">我方总数</span>
+                                    <input type="number" id="marketStockInput" class="market-control" min="1" step="1" value="1">
                                 </label>
                                 <label class="market-inline-field" id="marketGiveQtyField">
-                                    <span class="market-field__label" id="marketQtyLabel">单次数量</span>
-                                    <input type="number" id="marketQtyInput" class="market-control" min="1" step="1" inputmode="numeric">
-                                </label>
-                                <label class="market-inline-field" id="marketStockField">
-                                    <span class="market-field__label" id="marketStockLabel">库存</span>
-                                    <input type="number" id="marketStockInput" class="market-control" min="1" step="1" inputmode="numeric">
+                                    <span class="market-field__label" id="marketQtyLabel">数量</span>
+                                    <input type="number" id="marketQtyInput" class="market-control" min="1" step="1" value="1">
                                 </label>
                                 <label class="market-inline-field" id="marketWantQtyField" hidden>
                                     <span class="market-field__label" id="marketWantQtyLabel">换取数量</span>
-                                    <input type="number" id="marketWantQtyInput" class="market-control" min="1" step="1" inputmode="numeric">
+                                    <input type="number" id="marketWantQtyInput" class="market-control" min="1" step="1" value="1">
                                 </label>
                             </div>
-                            <p class="market-field__hint" id="marketBarterQtyHint">单次数量是买家每次购买拿到的件数。库存是你能卖出的总件数。报价是每一件的 aUEC。</p>
+                            <p class="market-field__hint" id="marketBarterQtyHint" hidden>我方总数是库存。给出数量 / 换取数量是单次比例。</p>
 
                             <div class="market-field">
                                 <span class="market-field__label">每日交易时段</span>
                                 <div class="market-time-range">
-                                    <input type="time" id="marketTradeTimeStart" value="00:00" step="60">
+                                    <input type="time" id="marketTradeTimeStart" value="20:00" step="900">
                                     <span class="market-time-range__sep">至</span>
-                                    <input type="time" id="marketTradeTimeEnd" value="23:59" step="60">
+                                    <input type="time" id="marketTradeTimeEnd" value="21:00" step="900">
                                 </div>
                                 <p class="market-field__hint">挂单有效期内，每天在此时间段内可约定交易</p>
                             </div>
@@ -378,13 +340,10 @@
                                     <button type="button" class="market-product-media__reset" id="marketWantImageRemove" hidden>恢复默认图</button>
                                 </div>
                             </div>
-                            <div class="market-cat-block" id="marketWantCategoryRow">
-                                <div class="market-field">
+                            <div class="market-field">
+                                <label class="market-inline-field" for="marketWantCategorySelect">
                                     <span class="market-field__label">换取物品分类</span>
-                                    <div class="market-seg market-seg--chips" id="marketWantCategorySeg" role="group" aria-label="换取物品分类"></div>
-                                </div>
-                                <label class="market-select-proxy" for="marketWantCategorySelect">
-                                    <select id="marketWantCategorySelect" tabindex="-1" aria-hidden="true">
+                                    <select id="marketWantCategorySelect">
                                         <option value="">请选择分类</option>
                                         <option value="component">舰船组件</option>
                                         <option value="weapon">舰船武器</option>
@@ -394,13 +353,6 @@
                                         <option value="other">其他</option>
                                     </select>
                                 </label>
-                                <div class="market-field" id="marketWantTypeField" hidden>
-                                    <span class="market-field__label">换取子分类</span>
-                                    <div class="market-seg market-seg--chips" id="marketWantTypeSeg" role="group" aria-label="换取子分类"></div>
-                                    <select id="marketWantTypeSelect" class="market-select-proxy" tabindex="-1" aria-hidden="true">
-                                        <option value="">请选择子分类</option>
-                                    </select>
-                                </div>
                             </div>
                             <div class="market-row-2 market-row-2--controls">
                                 <label class="market-inline-field" for="marketWantQualityInput">
@@ -439,7 +391,7 @@
                 <button type="button" class="market-modal__close" id="marketTradesCompleteClose" aria-label="关闭">&times;</button>
             </header>
             <div class="market-modal__body market-trades-complete-form">
-                <p class="market-field__hint">为卖家打分并写下评语，即可完成这笔交易。</p>
+                <p class="market-field__hint">请在游戏内完成物品交割，并确认已上传转账截图与卖家交易凭证后，为卖家评分。凭证图片单张不超过 4M，系统会压缩为 WebP。</p>
                 <div class="market-field">
                     <span class="market-field__label">评价（1-5 星）</span>
                     <div class="market-trades-stars" id="marketTradesStars" role="radiogroup" aria-label="评分">
@@ -498,20 +450,19 @@
     <script src="login-drawer-mount.js"></script>
     <script src="home-boot.js"></script>
     <script defer src="pw-toggle-icons.js"></script>
-    <script src="api-error.js?v=7" defer></script>
+    <script src="api-error.js?v=4" defer></script>
     <script src="auth-api.js" defer></script>
-    <script src="auth-session-sync.js?v=20261115b" defer></script>
+    <script src="auth-session-sync.js" defer></script>
     <script defer src="rsi-client.js?v=20260827b"></script>
     <script defer src="rsi-sync.js"></script>
     <script defer src="home-app.js?v=20261122a"></script>
-    <script src="nav-dropdown.js" defer></script>
-    <script src="nav-auth-tools.js?v=3" defer></script>
+    <script src="nav-dropdown.js?v=9" defer></script>
+    <script src="nav-auth-tools.js" defer></script>
     <script src="site-footer.js" defer></script>
     <script src="community-image-lightbox.js" defer></script>
-    <script src="market-notify.js?v=12" defer></script>
-    <script src="market-chat.js?v=5" defer></script>
-    <script src="page-share.js?v=61" defer></script>
-    <script src="market.js?v=123" defer></script>
-    <script src="market-trades.js?v=40" defer></script>
+    <script src="market-notify.js?v=6" defer></script>
+    <script src="market-chat.js?v=2" defer></script>
+    <script src="market.js?v=132" defer></script>
+    <script src="market-trades.js?v=33" defer></script>
 </body>
 </html>

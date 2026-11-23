@@ -587,6 +587,22 @@
     padding: 0.35rem 0.15rem 0.4rem;
     border-top: 1px solid rgba(95, 184, 255, 0.12);
     box-sizing: border-box;
+    cursor: pointer;
+}
+
+.min-loc.is-on {
+    background: rgba(95, 184, 255, 0.08);
+}
+
+button.min-craft-link {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
 }
 
 .min-loc-meta {

@@ -6,7 +6,8 @@
     <title>舰船配件 · USSXC</title>
     <meta name="description" content="星际公民舰船配件查询：组件、武器、舰船矿头等，含价格与购买地点。">
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="ship-components.css?v=117">
+    <link rel="stylesheet" href="ship-catalog.css?v=50">
+    <link rel="stylesheet" href="ship-components.css?v=120">
     <link rel="stylesheet" href="page-share.css?v=8">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
@@ -170,6 +171,30 @@
             </div>
 
             <div class="sc-workspace-body">
+            <div class="sc-ship-catalog scat-main" id="scShipCatalog" hidden>
+                <div class="scat-tools">
+                    <label class="scat-search-wrap">
+                        <input class="scat-search" id="scatSearch" type="search" placeholder="搜索飞船、船厂、地点" aria-label="搜索飞船">
+                    </label>
+                    <div class="scat-maker" id="scatMaker">
+                        <button type="button" class="scat-maker-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="船厂">
+                            <img class="scat-maker-logo" alt="" hidden>
+                            <span class="scat-maker-label">全部船厂</span>
+                        </button>
+                        <div class="scat-maker-menu" role="listbox" hidden></div>
+                    </div>
+                    <div class="scat-filters" id="scatFilters">
+                        <button type="button" class="scat-filter is-on" data-filter="all">全部</button>
+                        <button type="button" class="scat-filter" data-filter="resident">常驻</button>
+                        <button type="button" class="scat-filter" data-filter="flyable">可飞</button>
+                        <button type="button" class="scat-filter" data-filter="ground">可驾驶</button>
+                    </div>
+                </div>
+                <section class="scat-sheet" aria-label="舰船价格表">
+                    <div class="scat-head" id="scatHead"></div>
+                    <div class="scat-grid" id="scatGrid" aria-live="polite"></div>
+                </section>
+            </div>
             <p class="sc-mobile-scroll-hint" id="scMobileScrollHint" aria-hidden="true">左右滑动查看全部字段</p>
             <div class="sc-card-grid" id="scCardGrid" hidden></div>
             <div class="sc-table-shell" id="scTableShell">
@@ -190,7 +215,7 @@
         <p class="sc-footnote" id="scFootnote"></p>
     </main>
 
-    <script src="nav-dropdown.js" defer></script>
+    <script src="nav-dropdown.js?v=9" defer></script>
     <script src="nav-auth-tools.js?v=4" defer></script>
     <script src="api-error.js"></script>
     <script src="sc-display-format.js?v=3"></script>
@@ -199,7 +224,8 @@
     <script src="ship-component-wiki.js?v=82" defer></script>
     <script src="ship-component-blueprints.js?v=28" defer></script>
     <script src="sales-terminal-brands.js?v=1" defer></script>
-    <script src="ship-components.js?v=119" defer></script>
+    <script src="ship-components.js?v=124" defer></script>
+    <script src="ship-catalog.js?v=33" defer></script>
     <script src="page-share.js?v=61" defer></script>
 </body>
 </html>
