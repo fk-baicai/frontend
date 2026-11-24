@@ -986,7 +986,25 @@
         return false;
     }
 
+    function shipCatalogShareBox(el) {
+        var cat = el.querySelector && el.querySelector('.sc-ship-catalog');
+        if (!cat || cat.hidden) return null;
+        var shown = window.getComputedStyle(cat);
+        if (shown.display === 'none' || shown.visibility === 'hidden') return null;
+        var prev = cat.style.zoom;
+        cat.style.zoom = '1';
+        var w = Math.max(el.scrollWidth || 0, el.offsetWidth || 0, el.getBoundingClientRect().width || 0);
+        var h = Math.max(el.scrollHeight || 0, el.offsetHeight || 0);
+        cat.style.zoom = prev;
+        return {
+            w: Math.max(1, Math.ceil(w)),
+            h: Math.max(1, Math.ceil(h + 24))
+        };
+    }
+
     function captureBox(el) {
+        var shipBox = shipCatalogShareBox(el);
+        if (shipBox) return shipBox;
         var rect = el.getBoundingClientRect();
         if (el.classList && (el.classList.contains('bp-shell') || el.classList.contains('st-kiosk'))) {
             return {
@@ -1091,6 +1109,17 @@
             if (btn.parentNode) btn.parentNode.removeChild(btn);
         });
         await mirrorNode(el, clone);
+        var shipCatalog = clone.querySelector && clone.querySelector('.sc-ship-catalog');
+        if (shipCatalog) {
+            shipCatalog.style.zoom = '1';
+            Array.prototype.forEach.call(shipCatalog.querySelectorAll('.scat-art img'), function (img) {
+                var src = img.getAttribute('src') || '';
+                if (!src) return;
+                var box = document.createElement('div');
+                box.setAttribute('style', 'display:block;width:100%;height:100%;background-image:url("' + src.replace(/"/g, '%22') + '");background-size:contain;background-position:center center;background-repeat:no-repeat;');
+                if (img.parentNode) img.parentNode.replaceChild(box, img);
+            });
+        }
         var liveHero = el.querySelector && el.querySelector('.market-hero');
         var hero = clone.querySelector && clone.querySelector('.market-hero');
         if (liveHero && hero) {

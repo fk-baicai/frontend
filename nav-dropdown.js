@@ -185,7 +185,7 @@
             icon.className = 'nav-mega-link-icon';
             icon.setAttribute('aria-hidden', 'true');
             icon.innerHTML = TOOL_MENU_ICONS[key];
-            icon.style.cssText = 'grid-row:1 / span 2;width:1.55rem;height:1.55rem;color:#8ee0ff;display:flex;';
+            icon.style.cssText = 'grid-row:1 / span 2;width:1.55rem;height:1.55rem;color:rgba(168, 198, 218, 0.72);display:flex;';
             var svg = icon.querySelector('svg');
             if (svg) svg.style.cssText = 'width:100%;height:100%;display:block;';
             link.insertBefore(icon, link.firstChild);
@@ -196,18 +196,33 @@
             link.style.minWidth = '0';
             link.style.width = '100%';
             var title = link.querySelector('.nav-mega-link-title');
-            if (title) title.style.marginBottom = '0.12rem';
-            var desc = link.querySelector('.nav-mega-link-desc');
-            if (desc) {
-                desc.title = desc.textContent;
-                desc.style.overflow = 'hidden';
-                desc.style.whiteSpace = 'nowrap';
-                desc.style.textOverflow = 'ellipsis';
+            if (title) {
+                title.style.marginBottom = '0.12rem';
+                title.style.color = '#8ee0ff';
             }
+            var desc = link.querySelector('.nav-mega-link-desc');
+            if (desc) desc.title = desc.textContent;
         });
-        toolsList.style.gridTemplateColumns = 'repeat(3, 15.5rem)';
-        toolsList.style.columnGap = '2.25rem';
+        applyToolsMenuLayout(toolsList);
+        if (!toolsList.dataset.layoutBound) {
+            toolsList.dataset.layoutBound = '1';
+            window.addEventListener('resize', function () {
+                applyToolsMenuLayout(toolsList);
+            });
+        }
+    }
+
+    function applyToolsMenuLayout(toolsList) {
+        if (!toolsList) return;
+        var narrow = window.matchMedia('(max-width: 900px)').matches;
+        toolsList.style.gridTemplateColumns = narrow ? 'minmax(0, 1fr)' : 'repeat(3, 15.5rem)';
+        toolsList.style.columnGap = narrow ? '0' : '2.25rem';
         toolsList.style.rowGap = '1.25rem';
+        toolsList.querySelectorAll('.nav-mega-link-desc').forEach(function (desc) {
+            desc.style.overflow = narrow ? 'visible' : 'hidden';
+            desc.style.whiteSpace = narrow ? 'normal' : 'nowrap';
+            desc.style.textOverflow = narrow ? 'clip' : 'ellipsis';
+        });
     }
 
     function placeToolsAfterCatalog() {

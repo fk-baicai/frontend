@@ -4105,15 +4105,37 @@ body.sc-mode-search #scTable th.sc-col-volume {
     .ship-components-body,
     .personal-equipment-body {
         overscroll-behavior-x: none;
+        scrollbar-gutter: auto;
+    }
+
+    .sc-main {
+        max-width: 100%;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .sc-hero {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
     }
 
     .sc-workspace.sc-panel {
         overflow: hidden;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
     }
 
     .sc-workspace-body {
         min-width: 0;
         overflow: hidden;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .sc-filter-deck::after {
+        margin-left: 0;
+        margin-right: 0;
     }
 
     .sc-nav-row--major.sc-tabs,

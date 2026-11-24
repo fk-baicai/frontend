@@ -338,6 +338,10 @@ body.home-page-body .community-post-card {
  max-width: none;
 }
 
+#navMegaTools .nav-mega-link-title {
+ color: #8ee0ff;
+}
+
 #navMegaTools .nav-mega-link-title,
 #navMegaTools .nav-mega-link-desc {
  overflow: hidden;
@@ -354,13 +358,28 @@ body.home-page-body .community-post-card {
  max-width: 20rem;
 }
 
- @media (max-width: 640px) {
+ @media (max-width: 900px) {
  #navMegaShip .nav-mega-list,
  #navMegaEquipment .nav-mega-list {
   grid-template-columns: 1fr;
  }
+ #navMegaTools {
+  max-height: calc(100vh - var(--navbar-height, 6rem) - 0.5rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+ }
+ #navMegaTools .nav-mega-inner {
+  padding-right: 1rem;
+ }
  #navMegaTools .nav-mega-list {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr) !important;
+  width: 100%;
+ }
+ #navMegaTools .nav-mega-link-title,
+ #navMegaTools .nav-mega-link-desc {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
  }
  #navMegaTools a[href*="server-ip"] {
   order: 10;
