@@ -386,6 +386,16 @@
     white-space: nowrap;
 }
 
+.scat-usd,
+.scat-auec {
+    cursor: pointer;
+}
+
+.scat-ship.is-selected {
+    background: rgba(142, 224, 255, 0.16);
+    box-shadow: inset 0 0 0 1px #8ee0ff;
+}
+
 .scat-usd {
     color: #e6d7a2;
     font-size: 1.28rem;
@@ -430,19 +440,20 @@
 .scat-ship > .scat-place {
     grid-column: 5;
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     gap: 0;
-    overflow: hidden;
-    white-space: nowrap;
+    overflow: visible;
+    white-space: normal;
     text-align: center;
 }
 
 .scat-ship > .scat-place span {
     min-width: 0;
     flex: 0 1 auto;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
 }
 
 .scat-ship > .scat-place .scat-place-sep {
@@ -457,6 +468,18 @@
 
 .scat-ship > .scat-place span[hidden] {
     display: none;
+}
+
+.scat-ship > .scat-place.is-scrolling {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.scat-ship > .scat-place.is-scrolling span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .scat-place-track {
@@ -613,11 +636,11 @@
 
     .scat-ship > .scat-place .scat-place-track,
     .scat-ship > .scat-place .scat-place-track > span {
-        display: inline-block;
+        display: inline;
         flex: none;
         overflow: visible;
         text-overflow: clip;
-        white-space: nowrap;
+        white-space: normal;
     }
 
     .scat-ship > .scat-logo img {

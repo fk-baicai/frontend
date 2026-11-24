@@ -279,12 +279,14 @@
         var nameHtml = ship.url
             ? '<a href="' + escapeHtml(ship.url) + '" target="_blank" rel="noopener">' + nameInner + '</a>'
             : nameInner;
-        var placeList = ship.places || [];
+        var placeList = (ship.places || []).map(function (place) {
+            return String(place || '').replace(/空间站/g, '').replace(/轨道/g, '').replace(/讣闻站/g, '讣闻').trim();
+        }).filter(Boolean);
         var places = placeList.map(function (place, index) {
             return '<span class="is-place is-p' + (index % 4) + '"' + (index > 1 ? ' hidden' : '') + '>' + escapeHtml(place) + '</span>';
         }).join('');
         return (
-            '<article class="scat-ship">' +
+            '<article class="scat-ship' + (selectedIds[String(ship.id || '')] ? ' is-selected' : '') + '" data-ship-id="' + escapeHtml(String(ship.id || '')) + '">' +
             '<div class="scat-art">' + (img ? '<img src="' + escapeHtml(img) + '" alt="" loading="lazy">' : '') + '</div>' +
             '<div class="scat-name">' + nameHtml + '</div>' +
             '<div class="scat-logo">' + (makerLogo(ship) ? '<img src="' + escapeHtml(makerLogo(ship)) + '" alt="" onerror="this.remove()">' : '') + '</div>' +
@@ -298,22 +300,22 @@
         );
     }
 
-    var placeStep = 0;
+    var selectedIds = {};
     var placeTimer = 0;
+    var placeStep = 0;
 
     function placeWindow() {
-        return window.matchMedia('(max-width: 680px)').matches ? 1 : 2;
+        return window.matchMedia('(max-width: 680px)').matches ? 2 : 3;
     }
 
-    function placeHtml(names, start) {
+    function placeHtml(names, start, count) {
         if (!names.length) return '';
-        var count = Math.min(placeWindow(), names.length);
-        var a = ((start % names.length) + names.length) % names.length;
-        var html = '<span class="is-place is-p' + (a % 4) + '">' + escapeHtml(names[a]) + '</span>';
-        if (count > 1) {
-            var b = (a + 1) % names.length;
-            html += '<span class="scat-place-sep"> / </span>' +
-                '<span class="is-place is-p' + (b % 4) + '">' + escapeHtml(names[b]) + '</span>';
+        var total = count ? Math.min(count, names.length) : names.length;
+        var html = '';
+        for (var i = 0; i < total; i += 1) {
+            var index = count ? (((start || 0) + i) % names.length + names.length) % names.length : i;
+            if (i) html += '<span class="scat-place-sep"> / </span>';
+            html += '<span class="is-place is-p' + (index % 4) + '">' + escapeHtml(names[index]) + '</span>';
         }
         return '<span class="scat-place-track">' + html + '</span>';
     }
@@ -321,13 +323,12 @@
     function rotatePlaces() {
         placeStep += 1;
         var step = placeWindow();
-        var cells = grid.querySelectorAll('.scat-place');
+        var cells = grid.querySelectorAll('.scat-place.is-scrolling');
         for (var i = 0; i < cells.length; i += 1) {
             var names = cells[i]._names || [];
             if (names.length <= step) continue;
-            cells[i].innerHTML = placeHtml(names, ((placeStep + i) * step) % names.length);
+            cells[i].innerHTML = placeHtml(names, ((placeStep + i) * step) % names.length, step);
         }
-        markMarquee();
     }
 
     function startPlaces() {
@@ -335,15 +336,29 @@
         placeTimer = 0;
         var cells = grid.querySelectorAll('.scat-place');
         var needs = false;
+        var step = placeWindow();
         for (var i = 0; i < cells.length; i += 1) {
-            var raw = cells[i].getAttribute('data-places') || '';
+            var cell = cells[i];
+            var raw = cell.getAttribute('data-places') || '';
             var names = raw ? raw.split('\n').filter(Boolean) : [];
-            cells[i]._names = names;
-            cells[i].innerHTML = placeHtml(names, 0);
-            if (names.length > placeWindow()) needs = true;
+            cell._names = names;
+            cell.classList.add('is-scrolling');
+            cell.innerHTML = placeHtml(names);
+            var probe = document.createElement('span');
+            probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:inherit;';
+            probe.textContent = names.join(' / ');
+            cell.appendChild(probe);
+            var overflow = probe.offsetWidth > cell.clientWidth + 2;
+            probe.remove();
+            if (!overflow || names.length <= step) {
+                cell.classList.remove('is-scrolling');
+                continue;
+            }
+            cell.innerHTML = placeHtml(names, 0, step);
+            needs = true;
         }
         if (!needs) return;
-        placeTimer = setInterval(rotatePlaces, placeWindow() === 1 ? 8000 : 2200);
+        placeTimer = setInterval(rotatePlaces, step === 1 ? 8000 : 2200);
     }
 
     function fitNameLine(selector, base, floor) {
@@ -471,6 +486,20 @@
         setMaker('', '全部船厂', '');
     }
 
+    grid.addEventListener('click', function (event) {
+        var price = event.target.closest('.scat-usd, .scat-auec');
+        if (!price || !grid.contains(price)) return;
+        var ship = price.closest('.scat-ship');
+        if (!ship) return;
+        var id = ship.getAttribute('data-ship-id') || '';
+        if (selectedIds[id]) {
+            delete selectedIds[id];
+            ship.classList.remove('is-selected');
+        } else {
+            selectedIds[id] = true;
+            ship.classList.add('is-selected');
+        }
+    });
     document.getElementById('scatFilters').addEventListener('click', function (event) {
         var button = event.target.closest('[data-filter]');
         if (!button) return;
@@ -507,6 +536,7 @@
         if (next !== columns) render();
         else {
             fitNames();
+            startPlaces();
             markMarquee();
         }
     });

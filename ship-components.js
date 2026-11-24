@@ -3549,22 +3549,10 @@
         'REP-VS EMP Generator': 'REP-VS EMP发生器',
     };
 
-    var TYPE_NAME_SUFFIX = {
-        power: '电源',
-        quantum: '量子驱动器',
-        radar: '雷达',
-        shield: '护盾',
-        fuel_nozzle: '燃料喷嘴',
-        cooling: '散热',
-        jump: '跳跃驱动器',
-    };
-
-    function fallbackLocalizeItemEn(en, typeKey) {
+    function fallbackLocalizeItemEn(en) {
         var raw = String(en || '').trim();
         if (!raw || /[\u4e00-\u9fff]/.test(raw)) return raw;
         if (ITEM_EN_NAME_ZH[raw]) return ITEM_EN_NAME_ZH[raw];
-        var typeZh = TYPE_NAME_SUFFIX[typeKey];
-        if (typeZh && /^[A-Za-z0-9][A-Za-z0-9._'-]{1,16}$/.test(raw)) return raw + ' ' + typeZh;
         var s = raw
             .replace(/\bHelmet\b/gi, '头盔')
             .replace(/\bBackpack\b/gi, '背包')
@@ -3601,7 +3589,7 @@
         }
         var primary = zh || en || '—';
         if (!/[\u4e00-\u9fff]/.test(primary) && en) {
-            var fb = fallbackLocalizeItemEn(en, item && item.type);
+            var fb = fallbackLocalizeItemEn(en);
             if (fb && /[\u4e00-\u9fff]/.test(fb)) primary = fb;
         }
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SC 数据库管理 · USSXC</title>
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
-    <link rel="stylesheet" href="admin-sc-database.css?v=5" />
+    <link rel="stylesheet" href="admin-sc-database.css?v=6" />
     <link rel="stylesheet" href="admin-step-up.css" />
     <script src="auth-config.js"></script>
 </head>
@@ -34,6 +34,9 @@
                 <p id="scUpdateSummary" class="hint">加载中…</p>
                 <div id="scUpdateList" class="sc-update-list"></div>
                 <div id="scUpdateErr" class="err" hidden></div>
+                <h3 class="sc-update-log-title">每晚更新日志</h3>
+                <p id="scUpdateLogMeta" class="hint">每天北京时间 05:00 检查。有新版本才拉取汉化、Wiki、UEX；舰船现金价每晚重抓官网。</p>
+                <pre id="scUpdateLog" class="sc-update-log">加载中…</pre>
             </section>
 
             <section id="secScSource">
@@ -194,6 +197,6 @@
     <script src="api-error.js"></script>
     <script src="auth-api.js?v=16"></script>
     <script src="admin-step-up.js?v=4"></script>
-    <script src="admin-sc-database.js?v=4" defer></script>
+    <script src="admin-sc-database.js?v=5" defer></script>
 </body>
 </html>

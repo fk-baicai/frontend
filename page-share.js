@@ -993,8 +993,8 @@
         if (shown.display === 'none' || shown.visibility === 'hidden') return null;
         var prev = cat.style.zoom;
         cat.style.zoom = '1';
-        var w = Math.max(el.scrollWidth || 0, el.offsetWidth || 0, el.getBoundingClientRect().width || 0);
-        var h = Math.max(el.scrollHeight || 0, el.offsetHeight || 0);
+        var w = Math.max(cat.scrollWidth || 0, cat.offsetWidth || 0, el.clientWidth || 0);
+        var h = Math.max(cat.scrollHeight || 0, cat.offsetHeight || 0, el.scrollHeight || 0);
         cat.style.zoom = prev;
         return {
             w: Math.max(1, Math.ceil(w)),
@@ -1112,11 +1112,13 @@
         var shipCatalog = clone.querySelector && clone.querySelector('.sc-ship-catalog');
         if (shipCatalog) {
             shipCatalog.style.zoom = '1';
+            shipCatalog.style.width = w + 'px';
+            shipCatalog.style.maxWidth = 'none';
             Array.prototype.forEach.call(shipCatalog.querySelectorAll('.scat-art img'), function (img) {
                 var src = img.getAttribute('src') || '';
                 if (!src) return;
                 var box = document.createElement('div');
-                box.setAttribute('style', 'display:block;width:100%;height:100%;background-image:url("' + src.replace(/"/g, '%22') + '");background-size:contain;background-position:center center;background-repeat:no-repeat;');
+                box.setAttribute('style', 'display:block;width:100%;height:100%;background-image:url("' + src.replace(/"/g, '%22') + '");background-size:cover;background-position:center center;background-repeat:no-repeat;');
                 if (img.parentNode) img.parentNode.replaceChild(box, img);
             });
         }

@@ -515,6 +515,7 @@
                 summaryEl.textContent = status && status.success === false ? '更新结束，有步骤失败' : '更新结束';
             }
             loadScUpdateChecklist();
+            loadScNightlyLog();
             loadScLocalizationStatus();
             loadScAdminStatus();
             loadScSources();
@@ -1288,6 +1289,33 @@
         }
     }
 
+    async function loadScNightlyLog() {
+        var s = loadSess();
+        var el = document.getElementById('scUpdateLog');
+        var meta = document.getElementById('scUpdateLogMeta');
+        if (!el) return;
+        try {
+            var r = await fetch(scApiBase().replace(/\/$/, '') + '/api/admin/sc/update-log', {
+                headers: adminAuthHeaders(s.token),
+            });
+            var data = await r.json();
+            if (!r.ok || !data.ok) throw new Error('读取失败');
+            if (meta) meta.textContent = (data.schedule || '每天北京时间 05:00') + '。有新版本才拉取汉化、Wiki、UEX；舰船现金价每晚重抓官网。';
+            if (!data.runs || !data.runs.length) {
+                el.textContent = '还没有每晚更新记录。到北京时间 05:00 跑完一轮后会出现在这里。';
+                return;
+            }
+            el.textContent = data.runs
+                .map(function (run) {
+                    var head = (run.at || '') + (run.ok ? '  完成' : '  有失败');
+                    return head + '\n' + (run.lines || []).join('\n');
+                })
+                .join('\n\n');
+        } catch (e) {
+            el.textContent = (e && e.message) || '日志读取失败';
+        }
+    }
+
     async function loadScSyncLog() {
         var s = loadSess();
         var listEl = document.getElementById('scSyncLogList');
@@ -1367,6 +1395,7 @@
         app.hidden = false;
         wireUi();
         loadScUpdateChecklist();
+        loadScNightlyLog();
         loadScLocalizationStatus();
         loadScBlueprintsStatus();
         loadScAdminStatus();
