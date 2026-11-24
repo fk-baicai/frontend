@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"></noscript>
-    <link rel="stylesheet" href="blueprint-crafting.css?v=88">
+    <link rel="stylesheet" href="blueprint-crafting.css?v=94">
     <link rel="stylesheet" href="page-share.css?v=9">
     <link rel="stylesheet" href="ship-components.css">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -142,6 +142,11 @@
                     <p class="bp-sidebar__meta" id="bpFootnote"></p>
                 </header>
 
+                <div class="bp-own" id="bpOwnScope" hidden>
+                    <button type="button" class="bp-own__btn is-active" data-scope="all">全部蓝图</button>
+                    <button type="button" class="bp-own__btn" data-scope="mine">我的蓝图</button>
+                </div>
+
                 <div class="bp-sidebar__search">
                     <div class="bp-search-wrap">
                         <input type="search" id="bpSearch" class="bp-search" placeholder="搜索全部蓝图" autocomplete="off" aria-label="搜索蓝图" aria-expanded="false" aria-controls="bpSearchSuggest" aria-autocomplete="list" role="combobox">
@@ -215,6 +220,11 @@
                                 <div class="bp-hero__titles">
                                     <div class="bp-hero__title-row">
                                         <h2 class="bp-hero__name" id="bpOutputName">—</h2>
+                                        <button type="button" class="bp-own-toggle" id="bpOwnToggle" hidden aria-label="保存为我拥有" title="保存为我拥有">
+                                            <svg class="bp-own-toggle__icon" viewBox="0 0 1024 1024" aria-hidden="true" focusable="false">
+                                                <path fill="currentColor" d="M828.708571 177.005714a73.142857 73.142857 0 0 1 103.131429 0 73.142857 73.142857 0 0 1 0 103.131429L569.782857 642.194286a73.142857 73.142857 0 0 1-103.131428 0L311.588571 487.131429a73.142857 73.142857 0 0 1 0-103.862858 73.142857 73.142857 0 0 1 103.131429 0l103.862857 103.862858z m-231.862857-95.085714a73.142857 73.142857 0 1 1-29.257143 146.285714A305.005714 305.005714 0 0 0 512 219.428571a292.571429 292.571429 0 1 0 287.451429 350.354286A73.142857 73.142857 0 0 1 882.102857 512a73.142857 73.142857 0 0 1 57.782857 85.577143 438.857143 438.857143 0 1 1-343.04-515.657143z"/>
+                                            </svg>
+                                        </button>
                                         <div id="bpLoadoutSlots" class="bp-loadout-slots" hidden aria-label="配件槽位"></div>
                                     </div>
                                     <p class="bp-hero__sub" id="bpOutputSub">—</p>
@@ -292,7 +302,7 @@
     <script src="ship-component-wiki.js?v=67" defer></script>
     <script src="ship-component-weapon-loadout.js?v=20" defer></script>
     <script src="ship-component-blueprints.js?v=28" defer></script>
-    <script src="blueprint-crafting.js?v=89" defer></script>
+    <script src="blueprint-crafting.js?v=91" defer></script>
     <script src="page-share.js?v=63" defer></script>
     <script src="site-footer.js" defer></script>
 </body>

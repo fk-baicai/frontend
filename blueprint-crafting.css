@@ -348,6 +348,86 @@ html:has(body.bp-craft-body) {
     padding: 0;
 }
 
+.bp-own {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    margin: 0.4rem 0.75rem 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.bp-own__btn {
+    flex: 0 0 auto;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: rgba(184, 220, 240, 0.48);
+    font-family: var(--bp-font-ui);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    padding: 0.14rem 0.42rem;
+    cursor: pointer;
+    transition: color 0.18s, border-color 0.18s, background 0.18s;
+}
+
+.bp-own__btn:hover {
+    color: #e8f4ff;
+}
+
+.bp-own__btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 1px rgba(0, 240, 255, 0.45);
+}
+
+.bp-own__btn.is-active {
+    color: var(--bp-accent);
+    border-color: var(--bp-border);
+    background: rgba(0, 240, 255, 0.08);
+    box-shadow: none;
+}
+
+.bp-own-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0.12rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--bp-accent);
+    cursor: pointer;
+    flex: 0 0 auto;
+    line-height: 0;
+    filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.45));
+    transition: color 0.18s, filter 0.18s;
+}
+
+.bp-own-toggle:hover,
+.bp-own-toggle:focus-visible {
+    color: var(--bp-accent-hi);
+    outline: none;
+    filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.7));
+}
+
+.bp-own-toggle.is-owned {
+    color: var(--bp-green);
+    background: transparent;
+    filter: drop-shadow(0 0 5px rgba(57, 255, 154, 0.55));
+}
+
+.bp-own-toggle__icon {
+    width: 1.35rem;
+    height: 1.35rem;
+    display: block;
+}
+
 .bp-filter {
     flex-shrink: 0;
     display: grid;

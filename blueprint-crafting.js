@@ -138,6 +138,9 @@
         page: 1,
         total: 0,
         items: [],
+        catalog: [],
+        owned: {},
+        scope: 'all',
         selectedId: null,
         blueprint: null,
         qualities: {},
@@ -808,7 +811,10 @@
             el.blueprintList.innerHTML = '';
             el.blueprintList.style.setProperty('--bp-list-offset', '0');
             if (el.listPhantom) el.listPhantom.style.height = '0';
-            if (el.listEmpty) el.listEmpty.hidden = false;
+            if (el.listEmpty) {
+                el.listEmpty.textContent = state.scope === 'mine' ? '还没有保存的蓝图' : '暂无匹配蓝图';
+                el.listEmpty.hidden = false;
+            }
             updateListCount();
             return;
         }
@@ -1458,6 +1464,67 @@
         }
     }
 
+    function blueprintUserKey() {
+        try {
+            var raw = sessionStorage.getItem('ussHangzhouAuthSession') || localStorage.getItem('ussHangzhouAuthSession');
+            var sess = raw ? JSON.parse(raw) : null;
+            if (!sess || !sess.token) return '';
+            return String(sess.bindingId || sess.email || '');
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function loadOwnedBlueprints() {
+        state.owned = {};
+        var user = blueprintUserKey();
+        if (!user) return;
+        try {
+            var list = JSON.parse(localStorage.getItem('ussBlueprintOwned:' + user) || '[]');
+            (Array.isArray(list) ? list : []).forEach(function (id) {
+                if (id) state.owned[id] = true;
+            });
+        } catch (e) {
+            state.owned = {};
+        }
+    }
+
+    function saveOwnedBlueprints() {
+        var user = blueprintUserKey();
+        if (!user) return;
+        localStorage.setItem('ussBlueprintOwned:' + user, JSON.stringify(Object.keys(state.owned)));
+    }
+
+    function publishBlueprintList(items) {
+        state.catalog = (items || []).slice();
+        var view = state.catalog;
+        if (state.scope === 'mine' && blueprintUserKey()) {
+            view = state.catalog.filter(function (item) { return state.owned[item.uuid]; });
+        }
+        state.items = view;
+        state.total = view.length;
+    }
+
+    function syncOwnControls() {
+        var loggedIn = !!blueprintUserKey();
+        if (!loggedIn) state.scope = 'all';
+        if (el.ownScope) el.ownScope.hidden = !loggedIn;
+        if (el.ownScope) {
+            el.ownScope.querySelectorAll('.bp-own__btn').forEach(function (btn) {
+                btn.classList.toggle('is-active', btn.getAttribute('data-scope') === state.scope);
+            });
+        }
+        var id = (state.blueprint && state.blueprint.uuid) || state.selectedId;
+        if (el.ownToggle) {
+            el.ownToggle.hidden = !loggedIn || !id;
+            var owned = !!(id && state.owned[id]);
+            el.ownToggle.classList.toggle('is-owned', owned);
+            var label = owned ? '已拥有' : '保存为我拥有';
+            el.ownToggle.setAttribute('aria-label', label);
+            el.ownToggle.title = label;
+        }
+    }
+
     function loadAllBlueprints(options) {
         options = options || {};
         if (state.loadingList && !options.force) return Promise.resolve();
@@ -1468,8 +1535,7 @@
         if (!options.force && LIST_CACHE[cacheKey]) {
             var cached = LIST_CACHE[cacheKey];
             state.page = 1;
-            state.items = keepQuestUnlockItems(cached.items);
-            state.total = state.items.length;
+            publishBlueprintList(keepQuestUnlockItems(cached.items));
             if (!preserveScroll && el.listWrap) el.listWrap.scrollTop = 0;
             state.listVirt.measured = false;
             hideGate();
@@ -1481,6 +1547,8 @@
         state.loadingList = true;
         state.page = 1;
         state.items = [];
+        state.catalog = [];
+        var loaded = [];
         if (!preserveScroll && el.listWrap) el.listWrap.scrollTop = 0;
         state.listVirt.measured = false;
         if (el.listWrap) el.listWrap.classList.add('is-loading');
@@ -1489,18 +1557,18 @@
             return fetchJson(buildListQuery(state.page)).then(function (data) {
                 var rawBatch = data.items || [];
                 var batch = keepQuestUnlockItems(rawBatch);
-                state.items = state.items.concat(batch);
+                loaded = loaded.concat(batch);
                 var reportedTotal = Number(data.total) || 0;
-                if (rawBatch.length >= PAGE_SIZE && state.items.length < reportedTotal) {
+                if (rawBatch.length >= PAGE_SIZE && loaded.length < reportedTotal) {
                     state.page += 1;
                     state.total = reportedTotal;
                     return fetchNext();
                 }
-                state.total = state.items.length;
                 LIST_CACHE[cacheKey] = {
-                    items: state.items.slice(),
-                    total: state.total,
+                    items: loaded.slice(),
+                    total: loaded.length,
                 };
+                publishBlueprintList(loaded);
                 hideGate();
                 renderBlueprintList();
                 enrichArmorClassForListItems();
@@ -2181,6 +2249,7 @@
             if (el.missionCount) el.missionCount.hidden = true;
             if (el.missionsBar) el.missionsBar.classList.add('is-hidden');
             pushUrlState();
+            syncOwnControls();
             return;
         }
 
@@ -2555,6 +2624,7 @@
         var bp = state.blueprint;
         if (!bp) return;
         if (el.outputName) el.outputName.innerHTML = blueprintNameHtml(bp);
+        syncOwnControls();
         if (el.outputSub) {
             el.outputSub.textContent = blueprintOutputSubParts(bp).join(' · ') || '—';
         }
@@ -3834,6 +3904,33 @@
             });
         }
         bindSearchEvents();
+        if (el.ownScope) {
+            el.ownScope.addEventListener('click', function (ev) {
+                var btn = ev.target.closest('[data-scope]');
+                if (!btn || !blueprintUserKey()) return;
+                state.scope = btn.getAttribute('data-scope') === 'mine' ? 'mine' : 'all';
+                publishBlueprintList(state.catalog);
+                state.listVirt.measured = false;
+                renderBlueprintList();
+                syncOwnControls();
+            });
+        }
+        if (el.ownToggle) {
+            el.ownToggle.addEventListener('click', function () {
+                if (!blueprintUserKey()) return;
+                var id = (state.blueprint && state.blueprint.uuid) || state.selectedId;
+                if (!id) return;
+                if (state.owned[id]) delete state.owned[id];
+                else state.owned[id] = true;
+                saveOwnedBlueprints();
+                if (state.scope === 'mine') {
+                    publishBlueprintList(state.catalog);
+                    state.listVirt.measured = false;
+                    renderBlueprintList();
+                }
+                syncOwnControls();
+            });
+        }
         document.querySelectorAll('[data-preset]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 applyPreset(btn.getAttribute('data-preset'));
@@ -3864,6 +3961,8 @@
         el.typeField = $('bpTypeField');
         el.blueprintList = $('bpBlueprintList');
         el.listEmpty = $('bpListEmpty');
+        el.ownScope = $('bpOwnScope');
+        el.ownToggle = $('bpOwnToggle');
         el.listWrap = document.querySelector('.bp-list-wrap');
         el.listCount = $('bpListCount');
         el.search = $('bpSearch');
@@ -3902,6 +4001,8 @@
             var deepLinkId = readDeepLinkBlueprintId();
             if (deepLinkId) state.selectedId = deepLinkId;
         }
+        loadOwnedBlueprints();
+        syncOwnControls();
         bindEvents();
         wireBlueprintListEvents();
         wireVirtualListScroll();
