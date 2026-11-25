@@ -738,10 +738,14 @@
             shown += 1;
             var group = document.createElement('div');
             group.className = 'sc-facet-group';
-            var lab = document.createElement('span');
-            lab.className = 'sc-facet__label';
-            lab.textContent = facetLabel(key);
-            group.appendChild(lab);
+            var labelText = facetLabel(key);
+            if (key !== 'size' && key !== 'grade' && key !== 'class') {
+                var lab = document.createElement('span');
+                lab.className = 'sc-facet__label';
+                lab.textContent = labelText;
+                group.appendChild(lab);
+            }
+            group.setAttribute('aria-label', labelText);
             var row = document.createElement('div');
             row.className = 'sc-facet-tags';
             function addTag(value, label) {
@@ -4841,11 +4845,22 @@
             }
         } else if (key === 'class') {
             td.classList.add('sc-class');
-            td.textContent = item.class_zh || item.class_short_zh || '—';
+            var classText = item.class_zh || item.class_short_zh || '—';
+            td.textContent = classText;
+            var classTone = classText.indexOf('隐身') >= 0 ? 'stealth'
+                : classText.indexOf('竞赛') >= 0 ? 'race'
+                : classText.indexOf('工业') >= 0 ? 'ind'
+                : classText.indexOf('军') >= 0 ? 'mil'
+                : classText.indexOf('民') >= 0 ? 'civ'
+                : '';
+            if (classTone) td.classList.add('sc-class--' + classTone);
             if (item.class_en && item.class_en !== td.textContent) td.title = item.class_en;
         } else if (key === 'grade') {
             td.classList.add('sc-grade');
-            td.textContent = item.grade || item.grade_letter || '—';
+            var gradeText = item.grade || item.grade_letter || '—';
+            td.textContent = gradeText;
+            var gradeLetter = String(gradeText).trim().charAt(0).toLowerCase();
+            if (gradeLetter >= 'a' && gradeLetter <= 'd') td.classList.add('sc-grade--' + gradeLetter);
         } else if (key === 'size') {
             var sizeLabel = item.size_label || '—';
             var sizeBadge = document.createElement('span');
@@ -5769,8 +5784,31 @@
         loadList();
     }
 
+    function wireCategoryPointer() {
+        var deck = document.querySelector('.sc-filter-deck');
+        var follow = deck && deck.querySelector('.sc-nav-follow');
+        if (!deck || !follow) return;
+        deck.addEventListener('pointermove', function (event) {
+            var target = event.target.closest && event.target.closest('.sc-tab, .sc-facet-tag');
+            if (!target || !deck.contains(target)) {
+                deck.classList.remove('is-tracking');
+                return;
+            }
+            var deckRect = deck.getBoundingClientRect();
+            var rect = target.getBoundingClientRect();
+            follow.style.width = rect.width + 'px';
+            follow.style.height = rect.height + 'px';
+            follow.style.transform = 'translate(' + (rect.left - deckRect.left) + 'px,' + (rect.top - deckRect.top) + 'px)';
+            deck.classList.add('is-tracking');
+        });
+        deck.addEventListener('pointerleave', function () {
+            deck.classList.remove('is-tracking');
+        });
+    }
+
     async function init() {
         parseUrlState();
+        wireCategoryPointer();
         bindLeadNavOnce();
         bindSortHeaders();
         bindCatalogViewToggle();
