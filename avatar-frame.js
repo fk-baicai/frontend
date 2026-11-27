@@ -2,6 +2,7 @@
     var handles = {};
     var busy = false;
     var paintTimer = 0;
+    var RETRY_DELAYS = [0, 320, 900];
 
     function api(path) {
         var base = String(window.USS_AUTH_API_BASE || window.USS_REGISTER_API_BASE || '').replace(/\/$/, '');
@@ -113,32 +114,95 @@
             .catch(function () { paintAll(); });
     }
 
-    function authFetch(path, body) {
+    function sleep(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
+    function isRetryableError(err, data, res) {
+        if (err && (err.name === 'TypeError' || /Failed to fetch|NetworkError|network|abort/i.test(String(err.message || '')))) {
+            return true;
+        }
+        var code = data && data.code;
+        if (code === 'RLY_004' || code === 'RLY_001' || code === 'RLY_002') return true;
+        var msg = String((data && data.message) || (err && err.message) || '');
+        if (/服务暂时没有连上|请再试一次|没有连上|Failed to fetch/i.test(msg)) return true;
+        if (res && (res.status === 502 || res.status === 503 || res.status === 504)) return true;
+        return false;
+    }
+
+    function applyUser(data) {
+        var sess = session();
+        if (data && data.user) {
+            sess = saveSession(data.user) || sess;
+            if (data.user.bindingId) {
+                handles[String(data.user.bindingId).toLowerCase()] = !!data.user.avatarFrameOn;
+            }
+            paintAll();
+        }
+        return data;
+    }
+
+    function authFetch(path, body, opts) {
         var sess = session();
         if (!sess || !sess.token) return Promise.reject(new Error('请先登录。'));
-        return fetch(api(path), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + sess.token },
-            body: JSON.stringify(body || {})
-        }).then(function (res) {
-            return res.text().then(function (text) {
-                var data = null;
-                try { data = text ? JSON.parse(text) : null; } catch (e) {
-                    throw new Error('接口没有返回数据，请确认本机服务已启动。');
+        var options = opts || {};
+        var maxAttempts = options.maxAttempts || RETRY_DELAYS.length;
+        var attempt = 0;
+        var payload = body || {};
+
+        function once() {
+            attempt += 1;
+            var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+            var timer = setTimeout(function () {
+                if (ctrl) ctrl.abort();
+            }, options.timeoutMs || 25000);
+            return fetch(api(path), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + sess.token },
+                body: JSON.stringify(payload),
+                signal: ctrl ? ctrl.signal : undefined
+            }).then(function (res) {
+                return res.text().then(function (text) {
+                    clearTimeout(timer);
+                    var data = null;
+                    try { data = text ? JSON.parse(text) : null; } catch (e) {
+                        var parseErr = new Error('接口没有返回数据，请确认本机服务已启动。');
+                        parseErr.retryable = attempt < maxAttempts;
+                        throw parseErr;
+                    }
+                    if (!res.ok || !data || !data.ok) {
+                        var fail = new Error((data && (data.message || data.code)) || '没有完成。');
+                        fail.code = data && data.code;
+                        fail.status = res.status;
+                        fail.retryable = isRetryableError(null, data, res) && attempt < maxAttempts;
+                        throw fail;
+                    }
+                    return applyUser(data);
+                });
+            }).catch(function (err) {
+                clearTimeout(timer);
+                if (err && err.name === 'AbortError') {
+                    err = new Error('请求超时，正在重试…');
+                    err.retryable = attempt < maxAttempts;
                 }
-                if (!res.ok || !data || !data.ok) {
-                    throw new Error((data && (data.message || data.code)) || '没有完成。');
+                if (!err.retryable && isRetryableError(err, null, null) && attempt < maxAttempts) {
+                    err.retryable = true;
                 }
-                if (data.user) {
-                    sess = saveSession(data.user) || sess;
+                if (err.retryable && attempt < maxAttempts) {
+                    var wait = RETRY_DELAYS[Math.min(attempt, RETRY_DELAYS.length - 1)] || 400;
+                    if (typeof options.onRetry === 'function') {
+                        options.onRetry(attempt + 1, maxAttempts, err);
+                    }
+                    return sleep(wait).then(once);
                 }
-                if (data.user && data.user.bindingId) {
-                    handles[String(data.user.bindingId).toLowerCase()] = !!data.user.avatarFrameOn;
+                if (err && /正在重试/.test(String(err.message || ''))) {
+                    err.message = '服务暂时没有连上，请再试一次。';
                 }
-                paintAll();
-                return data;
+                throw err;
             });
-        });
+        }
+
+        return once();
     }
 
     function toggleFrame() {

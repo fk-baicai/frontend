@@ -243,7 +243,7 @@
     }
     if (!document.querySelector('script[src*="avatar-frame.js"]')) {
     var frameScript = document.createElement('script');
-    frameScript.src = 'avatar-frame.js?v=6';
+    frameScript.src = 'avatar-frame.js?v=7';
     frameScript.defer = true;
     document.body.appendChild(frameScript);
     }
@@ -252,6 +252,40 @@
     var redeemMsg = document.getElementById('ussDonateRedeemMsg');
     var redeemInput = document.getElementById('ussDonateRedeemInput');
     var redeemMake = document.getElementById('ussDonateRedeemMake');
+    var redeemGo = document.getElementById('ussDonateRedeemGo');
+    var redeemBusy = false;
+
+    function setRedeemBusy(on, label) {
+        redeemBusy = !!on;
+        if (redeemMake) redeemMake.disabled = redeemBusy;
+        if (redeemGo) redeemGo.disabled = redeemBusy;
+        if (redeemInput) redeemInput.disabled = redeemBusy;
+        if (on && redeemMsg && label) redeemMsg.textContent = label;
+    }
+
+    function normalizeRedeemCode(raw) {
+        return String(raw || '').trim().toUpperCase().replace(/[^A-F0-9]/g, '').slice(0, 10);
+    }
+
+    function waitAvatarFrame() {
+        if (window.UssAvatarFrame && window.UssAvatarFrame.authFetch) {
+            return Promise.resolve(window.UssAvatarFrame);
+        }
+        return new Promise(function (resolve, reject) {
+            var n = 0;
+            var timer = setInterval(function () {
+                n += 1;
+                if (window.UssAvatarFrame && window.UssAvatarFrame.authFetch) {
+                    clearInterval(timer);
+                    resolve(window.UssAvatarFrame);
+                } else if (n > 40) {
+                    clearInterval(timer);
+                    reject(new Error('兑换组件还没加载完，请稍后再试。'));
+                }
+            }, 50);
+        });
+    }
+
     if (redeemBtn && redeem) {
         redeemBtn.addEventListener('click', function () {
             redeem.hidden = !redeem.hidden;
@@ -261,18 +295,56 @@
     }
     if (redeemMake) {
         redeemMake.addEventListener('click', function () {
-            window.UssAvatarFrame.authFetch('/api/site/avatar-redeem-codes').then(function (data) {
+            if (redeemBusy) return;
+            setRedeemBusy(true, '正在生成兑换码…');
+            waitAvatarFrame().then(function (api) {
+                return api.authFetch('/api/site/avatar-redeem-codes', {}, {
+                    onRetry: function (n, max) {
+                        if (redeemMsg) redeemMsg.textContent = '线路不稳，正在重试（' + n + '/' + max + ')…';
+                    }
+                });
+            }).then(function (data) {
                 if (redeemInput) redeemInput.value = data.code || '';
                 if (redeemMsg) redeemMsg.textContent = '兑换码已生成，发给充电用户即可。';
-            }).catch(function (err) { if (redeemMsg) redeemMsg.textContent = err.message; });
+            }).catch(function (err) {
+                if (redeemMsg) redeemMsg.textContent = (err && err.message) || '兑换码没有生成。';
+            }).then(function () {
+                setRedeemBusy(false);
+            });
         });
     }
-    var redeemGo = document.getElementById('ussDonateRedeemGo');
     if (redeemGo) {
         redeemGo.addEventListener('click', function () {
-            window.UssAvatarFrame.authFetch('/api/site/avatar-redeem', { code: redeemInput ? redeemInput.value : '' }).then(function () {
-                if (redeemMsg) redeemMsg.textContent = '兑换成功。点开头像即可佩戴。';
-            }).catch(function (err) { if (redeemMsg) redeemMsg.textContent = err.message; });
+            if (redeemBusy) return;
+            var code = normalizeRedeemCode(redeemInput ? redeemInput.value : '');
+            if (redeemInput) redeemInput.value = code;
+            if (!/^[A-F0-9]{10}$/.test(code)) {
+                if (redeemMsg) redeemMsg.textContent = '兑换码不正确。';
+                return;
+            }
+            setRedeemBusy(true, '正在兑换…');
+            waitAvatarFrame().then(function (api) {
+                return api.authFetch('/api/site/avatar-redeem', { code: code }, {
+                    onRetry: function (n, max) {
+                        if (redeemMsg) redeemMsg.textContent = '线路不稳，正在重试（' + n + '/' + max + ')…';
+                    }
+                });
+            }).then(function (data) {
+                if (redeemMsg) {
+                    redeemMsg.textContent = data && data.already
+                        ? '账号已有头像框，可直接佩戴。'
+                        : '兑换成功。点开头像即可佩戴。';
+                }
+            }).catch(function (err) {
+                if (redeemMsg) redeemMsg.textContent = (err && err.message) || '兑换没有完成。';
+            }).then(function () {
+                setRedeemBusy(false);
+            });
+        });
+    }
+    if (redeemInput) {
+        redeemInput.addEventListener('blur', function () {
+            redeemInput.value = normalizeRedeemCode(redeemInput.value);
         });
     }
 

@@ -11459,6 +11459,12 @@ body.uss-donate-modal-open {
  outline: none;
 }
 
+.uss-donate-modal__redeem:disabled {
+ opacity: 0.55;
+ cursor: wait;
+ pointer-events: none;
+}
+
 body.uss-donate-modal-open .min-note-mask {
  z-index: 1300;
 }
