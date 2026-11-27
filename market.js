@@ -1297,9 +1297,17 @@
         var params = new URLSearchParams();
         params.set('orderType', state.tab === 'sell' ? 'sell' : 'buy');
         if (state.searchQ) params.set('q', state.searchQ);
+        var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        var abortTimer = null;
+        if (ctrl) {
+            abortTimer = setTimeout(function () {
+                try { ctrl.abort(); } catch (e) { /* ignore */ }
+            }, 20000);
+        }
         try {
             var r = await fetch(joinUrl('/api/market/orders?' + params.toString()), {
                 headers: Object.assign({ Accept: 'application/json' }, authHeaders()),
+                signal: ctrl ? ctrl.signal : undefined,
             });
             var data = await r.json().catch(function () { return {}; });
             if (!r.ok) throw new Error((data && data.message) || '加载失败');
@@ -1333,9 +1341,11 @@
             state.orders = [];
             if (el.gridEmpty) {
                 el.gridEmpty.hidden = false;
-                el.gridEmpty.textContent = (e && e.message) || '加载订单失败';
+                var aborted = e && (e.name === 'AbortError' || /abort/i.test(String(e.message || '')));
+                el.gridEmpty.textContent = aborted ? '加载超时，请刷新重试' : ((e && e.message) || '加载订单失败');
             }
         } finally {
+            if (abortTimer) clearTimeout(abortTimer);
             state.loading = false;
             state.page = 1;
             renderGrid();
@@ -2525,7 +2535,7 @@
         var lot = order.lottery || {};
         var lotteryFacts = '';
         if (isLottery) {
-            var audienceText = '仅舰队成员';
+            var audienceText = lot.audience === 'public' ? '所有人' : '仅舰队成员';
             var costText = lot.pointCost > 0 ? (String(lot.pointCost) + ' 签到积分') : '免费';
             var modeText = lot.mode === 'scheduled'
                 ? ('定时开奖，' + formatLotteryClock(lot.drawAt) + ' 随机抽取')
@@ -2997,12 +3007,13 @@
         var sub = document.getElementById('marketCatsSub');
         if (!main || !sub) return;
         var fleet = isFleetMemberSession();
-        if (!fleet && (state.categoryGroup === 'lottery' || state.categoryGroup === 'gift')) {
+        // 礼物仍仅舰队；抽奖分类全站可见（舰队专属单由后端过滤）
+        if (!fleet && state.categoryGroup === 'gift') {
             state.categoryGroup = '';
             state.categoryType = '';
         }
         var mains = CATEGORY_GROUPS.filter(function (g) {
-            if (g.id === 'gift' || g.id === 'lottery') return fleet;
+            if (g.id === 'gift') return fleet;
             return true;
         });
         main.innerHTML = mains.map(function (g) {
@@ -3312,7 +3323,24 @@
         }
     }
 
+    function hideNormalListingQtyUi() {
+        if (el.qtyPriceRow) el.qtyPriceRow.hidden = true;
+        if (el.priceField) el.priceField.hidden = true;
+        if (el.giveQtyField) el.giveQtyField.hidden = true;
+        if (el.stockField) el.stockField.hidden = true;
+        if (el.wantQtyField) el.wantQtyField.hidden = true;
+        if (el.barterQtyHint) el.barterQtyHint.hidden = true;
+        var qtyWrap = el.qtyInput && el.qtyInput.closest('.market-inline-field');
+        if (qtyWrap) qtyWrap.hidden = true;
+    }
+
     function syncHqPointsFormHints() {
+        // 抽奖不走买卖库存逻辑；这里若再显示「单次数量」会和奖品份数冲突
+        if (isLotteryCategorySelected()) {
+            hideNormalListingQtyUi();
+            if (el.hqPointsHint) el.hqPointsHint.hidden = true;
+            return;
+        }
         var offerPts = isHqPointsItem(currentItem());
         var wantPts = isHqPointsItem(currentWantItem());
         var isBarter = state.create.tradeType === 'barter';
@@ -3350,7 +3378,10 @@
                 el.barterQtyHint.textContent = '单次数量是买家每次购买拿到的件数。库存是你能卖出的总件数。报价是每一件的 aUEC。';
             }
         }
-        if (el.qtyPriceRow) el.qtyPriceRow.classList.toggle('market-row-2--barter-qty', !!showStock);
+        if (el.qtyPriceRow) {
+            el.qtyPriceRow.hidden = false;
+            el.qtyPriceRow.classList.toggle('market-row-2--barter-qty', !!showStock);
+        }
     }
 
     var GIFT_MAX_URLS = 30;
@@ -3408,20 +3439,27 @@
 
     function syncLotteryFieldVisibility() {
         var mode = lotterySegValue(el.lotteryModeSeg, 'data-lottery-mode') || 'instant';
+        var audience = lotterySegValue(el.lotteryAudienceSeg, 'data-lottery-audience') || 'fleet';
         var instant = mode === 'instant';
+        var publicOn = audience === 'public';
         if (el.lotteryProbField) el.lotteryProbField.hidden = !instant;
         if (el.lotteryDrawAtField) el.lotteryDrawAtField.hidden = instant;
         if (el.lotteryDrawAtHint) el.lotteryDrawAtHint.hidden = instant;
-        if (el.lotteryCostField) el.lotteryCostField.hidden = false;
-        if (el.lotteryCostHint) el.lotteryCostHint.hidden = false;
+        if (el.lotteryCostField) el.lotteryCostField.hidden = publicOn;
+        if (el.lotteryCostHint) el.lotteryCostHint.hidden = publicOn;
+        if (publicOn && el.lotteryPointCost) el.lotteryPointCost.value = '0';
         if (el.lotteryModeHint) {
             el.lotteryModeHint.textContent = instant
                 ? '点一次开一次。中奖概率只对即抽即开生效。未中奖也会扣除参与消耗。'
                 : '到点后在已参与的人里随机抽取，不看概率。人数少于奖品份数时，参与者全部中奖。';
         }
         if (el.lotteryAudienceHint) {
-            el.lotteryAudienceHint.textContent = '抽奖仅舰队成员可见和参与，可以用总部签到积分作为参与消耗。填 0 表示免费。';
+            el.lotteryAudienceHint.textContent = publicOn
+                ? '所有人：商城全站可见可参与（需登录）。不可设置签到积分消耗。'
+                : '仅舰队成员：商城里只有舰队能看见和参与，可用总部签到积分。填 0 表示免费。';
         }
+        // 切换开奖方式/范围时也再藏一次买卖字段，避免「单次数量」冒出来
+        if (isLotteryCategorySelected()) hideNormalListingQtyUi();
     }
 
     function syncLotteryFormUi() {
@@ -3429,31 +3467,45 @@
         var on = admin && isLotteryCategorySelected();
         if (el.lotteryCategoryOption) el.lotteryCategoryOption.hidden = !admin;
         if (el.lotteryField) el.lotteryField.hidden = !on;
-        if (el.locField) el.locField.hidden = on;
-        if (el.qualityField) el.qualityField.hidden = on;
-        if (el.tradeTimeField) el.tradeTimeField.hidden = on;
-        if (el.qtyPriceRow) el.qtyPriceRow.hidden = on;
         if (on) {
+            // 抽奖只用「奖品份数 / 概率 / 开奖时间」，彻底关掉买卖挂单字段
+            hideNormalListingQtyUi();
+            if (el.locField) el.locField.hidden = true;
+            if (el.qualityField) el.qualityField.hidden = true;
+            if (el.tradeTimeField) el.tradeTimeField.hidden = true;
             if (el.tradeTypeField) el.tradeTypeField.hidden = true;
             if (el.orderTypeField) el.orderTypeField.hidden = true;
-            if (el.priceField) el.priceField.hidden = true;
             if (el.barterWantSection) el.barterWantSection.hidden = true;
-            if (el.qtyPriceRow) el.qtyPriceRow.hidden = true;
-            if (el.barterQtyHint) el.barterQtyHint.hidden = true;
+            if (el.giftField) el.giftField.hidden = true;
             if (el.offerLabel) el.offerLabel.textContent = '奖品名称';
             if (el.itemInput && el.itemInput.placeholder !== undefined) el.itemInput.placeholder = '填写奖品名称';
+            if (state.create) {
+                state.create.tradeType = 'lottery';
+                state.create.orderType = 'sell';
+                state.create.tradeTimeStart = '00:00';
+                state.create.tradeTimeEnd = '23:59';
+                if (!state.create.location || !state.create.location.name) {
+                    state.create.location = { name: '线上' };
+                }
+            }
             syncLotteryFieldVisibility();
-        } else if (el.itemInput) {
-            el.itemInput.placeholder = '搜索选择物品';
+        } else {
+            if (el.itemInput) el.itemInput.placeholder = '搜索选择物品';
+            if (el.locField) el.locField.hidden = false;
+            if (el.qualityField) el.qualityField.hidden = false;
+            if (el.tradeTimeField) el.tradeTimeField.hidden = false;
+            if (el.tradeTypeField) el.tradeTypeField.hidden = false;
+            // orderType / price / qty 由 syncCreateFormUi + syncHqPointsFormHints 按买卖类型恢复
         }
     }
 
     function readLotteryForm() {
         var mode = lotterySegValue(el.lotteryModeSeg, 'data-lottery-mode') || 'instant';
-        var audience = 'fleet';
+        var audience = lotterySegValue(el.lotteryAudienceSeg, 'data-lottery-audience') || 'fleet';
+        if (audience !== 'public') audience = 'fleet';
         var prize = Math.floor(Number(el.lotteryPrizeCount && el.lotteryPrizeCount.value));
-        if (!Number.isFinite(prize) || prize < 1 || prize > 500) {
-            return { error: '奖品份数须为 1 到 500', el: el.lotteryPrizeCount };
+        if (!Number.isFinite(prize) || prize < 1 || prize > 50) {
+            return { error: '奖品份数须为 1 到 50（过大时定时开奖会变成全员中奖并群发邮件）', el: el.lotteryPrizeCount };
         }
         var probability = null;
         var drawAt = null;
@@ -3463,6 +3515,9 @@
             if (!Number.isFinite(probability) || probability < 1 || probability > 100) {
                 return { error: '中奖概率须为 1 到 100', el: el.lotteryProbability };
             }
+            if (probability >= 80 && !window.confirm('中奖概率为 ' + probability + '%，几乎人人都会中奖并收到邮件。确认发布？')) {
+                return { error: '已取消发布', el: el.lotteryProbability };
+            }
         } else {
             var rawAt = el.lotteryDrawAt ? el.lotteryDrawAt.value : '';
             var at = rawAt ? Date.parse(rawAt) : NaN;
@@ -3470,10 +3525,17 @@
                 return { error: '开奖时间须晚于当前至少 1 分钟', el: el.lotteryDrawAt };
             }
             drawAt = new Date(at).toISOString();
+            if (prize > 1 && !window.confirm('定时开奖：奖品份数为 ' + prize + '。若参与人数 ≤ ' + prize + '，所有参与者都会中奖并收到邮件。确认？')) {
+                return { error: '已取消发布', el: el.lotteryPrizeCount };
+            }
         }
-        pointCost = Math.floor(Number(el.lotteryPointCost && el.lotteryPointCost.value));
-        if (!Number.isFinite(pointCost) || pointCost < 0 || pointCost > 100000) {
-            return { error: '参与消耗须为 0 到 100000 的整数', el: el.lotteryPointCost };
+        if (audience === 'public') {
+            pointCost = 0;
+        } else {
+            pointCost = Math.floor(Number(el.lotteryPointCost && el.lotteryPointCost.value));
+            if (!Number.isFinite(pointCost) || pointCost < 0 || pointCost > 100000) {
+                return { error: '参与消耗须为 0 到 100000 的整数', el: el.lotteryPointCost };
+            }
         }
         return {
             lottery: {
@@ -3533,12 +3595,16 @@
         if (el.qualityInput) el.qualityInput.value = itemQuality(it);
         var isBarter = c.tradeType === 'barter';
         var isCurrency = c.tradeType === 'currency';
-        if (el.priceField) el.priceField.hidden = isBarter;
-        if (el.orderTypeField) el.orderTypeField.hidden = isBarter;
-        if (el.barterWantSection) el.barterWantSection.hidden = !isBarter;
-        if (el.formRoot) el.formRoot.classList.toggle('market-form--barter', isBarter);
-        if (el.modal) el.modal.classList.toggle('market-modal--barter', isBarter);
-        if (el.offerLabel) el.offerLabel.textContent = isBarter ? '我方物品' : '商品名称';
+        var isLottery = c.tradeType === 'lottery' || isLotteryCategorySelected();
+        if (el.priceField) el.priceField.hidden = isBarter || isLottery;
+        if (el.orderTypeField) el.orderTypeField.hidden = isBarter || isLottery;
+        if (el.tradeTypeField) el.tradeTypeField.hidden = !!isLottery;
+        if (el.barterWantSection) el.barterWantSection.hidden = !isBarter || isLottery;
+        if (el.formRoot) el.formRoot.classList.toggle('market-form--barter', isBarter && !isLottery);
+        if (el.modal) el.modal.classList.toggle('market-modal--barter', isBarter && !isLottery);
+        if (el.offerLabel) {
+            el.offerLabel.textContent = isLottery ? '奖品名称' : (isBarter ? '我方物品' : '商品名称');
+        }
         var want = currentWantItem();
         if (el.wantItemInput) el.wantItemInput.value = want.name || '';
         if (el.wantCategorySelect) el.wantCategorySelect.value = c.barterWantCategoryGroup || want.categoryGroup || '';
@@ -3560,10 +3626,11 @@
             el.wantQtyInput.value = wq != null && wq !== '' ? wq : '';
         }
         syncGiftFormUi();
+        syncHqPointsFormHints();
+        // 必须最后跑：避免数量/库存提示把抽奖专用 UI 又盖回来
         syncLotteryFormUi();
         renderProductImage(it);
         renderWantProductImage(want);
-        syncHqPointsFormHints();
         paintAllCategoryChips();
         if (el.formError) el.formError.hidden = true;
     }
@@ -4188,18 +4255,18 @@
                 return failRequired('请选择子分类', el.typeSelect || el.categorySelect);
             }
         }
-        var startMin = parseTimeMinutes(c.tradeTimeStart);
-        var endMin = parseTimeMinutes(c.tradeTimeEnd);
-        if (startMin == null || endMin == null) {
-            return failRequired('请填写有效的交易时段', startMin == null ? el.tradeTimeStart : el.tradeTimeEnd);
-        }
-        if (endMin <= startMin) {
-            return failRequired('结束时间须晚于开始时间', el.tradeTimeEnd);
-        }
         var items;
-        if (c.tradeType === 'lottery') {
+        if (c.tradeType === 'lottery' || lotteryPayload) {
+            if (!lotteryPayload) {
+                return failRequired('请完善抽奖设置', el.lotteryPrizeCount || el.categorySelect);
+            }
             var prizeName = el.itemInput ? el.itemInput.value.trim() : '';
             if (!prizeName) return failRequired('请填写奖品名称', el.itemInput);
+            c.tradeType = 'lottery';
+            c.orderType = 'sell';
+            c.tradeTimeStart = '00:00';
+            c.tradeTimeEnd = '23:59';
+            if (!c.location || !c.location.name) c.location = { name: '线上' };
             items = [{
                 name: prizeName,
                 nameZh: prizeName,
@@ -4209,83 +4276,91 @@
                 quality: 500,
             }];
         } else {
-        items = buildPayloadItems();
-        if (!items.length || !items[0].name) {
-            return failRequired('请搜索选择我方物品', el.itemInput);
-        }
-        if (c.tradeType === 'barter') {
-            var offerPts = isHqPointsItem(items[0]);
-            var wantPts = isHqPointsItem(items[1]);
-            if (offerPts && wantPts) {
-                return failRequired('积分只能填写在互换的一侧', el.wantItemInput);
+            var startMin = parseTimeMinutes(c.tradeTimeStart);
+            var endMin = parseTimeMinutes(c.tradeTimeEnd);
+            if (startMin == null || endMin == null) {
+                return failRequired('请填写有效的交易时段', startMin == null ? el.tradeTimeStart : el.tradeTimeEnd);
             }
-            if (!isSuperAdminSession() && (offerPts || wantPts)) {
-                return failRequired('仅超级管理员可发布积分互换', offerPts ? el.itemInput : el.wantItemInput);
+            if (endMin <= startMin) {
+                return failRequired('结束时间须晚于开始时间', el.tradeTimeEnd);
             }
-            if (!wantPts && !c.barterWantCategoryGroup && !items[1].categoryGroup) {
-                return failRequired('请选择换取物品分类', el.wantCategorySelect);
+            items = buildPayloadItems();
+            if (!items.length || !items[0].name) {
+                return failRequired('请搜索选择我方物品', el.itemInput);
             }
-            if (!wantPts) {
-                var wantGroup = c.barterWantCategoryGroup || items[1].categoryGroup;
-                var wantSubs = subtypesForGroup(wantGroup);
-                if (wantSubs.length && (!items[1].typeKey || wantSubs.indexOf(items[1].typeKey) < 0)) {
-                    return failRequired('请选择换取子分类', el.wantTypeSelect || el.wantCategorySelect);
+            if (c.tradeType === 'barter') {
+                var offerPts = isHqPointsItem(items[0]);
+                var wantPts = isHqPointsItem(items[1]);
+                if (offerPts && wantPts) {
+                    return failRequired('积分只能填写在互换的一侧', el.wantItemInput);
+                }
+                if (!isSuperAdminSession() && (offerPts || wantPts)) {
+                    return failRequired('仅超级管理员可发布积分互换', offerPts ? el.itemInput : el.wantItemInput);
+                }
+                if (!wantPts && !c.barterWantCategoryGroup && !items[1].categoryGroup) {
+                    return failRequired('请选择换取物品分类', el.wantCategorySelect);
+                }
+                if (!wantPts) {
+                    var wantGroup = c.barterWantCategoryGroup || items[1].categoryGroup;
+                    var wantSubs = subtypesForGroup(wantGroup);
+                    if (wantSubs.length && (!items[1].typeKey || wantSubs.indexOf(items[1].typeKey) < 0)) {
+                        return failRequired('请选择换取子分类', el.wantTypeSelect || el.wantCategorySelect);
+                    }
+                }
+                if (!items[1].name) {
+                    return failRequired('请搜索选择期望换取的物品', el.wantItemInput);
+                }
+                if (!offerPts) {
+                    var stockN = Math.max(1, parseInt(items[0].quantity, 10) || 1);
+                    var giveN = Math.max(1, parseInt(items[0].swapGiveQty, 10) || 1);
+                    if (!(isGiftCategorySelected()) && stockN < giveN) {
+                        return failRequired('我方总数须不少于单次给出数量', el.stockInput);
+                    }
+                }
+                if (isGiftCategorySelected()) {
+                    if (!isSuperAdminSession()) {
+                        return failRequired('仅超级管理员可发布礼物互换', el.categorySelect);
+                    }
+                    var urls = items[0].giftRedeemUrls || [];
+                    var emptyGift = el.giftLinksList && el.giftLinksList.querySelector('[data-gift-url-idx]');
+                    if (el.giftLinksList) {
+                        var emptyInp = Array.prototype.find.call(
+                            el.giftLinksList.querySelectorAll('[data-gift-url-idx]'),
+                            function (inp) { return !String(inp.value || '').trim(); }
+                        );
+                        if (emptyInp) emptyGift = emptyInp;
+                    }
+                    if (!urls.length || urls.some(function (u) { return !String(u || '').trim(); })) {
+                        return failRequired('我方总数是几，就填几条兑换链接', emptyGift || el.stockInput);
+                    }
+                    if (urls.length !== (items[0].quantity || urls.length)) {
+                        return failRequired('礼物链接条数须与我方总数一致', el.stockInput);
+                    }
+                }
+                if (isGiftItem(items[1])) {
+                    return failRequired('礼物只能填写在给出一侧', el.wantCategorySelect);
                 }
             }
-            if (!items[1].name) {
-                return failRequired('请搜索选择期望换取的物品', el.wantItemInput);
-            }
-            if (!offerPts) {
-                var stockN = Math.max(1, parseInt(items[0].quantity, 10) || 1);
-                var giveN = Math.max(1, parseInt(items[0].swapGiveQty, 10) || 1);
-                if (!(isGiftCategorySelected()) && stockN < giveN) {
-                    return failRequired('我方总数须不少于单次给出数量', el.stockInput);
+            if (c.tradeType === 'currency') {
+                for (var i = 0; i < items.length; i++) {
+                    if (!Number.isFinite(items[i].pricePerUnit) || items[i].pricePerUnit < 0) {
+                        return failRequired('请填写有效的单件报价（可为 0 aUEC）', el.priceInput);
+                    }
+                }
+                if (!isHqPointsItem(items[0])) {
+                    var curStock = parseInt(items[0].quantity, 10);
+                    var curGive = parseInt(items[0].swapGiveQty, 10);
+                    if (!Number.isFinite(curGive) || curGive < 1) {
+                        return failRequired('请填写单次数量', el.qtyInput);
+                    }
+                    if (!Number.isFinite(curStock) || curStock < 1) {
+                        return failRequired('请填写库存', el.stockInput);
+                    }
+                    if (curStock < curGive) {
+                        return failRequired('库存须不少于单次数量', el.stockInput);
+                    }
                 }
             }
-            if (isGiftCategorySelected()) {
-                if (!isSuperAdminSession()) {
-                    return failRequired('仅超级管理员可发布礼物互换', el.categorySelect);
-                }
-                var urls = items[0].giftRedeemUrls || [];
-                var emptyGift = el.giftLinksList && el.giftLinksList.querySelector('[data-gift-url-idx]');
-                if (el.giftLinksList) {
-                    var emptyInp = Array.prototype.find.call(
-                        el.giftLinksList.querySelectorAll('[data-gift-url-idx]'),
-                        function (inp) { return !String(inp.value || '').trim(); }
-                    );
-                    if (emptyInp) emptyGift = emptyInp;
-                }
-                if (!urls.length || urls.some(function (u) { return !String(u || '').trim(); })) {
-                    return failRequired('我方总数是几，就填几条兑换链接', emptyGift || el.stockInput);
-                }
-                if (urls.length !== (items[0].quantity || urls.length)) {
-                    return failRequired('礼物链接条数须与我方总数一致', el.stockInput);
-                }
-            }
-            if (isGiftItem(items[1])) {
-                return failRequired('礼物只能填写在给出一侧', el.wantCategorySelect);
-            }
-        }
-        if (c.tradeType === 'currency') {
-            for (var i = 0; i < items.length; i++) {
-                if (!Number.isFinite(items[i].pricePerUnit) || items[i].pricePerUnit < 0) {
-                    return failRequired('请填写有效的单件报价（可为 0 aUEC）', el.priceInput);
-                }
-            }
-            if (!isHqPointsItem(items[0])) {
-                var curStock = parseInt(items[0].quantity, 10);
-                var curGive = parseInt(items[0].swapGiveQty, 10);
-                if (!Number.isFinite(curGive) || curGive < 1) {
-                    return failRequired('请填写单次数量', el.qtyInput);
-                }
-                if (!Number.isFinite(curStock) || curStock < 1) {
-                    return failRequired('请填写库存', el.stockInput);
-                }
-                if (curStock < curGive) {
-                    return failRequired('库存须不少于单次数量', el.stockInput);
-                }
-            }
-        }
         }
         var payload = {
             tradeType: c.tradeType,

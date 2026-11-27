@@ -384,7 +384,7 @@
                                 <div class="market-row-2 market-row-2--controls">
                                     <label class="market-inline-field" for="marketLotteryPrizeCount">
                                         <span class="market-field__label">奖品份数</span>
-                                        <input type="number" id="marketLotteryPrizeCount" class="market-control" min="1" max="500" step="1" value="1">
+                                        <input type="number" id="marketLotteryPrizeCount" class="market-control" min="1" max="50" step="1" value="1">
                                     </label>
                                     <label class="market-inline-field" id="marketLotteryProbField" for="marketLotteryProbability">
                                         <span class="market-field__label">中奖概率 (%)</span>
@@ -394,8 +394,9 @@
                                 <span class="market-field__label">参与范围</span>
                                 <div class="market-seg market-seg--duo" id="marketSegLotteryAudience">
                                     <button type="button" class="is-active" data-lottery-audience="fleet">仅舰队成员</button>
+                                    <button type="button" data-lottery-audience="public">所有人</button>
                                 </div>
-                                <p class="market-field__hint" id="marketLotteryAudienceHint">抽奖仅舰队成员可见和参与，可设置签到积分消耗。</p>
+                                <p class="market-field__hint" id="marketLotteryAudienceHint">仅舰队成员：商城里只有舰队能看见和参与，可用签到积分。所有人：全站可见可参与，不可设积分消耗。</p>
                                 <label class="market-inline-field" id="marketLotteryCostField" for="marketLotteryPointCost">
                                     <span class="market-field__label">参与消耗（签到积分）</span>
                                     <input type="number" id="marketLotteryPointCost" class="market-control" min="0" max="100000" step="1" value="0">
@@ -405,7 +406,7 @@
                                     <span class="market-field__label">开奖时间</span>
                                     <input type="datetime-local" id="marketLotteryDrawAt" class="market-control">
                                 </label>
-                                <p class="market-field__hint" id="marketLotteryDrawAtHint" hidden>到点后随机抽取。人数少于奖品份数时，参与者全部中奖。</p>
+                                <p class="market-field__hint" id="marketLotteryDrawAtHint" hidden>到点后随机抽取。若奖品份数 ≥ 参与人数，所有参与者都会中奖并收到邮件——请把份数设成真正想抽出的名额。</p>
                             </div>
 
                             <div class="market-field" id="marketQualityField">
@@ -744,6 +745,6 @@
     <script src="market-notify.js?v=12" defer></script>
     <script src="market-chat.js?v=5" defer></script>
     <script src="page-share.js?v=61" defer></script>
-    <script src="market.js?v=133" defer></script>
+    <script src="market.js?v=137" defer></script>
 </body>
 </html>
