@@ -41,30 +41,71 @@
         return sess;
     }
 
+    function isFrameHost(el) {
+        if (!el || !el.classList) return false;
+        return el.classList.contains('community-author-avatar') ||
+            el.classList.contains('community-chat-roster-avatar') ||
+            el.classList.contains('community-chat-mention-pop__avatar') ||
+            el.classList.contains('oopz-bridge-member-avatar-wrap') ||
+            el.classList.contains('nav-login-avatar-inner') ||
+            el.classList.contains('market-seller-card__avatar-wrap') ||
+            el.classList.contains('uss-avatar-frame');
+    }
+
     function frameHost(img) {
-        var parent = img.parentElement;
-        if (!parent) return img;
-        if (parent.classList.contains('community-author-avatar') ||
-            parent.classList.contains('community-chat-roster-avatar') ||
-            parent.classList.contains('community-chat-mention-pop__avatar') ||
-            parent.classList.contains('oopz-bridge-member-avatar-wrap') ||
-            parent.classList.contains('nav-login-avatar-inner') ||
-            parent.classList.contains('market-seller-card__avatar-wrap')) return parent;
+        var node = img.parentElement;
+        var i = 0;
+        while (node && i < 4) {
+            if (isFrameHost(node)) return node;
+            node = node.parentElement;
+            i += 1;
+        }
         return img;
+    }
+
+    function clearOrnament(host) {
+        if (!host) return;
+        host.classList.remove('uss-has-frame');
+        var leftover = host.querySelector(':scope > .uss-frame-svg, :scope > #ussFrameSprite');
+        if (leftover) leftover.remove();
+    }
+
+    function mountOrnament(host) {
+        host.classList.add('uss-has-frame');
+        var leftover = host.querySelector(':scope > .uss-frame-svg');
+        if (leftover) leftover.remove();
     }
 
     function paint(img) {
         if (!img || img.tagName !== 'IMG') return;
         var parent = img.parentElement;
-        if (parent && parent.classList.contains('uss-avatar-frame')) {
-            parent.parentNode.insertBefore(img, parent);
-            parent.remove();
-        }
         var handle = String(img.getAttribute('data-avatar-handle') || '').trim().toLowerCase();
         var on = !!(handle && handles[handle]) || img.getAttribute('data-avatar-frame') === '1';
+        if (parent && parent.classList.contains('uss-avatar-frame')) {
+            if (on) {
+                mountOrnament(parent);
+                return;
+            }
+            parent.parentNode.insertBefore(img, parent);
+            parent.remove();
+            parent = img.parentElement;
+        }
+        img.classList.remove('uss-has-frame');
         var host = frameHost(img);
-        img.classList.toggle('uss-has-frame', on && host === img);
-        if (host !== img) host.classList.toggle('uss-has-frame', on);
+        if (host !== img) {
+            if (on) mountOrnament(host);
+            else clearOrnament(host);
+            return;
+        }
+        if (!on || !img.parentNode) {
+            clearOrnament(img);
+            return;
+        }
+        var wrap = document.createElement('span');
+        wrap.className = 'uss-avatar-frame uss-has-frame';
+        img.parentNode.insertBefore(wrap, img);
+        wrap.appendChild(img);
+        mountOrnament(wrap);
     }
 
     function syncDrawerHint() {
@@ -72,23 +113,27 @@
         if (!dImg) return;
         var sess = session();
         var owned = !!(sess && sess.avatarFrameOwned);
+        var host = dImg.closest('.uss-avatar-frame') || dImg;
+        host.style.cursor = owned ? 'pointer' : '';
         dImg.style.cursor = owned ? 'pointer' : '';
         dImg.title = owned ? (sess.avatarFrameOn ? '点击摘下头像框' : '点击佩戴头像框') : '';
         if (sess && sess.bindingId) {
-            dImg.setAttribute('data-avatar-handle', String(sess.bindingId).trim().toLowerCase());
-        }
-        if (owned && sess.avatarFrameOn) {
-            handles[String(sess.bindingId || '').trim().toLowerCase()] = true;
+            var id = String(sess.bindingId).trim().toLowerCase();
+            dImg.setAttribute('data-avatar-handle', id);
+            handles[id] = !!(owned && sess.avatarFrameOn);
         }
     }
 
     function paintAll() {
+        var sprite = document.getElementById('ussFrameSprite');
+        if (sprite) sprite.remove();
         syncDrawerHint();
         document.querySelectorAll('img[data-avatar-handle], img.min-note-avatar').forEach(paint);
         var dImg = document.getElementById('drawerUserAvatarImg');
         if (dImg) paint(dImg);
         var nImg = document.getElementById('navUserAvatarImg');
         if (nImg) paint(nImg);
+        syncDrawerHint();
     }
 
     function schedulePaint() {
@@ -223,8 +268,13 @@
     }
 
     document.addEventListener('click', function (event) {
-        var avatar = event.target.closest('#drawerUserAvatarImg');
-        if (!avatar) return;
+        var node = event.target;
+        if (!node) return;
+        if (node.nodeType !== 1) node = node.parentElement;
+        var drawerImg = document.getElementById('drawerUserAvatarImg');
+        if (!drawerImg || !node || !node.closest) return;
+        var area = drawerImg.closest('.uss-avatar-frame') || drawerImg;
+        if (node !== area && !area.contains(node)) return;
         event.preventDefault();
         event.stopPropagation();
         toggleFrame();

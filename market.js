@@ -1918,7 +1918,7 @@
             '<div class="market-card__text">' +
             '<span class="market-card__cat">' + catLine + '</span>' +
             '<h2 class="market-card__title">' + escapeHtml(listingHeadline(o)) +
-            (o.tradeType !== 'barter' && o.items.length > 1 ? ' 等' + o.items.length + '件' : '') + '</h2>' +
+            (o.tradeType !== 'barter' && Array.isArray(o.items) && o.items.length > 1 ? ' 等' + o.items.length + '件' : '') + '</h2>' +
             '<p class="market-card__price' + priceClass + '" title="' + escapeHtml(formatPrice(o)) + '">' + escapeHtml(formatPriceCard(o)) + '</p>' +
             '</div>' +
             '<button type="button" class="market-card__cta" aria-label="购买">' + CART_SVG + '</button>' +
@@ -4395,39 +4395,73 @@
                     contact: payload.contact,
                     contactPublic: !!payload.contactPublic,
                 };
-                var patchRes = await fetch(joinUrl('/api/market/orders/' + encodeURIComponent(state.editingOrderId)), {
+                var editingId = state.editingOrderId;
+                closeModal();
+                fetch(joinUrl('/api/market/orders/' + encodeURIComponent(editingId)), {
                     method: 'PATCH',
                     headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, authHeaders()),
                     body: JSON.stringify(patchBody),
-                });
-                var patchData = await patchRes.json().catch(function () { return {}; });
-                if (!patchRes.ok) throw new Error(apiErrorText(patchData, '保存失败'));
-                closeModal();
-                if (typeof window.USS_MARKET_ON_ORDER_SAVED === 'function') {
-                    window.USS_MARKET_ON_ORDER_SAVED();
-                } else {
-                    await fetchOrders();
-                }
+                })
+                    .then(function (patchRes) {
+                        return patchRes.json().catch(function () { return {}; }).then(function (patchData) {
+                            if (!patchRes.ok) throw new Error(apiErrorText(patchData, '保存失败'));
+                            if (typeof window.USS_MARKET_ON_ORDER_SAVED === 'function') {
+                                window.USS_MARKET_ON_ORDER_SAVED();
+                            } else {
+                                return fetchOrders();
+                            }
+                        });
+                    })
+                    .catch(function (err) {
+                        window.alert((err && err.message) || '保存失败');
+                        fetchOrders();
+                    });
                 return;
             }
-            var r = await fetch(joinUrl('/api/market/orders'), {
-                method: 'POST',
-                headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, authHeaders()),
-                body: JSON.stringify(payload),
+            var sess = loadSession() || {};
+            var pendingId = 'pending-' + Date.now();
+            var optimistic = Object.assign({}, payload, {
+                id: pendingId,
+                status: 'open',
+                createdAt: new Date().toISOString(),
+                bindingId: sess.bindingId || '',
+                avatarUrl: sess.avatarUrl || '',
             });
-            var data = await r.json().catch(function () { return {}; });
-            if (!r.ok) {
-                if (data && data.code === 'MKT_042') {
-                    closeModal();
-                    ensureRsiBindThen(function () {});
-                    return;
-                }
-                throw new Error(apiErrorText(data, '生成单据失败'));
-            }
             closeModal();
             state.tab = c.orderType === 'buy' ? 'buy' : 'sell';
             syncTabs();
-            await fetchOrders();
+            state.orders.unshift(optimistic);
+            renderGrid();
+            fetch(joinUrl('/api/market/orders'), {
+                method: 'POST',
+                headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, authHeaders()),
+                body: JSON.stringify(payload),
+            })
+                .then(function (r) {
+                    return r.json().catch(function () { return {}; }).then(function (data) {
+                        if (!r.ok) {
+                            if (data && data.code === 'MKT_042') {
+                                state.orders = state.orders.filter(function (o) { return o && o.id !== pendingId; });
+                                renderGrid();
+                                ensureRsiBindThen(function () {});
+                                return;
+                            }
+                            throw new Error(apiErrorText(data, '生成单据失败'));
+                        }
+                        if (data && data.order && data.order.id) {
+                            state.orders = state.orders.filter(function (o) { return o && o.id !== pendingId; });
+                            mergeOrderIntoState(data.order);
+                            renderGrid();
+                        }
+                        return fetchOrders();
+                    });
+                })
+                .catch(function (e) {
+                    state.orders = state.orders.filter(function (o) { return o && o.id !== pendingId; });
+                    renderGrid();
+                    window.alert((e && e.message) || '生成单据失败，稍后再试');
+                });
+            return;
         } catch (e) {
             var errMsg = (e && e.message) || '生成单据失败，稍后再试';
             var errFocus = null;

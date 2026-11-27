@@ -1442,6 +1442,17 @@ button.sc-lead-item.is-active {
 .min-note-name { color: #8ee0ff; }
 .min-note-time { color: rgba(200, 220, 235, 0.55); font-size: 0.75rem; }
 .min-note-text { margin: 0.25rem 0 0; white-space: pre-wrap; }
+.min-note-actions { display: flex; align-items: center; gap: 0.75rem; }
+.min-note-delete {
+ margin: 0.35rem 0 0;
+ padding: 0;
+ border: 0;
+ background: transparent;
+ color: rgba(255, 140, 140, 0.92);
+ font: inherit;
+ font-size: 0.75rem;
+ cursor: pointer;
+}
 .min-note-reply,
 .min-note-reply-cancel {
  margin: 0.35rem 0 0;

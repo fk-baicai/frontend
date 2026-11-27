@@ -34,7 +34,8 @@
                 name: name.slice(0, 32),
                 avatarUrl: sess.avatarUrl || "",
                 rankLabel: sess.rsiRankLabel || "",
-                rankIcon: sess.rsiRankIconUrl || ""
+                rankIcon: sess.rsiRankIconUrl || "",
+                isSuperAdmin: !!sess.isSuperAdmin
             };
         } catch (e) {
             return null;
@@ -85,7 +86,7 @@
         }, 0);
     }
 
-    function paintNotes(list, notes, onReply) {
+    function paintNotes(list, notes, onReply, onDelete) {
         list.textContent = "";
         if (!notes.length) {
             list.appendChild(el("p", "min-empty", "还没有留言。"));
@@ -93,21 +94,37 @@
         }
         notes.slice().reverse().forEach(function (note) {
             var item = el("article", "min-note-item");
+            if (note.id) item.setAttribute("data-note-id", String(note.id));
             item.appendChild(personRow(note, true));
             item.appendChild(el("p", "min-note-text", note.text));
+            var actions = el("div", "min-note-actions");
             var reply = el("button", "min-note-reply", "");
             reply.type = "button";
             reply.setAttribute("aria-label", "回复");
             reply.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>';
             reply.addEventListener("click", function () { onReply(note); });
-            item.appendChild(reply);
+            actions.appendChild(reply);
+            if (onDelete && note.id) {
+                var del = el("button", "min-note-delete", "删除");
+                del.type = "button";
+                del.addEventListener("click", function () { onDelete(note.id); });
+                actions.appendChild(del);
+            }
+            item.appendChild(actions);
             var replies = note.replies || [];
             if (replies.length) {
                 var box = el("div", "min-note-replies");
                 replies.forEach(function (child) {
                     var row = el("div", "min-note-reply-item");
+                    if (child && child.id) row.setAttribute("data-note-id", String(child.id));
                     row.appendChild(personRow(child, true));
                     row.appendChild(el("p", "min-note-text", child.text));
+                    if (onDelete && child && child.id) {
+                        var replyDel = el("button", "min-note-delete", "删除");
+                        replyDel.type = "button";
+                        replyDel.addEventListener("click", function () { onDelete(child.id); });
+                        row.appendChild(replyDel);
+                    }
                     box.appendChild(row);
                 });
                 item.appendChild(box);
@@ -231,13 +248,88 @@
         form.appendChild(hint);
         form.appendChild(text);
         form.appendChild(send);
+        function paint() {
+            paintNotes(list, lastNotes, setReply, viewer && viewer.isSuperAdmin ? deleteNote : null);
+        }
+        var lastNotes = [];
+        function deleteNote(noteId) {
+            if (!viewer || !viewer.token || !noteId) return;
+            if (!window.confirm("确定删除这条留言？")) return;
+            var node = list.querySelector('[data-note-id="' + noteId + '"]');
+            if (node) node.remove();
+            fetch(noteUrl(id, kind) + "/" + encodeURIComponent(noteId), {
+                method: "DELETE",
+                headers: { Authorization: "Bearer " + viewer.token }
+            }).then(function (res) {
+                return res.json().then(function (body) { return { ok: res.ok, body: body }; });
+            }).then(function (result) {
+                if (!result.ok || !result.body || !result.body.ok) {
+                    list.appendChild(el("p", "min-empty", (result.body && result.body.message) || "留言没有删除。"));
+                    fetch(noteUrl(id, kind))
+                        .then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); })
+                        .then(function (body) {
+                            lastNotes = body.notes || [];
+                            paint();
+                            markCount(id, noteTotal(lastNotes));
+                        })
+                        .catch(function () { /* keep optimistic removal */ });
+                    return;
+                }
+                lastNotes = result.body.notes || [];
+                paint();
+                markCount(id, noteTotal(lastNotes));
+            }).catch(function () {
+                list.appendChild(el("p", "min-empty", "留言没有删除。"));
+            });
+        }
         form.addEventListener("submit", function (ev) {
             ev.preventDefault();
-            send.disabled = true;
-            var headers = { "Content-Type": "application/json" };
-            if (viewer) headers.Authorization = "Bearer " + viewer.token;
             var payload = { name: viewer ? viewer.name : name.value, text: text.value };
             if (parent && parent.id) payload.parent = parent.id;
+            var bodyText = String(text.value || "").trim();
+            if (!bodyText) return;
+            if (!viewer && !String(name.value || "").trim()) return;
+            var optimistic = {
+                id: "pending-" + Date.now(),
+                name: payload.name,
+                text: bodyText,
+                at: new Date().toISOString(),
+                replies: [],
+                avatarUrl: viewer ? viewer.avatarUrl : "",
+                rankLabel: viewer ? viewer.rankLabel : "",
+                rankIcon: viewer ? viewer.rankIcon : "",
+                avatarFrame: false
+            };
+            var parentId = parent && parent.id ? parent.id : "";
+            if (!viewer) localStorage.setItem("min-note-name", String(name.value || "").trim());
+            text.value = "";
+            clearReply();
+            var empty = list.querySelector(".min-empty");
+            if (empty) empty.remove();
+            if (parentId) {
+                var article = list.querySelector('.min-note-item[data-note-id="' + parentId + '"]');
+                if (article) {
+                    var replies = article.querySelector(".min-note-replies");
+                    if (!replies) {
+                        replies = el("div", "min-note-replies");
+                        article.appendChild(replies);
+                    }
+                    var row = el("article", "min-note-reply-item");
+                    row.setAttribute("data-pending", optimistic.id);
+                    row.appendChild(personRow(optimistic, true));
+                    row.appendChild(el("p", "min-note-text", optimistic.text));
+                    replies.appendChild(row);
+                }
+            } else {
+                var wrap = el("article", "min-note-item");
+                wrap.setAttribute("data-pending", optimistic.id);
+                wrap.appendChild(personRow(optimistic, true));
+                wrap.appendChild(el("p", "min-note-text", optimistic.text));
+                if (list.firstChild) list.insertBefore(wrap, list.firstChild);
+                else list.appendChild(wrap);
+            }
+            var headers = { "Content-Type": "application/json" };
+            if (viewer) headers.Authorization = "Bearer " + viewer.token;
             fetch(noteUrl(id, kind), {
                 method: "POST",
                 headers: headers,
@@ -245,18 +337,18 @@
             }).then(function (res) {
                 return res.json().then(function (body) { return { ok: res.ok, body: body }; });
             }).then(function (result) {
-                send.disabled = false;
                 if (!result.ok || !result.body || !result.body.ok) {
+                    var pending = list.querySelector('[data-pending="' + optimistic.id + '"]');
+                    if (pending) pending.remove();
                     list.appendChild(el("p", "min-empty", (result.body && result.body.message) || "留言没有保存。"));
                     return;
                 }
-                if (!viewer) localStorage.setItem("min-note-name", name.value.trim());
-                text.value = "";
-                clearReply();
-                paintNotes(list, result.body.notes || [], setReply);
-                markCount(id, noteTotal(result.body.notes));
+                lastNotes = result.body.notes || [];
+                paint();
+                markCount(id, noteTotal(lastNotes));
             }).catch(function () {
-                send.disabled = false;
+                var pending = list.querySelector('[data-pending="' + optimistic.id + '"]');
+                if (pending) pending.remove();
                 list.appendChild(el("p", "min-empty", "留言没有保存。"));
             });
         });
@@ -272,7 +364,7 @@
         else name.focus();
         fetch(noteUrl(id, kind))
             .then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); })
-            .then(function (body) { paintNotes(list, body.notes || [], setReply); })
+            .then(function (body) { lastNotes = body.notes || []; paint(); })
             .catch(function () { list.textContent = ""; list.appendChild(el("p", "min-empty", "留言没有读到。")); });
     }
 

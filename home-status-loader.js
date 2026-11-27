@@ -92,12 +92,11 @@
         if (inflight) return inflight;
         var opts = options || {};
         var base = apiBase();
-        var url = base + '/api/home-dashboard?_=' + Date.now();
+        var url = base + '/api/home-dashboard';
         inflight = fetchWithTimeout(
             url,
             {
-                cache: 'no-store',
-                headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+                cache: opts.force ? 'no-store' : 'default',
             },
             opts.timeoutMs
         )
@@ -159,7 +158,14 @@
 
     var cached = readCache();
     if (cached) latest = cached;
-    fetchDashboard();
+    if (cached) {
+        var delay = global.UssHomeBoot && typeof global.UssHomeBoot.scheduleIdle === 'function'
+            ? function (fn) { global.UssHomeBoot.scheduleIdle(fn, 800); }
+            : function (fn) { global.setTimeout(fn, 800); };
+        delay(function () { fetchDashboard(); });
+    } else {
+        fetchDashboard();
+    }
 })(
     typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : this
 );

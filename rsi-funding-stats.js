@@ -592,16 +592,15 @@
         }
     }
 
-    async function fetchFromBackend() {
+    async function fetchFromBackend(force) {
         var lastErr = null;
         var bases = apiBaseCandidates();
         for (var i = 0; i < bases.length; i++) {
             var base = bases[i];
             try {
-                var url = base + '/api/rsi-funding-stats?_=' + Date.now();
+                var url = base + '/api/rsi-funding-stats';
                 var r = await fetch(url, {
-                    cache: 'no-store',
-                    headers: { Pragma: 'no-cache', 'Cache-Control': 'no-cache' },
+                    cache: force ? 'no-store' : 'default',
                 });
                 var data = {};
                 try {
@@ -628,7 +627,7 @@
         if (!opts.silent) renderLoading();
 
         try {
-            var data = await fetchFromBackend();
+            var data = await fetchFromBackend(!!opts.force);
             render(data);
         } catch (err) {
             renderError(formatFetchError(err));
@@ -667,10 +666,17 @@
     }
 
     function scheduleInit() {
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
+        var start = function () {
+            if (window.UssHomeBoot && typeof window.UssHomeBoot.afterPageReadyIdle === 'function') {
+                window.UssHomeBoot.afterPageReadyIdle(init, 400);
+                return;
+            }
             init();
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', start);
+        } else {
+            start();
         }
     }
 

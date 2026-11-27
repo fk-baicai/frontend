@@ -178,7 +178,11 @@
     function appendRows(rows, reset) {
         var log = document.getElementById('marketChatLog');
         if (!log) return;
-        if (reset) log.innerHTML = '';
+        var pendingNodes = [];
+        if (reset) {
+            pendingNodes = Array.prototype.slice.call(log.querySelectorAll('[data-msg-id^="pending-"]'));
+            log.innerHTML = '';
+        }
         var sess = loadSession() || {};
         var myBid = String(sess.bindingId || '').toLowerCase();
         (rows || []).forEach(function (m) {
@@ -186,8 +190,13 @@
             upsertMessage(log, m, myBid);
             if (m.seq > state.maxSeq) state.maxSeq = m.seq;
         });
+        pendingNodes.forEach(function (node) {
+            if (!log.querySelector('[data-msg-id="' + node.getAttribute('data-msg-id') + '"]')) {
+                log.appendChild(node);
+            }
+        });
         if (rows && rows.length) log.scrollTop = log.scrollHeight;
-        if (reset && (!rows || !rows.length)) {
+        if (reset && (!rows || !rows.length) && !pendingNodes.length) {
             log.innerHTML = '<p class="market-chat-empty">' +
                 (state.canSend ? '还没有消息，直接打个招呼即可。' : '没有可保留的聊天记录。') +
                 '</p>';
@@ -276,33 +285,51 @@
         var input = document.getElementById('marketChatInput');
         var text = input ? String(input.value || '').trim() : '';
         if (!text || !state.purchaseId || state.sending || !state.canSend) return;
-        state.sending = true;
-        var sendBtn = document.getElementById('marketChatSend');
-        if (sendBtn) sendBtn.disabled = true;
-        try {
-            var r = await fetch(joinUrl('/api/market/chat/threads/' + encodeURIComponent(state.purchaseId)), {
-                method: 'POST',
-                headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, authHeaders()),
-                body: JSON.stringify({ text: text }),
+        var sess = loadSession() || {};
+        var pendingId = 'pending-' + Date.now();
+        var optimistic = {
+            id: pendingId,
+            text: text,
+            createdAt: new Date().toISOString(),
+            fromBindingId: sess.bindingId || '',
+            seq: 0,
+        };
+        if (input) input.value = '';
+        var empty = document.querySelector('#marketChatLog .market-chat-empty');
+        if (empty) empty.remove();
+        appendRows([optimistic], false);
+        if (input) input.focus();
+        fetch(joinUrl('/api/market/chat/threads/' + encodeURIComponent(state.purchaseId)), {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, authHeaders()),
+            body: JSON.stringify({ text: text }),
+        })
+            .then(function (r) {
+                return r.json().catch(function () { return {}; }).then(function (data) {
+                    return { ok: r.ok, data: data };
+                });
+            })
+            .then(function (result) {
+                var log = document.getElementById('marketChatLog');
+                var pending = log && log.querySelector('[data-msg-id="' + pendingId + '"]');
+                if (!result.ok) {
+                    var hinted =
+                        result.data && result.data.code && window.UssApiError && window.UssApiError.formatUserError
+                            ? window.UssApiError.formatUserError(result.data.code)
+                            : '';
+                    if (pending) pending.remove();
+                    window.alert(hinted || (result.data && result.data.message) || '发送失败');
+                    return;
+                }
+                if (pending) pending.remove();
+                if (result.data && result.data.message) appendRows([result.data.message], false);
+            })
+            .catch(function (e) {
+                var log = document.getElementById('marketChatLog');
+                var pending = log && log.querySelector('[data-msg-id="' + pendingId + '"]');
+                if (pending) pending.remove();
+                window.alert((e && e.message) || '发送失败');
             });
-            var data = await r.json().catch(function () { return {}; });
-            if (!r.ok) {
-                var hinted = data && data.code && window.UssApiError && window.UssApiError.formatUserError
-                    ? window.UssApiError.formatUserError(data.code)
-                    : '';
-                throw new Error(hinted || (data && data.message) || '发送失败');
-            }
-            if (input) input.value = '';
-            var empty = document.querySelector('#marketChatLog .market-chat-empty');
-            if (empty) empty.remove();
-            if (data.message) appendRows([data.message], false);
-        } catch (e) {
-            window.alert((e && e.message) || '发送失败');
-        } finally {
-            state.sending = false;
-            if (sendBtn) sendBtn.disabled = false;
-            if (input) input.focus();
-        }
     }
 
     function startPoll() {

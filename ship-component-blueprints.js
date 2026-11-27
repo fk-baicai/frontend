@@ -1610,11 +1610,17 @@
     }
 
     var prefetchSerial = 0;
+    var wikiPauseUntil = 0;
+
+    function noteWikiUnavailable() {
+        wikiPauseUntil = Date.now() + 60000;
+    }
 
     function prefetchMissionDetails(missions, options) {
+        if (Date.now() < wikiPauseUntil) return;
         var opts = options || {};
-        var limit = Math.max(1, Number(opts.limit) || 36);
-        var concurrency = Math.max(1, Math.min(6, Number(opts.concurrency) || 4));
+        var limit = Math.max(1, Number(opts.limit) || 12);
+        var concurrency = Math.max(1, Math.min(2, Number(opts.concurrency) || 2));
         var serial = ++prefetchSerial;
         var queue = [];
         var seen = Object.create(null);
@@ -1640,11 +1646,12 @@
         var running = 0;
         function pump() {
             if (serial !== prefetchSerial) return;
+            if (Date.now() < wikiPauseUntil) return;
             while (running < concurrency && index < queue.length) {
                 var job = queue[index++];
                 if (detailCache[job.id] && isUsableMissionDetail(detailCache[job.id])) continue;
                 running += 1;
-                fetchMissionDetail(job.id, job.debug)
+                fetchMissionDetail(job.id, job.debug, { prefetch: true })
                     .catch(function () {})
                     .finally(function () {
                         running -= 1;
@@ -1655,7 +1662,7 @@
         pump();
     }
 
-    async function fetchMissionDetail(ref, debugName) {
+    async function fetchMissionDetail(ref, debugName, opts) {
         var id = String(ref || '').trim();
         if (!id) throw new Error('缺少任务 ID');
         var cacheKey = id + '|' + String(debugName || '') + '|v' + DETAIL_SCHEMA_VERSION;
@@ -1670,9 +1677,13 @@
         if (debugName) {
             url += '&debug_name=' + encodeURIComponent(String(debugName));
         }
+        if (opts && opts.prefetch) url += '&prefetch=1';
         var res = await fetch(url, { cache: 'no-store' });
         var data = await parseJsonResponse(res, '任务详情响应解析失败');
         if (!res.ok || !data.ok || !data.mission) {
+            if (res.status === 503 || (data && /暂时拉不到|Wiki 暂时不可用/.test(String(data.message || '')))) {
+                noteWikiUnavailable();
+            }
             throw new Error((data && data.message) || '任务详情加载失败');
         }
         var mission = data.mission;

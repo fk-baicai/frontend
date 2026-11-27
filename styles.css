@@ -7715,7 +7715,7 @@ body.oopz-bind-open {
 .community-chat-roster-inner {
  flex: 1;
  min-height: 0;
- padding: 10px 8px 12px;
+ padding: 10px 14px 16px;
  display: flex;
  flex-direction: column;
  gap: 6px;
@@ -7789,6 +7789,7 @@ body.oopz-bind-open {
  cursor: pointer;
  text-align: left;
  font: inherit;
+ overflow: visible;
  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
@@ -7851,6 +7852,10 @@ body.oopz-bind-open {
  border-radius: 50%;
  overflow: hidden;
  background: linear-gradient(145deg, rgb(84, 173, 247), rgb(30, 77, 107));
+}
+
+.community-chat-roster-self {
+ cursor: default;
 }
 
 .community-chat-roster-avatar-img {
@@ -10581,6 +10586,10 @@ a.community-author-avatar-link:focus-visible {
  max-width: 2rem;
  max-height: 2rem;
  }
+ .nav-login-avatar-inner.uss-has-frame {
+ width: 2rem;
+ height: 2rem;
+ }
  .nav-mega-inner {
  padding-left: var(--navbar-pad-x);
  }
@@ -11600,6 +11609,21 @@ body.uss-donate-modal-open .min-note-mask {
 .min-note-reply svg {
  display: block;
 }
+.min-note-actions {
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
+}
+.min-note-delete {
+ margin: 0.35rem 0 0;
+ padding: 0;
+ border: 0;
+ background: transparent;
+ color: rgba(255, 140, 140, 0.92);
+ font: inherit;
+ font-size: 0.75rem;
+ cursor: pointer;
+}
 .min-note-reply,
 .min-note-reply-cancel {
  margin: 0.35rem 0 0;
@@ -11969,18 +11993,32 @@ body.uss-donate-modal-open .min-note-mask {
  font-size: 0.78rem;
 }
 
-img.uss-has-frame {
- border-radius: 50% !important;
- border: 2px solid transparent !important;
- background:
-  linear-gradient(rgb(8, 22, 37), rgb(8, 22, 37)) padding-box,
-  conic-gradient(from var(--uss-frame-turn, 0deg), #b08a4a 0deg, #ffe9b0 40deg, #fff8e4 64deg, #f0c878 105deg, #c9a05a 160deg, #ffe2a0 220deg, #e0b86a 280deg, #b08a4a 360deg) border-box;
- background-clip: padding-box, border-box;
- box-shadow:
-  0 0 5px rgba(232, 188, 96, 0.95),
-  0 0 12px rgba(200, 148, 56, 0.75),
-  0 0 22px rgba(168, 112, 36, 0.55);
- animation: uss-frame-spin 4.2s linear infinite;
+/* 头像框：avatar-frame.png，按头像内孔比例缩放 */
+:root {
+ --uss-frame-img: url("/api/site/avatar-frame.png");
+}
+
+.site-header,
+.navbar,
+.nav-right,
+.nav-login-trigger {
+ overflow: visible;
+}
+
+.uss-avatar-frame.uss-has-frame {
+ position: relative;
+ display: inline-block;
+ line-height: 0;
+ vertical-align: middle;
+ overflow: visible;
+ border-radius: 50%;
+}
+
+.uss-avatar-frame.uss-has-frame > img {
+ border-radius: 50%;
+ display: block;
+ position: relative;
+ z-index: 1;
 }
 
 .community-author-avatar.uss-has-frame,
@@ -11988,35 +12026,108 @@ img.uss-has-frame {
 .community-chat-mention-pop__avatar.uss-has-frame,
 .oopz-bridge-member-avatar-wrap.uss-has-frame,
 .nav-login-avatar-inner.uss-has-frame,
-.market-seller-card__avatar-wrap.uss-has-frame {
+.market-seller-card__avatar-wrap.uss-has-frame,
+.uss-avatar-frame.uss-has-frame {
  position: relative;
  border-radius: 50%;
+ overflow: visible !important;
+}
+
+.community-author-avatar.uss-has-frame .community-author-avatar-link {
  overflow: visible;
 }
 
-.community-author-avatar.uss-has-frame::after,
-.community-chat-roster-avatar.uss-has-frame::after,
-.community-chat-mention-pop__avatar.uss-has-frame::after,
-.oopz-bridge-member-avatar-wrap.uss-has-frame::after,
-.nav-login-avatar-inner.uss-has-frame::after,
-.market-seller-card__avatar-wrap.uss-has-frame::after {
+.community-chat-line .community-author-avatar.uss-has-frame {
+ margin: 0.28rem;
+}
+
+.community-chat-roster-avatar.uss-has-frame {
+ margin: 0.2rem 0.12rem 0.2rem 0;
+}
+
+.uss-has-frame::before {
  content: "";
  position: absolute;
- inset: -2px;
+ inset: -4%;
  border-radius: 50%;
- padding: 2px;
- background: conic-gradient(from var(--uss-frame-turn, 0deg), #b08a4a 0deg, #ffe9b0 40deg, #fff8e4 64deg, #f0c878 105deg, #c9a05a 160deg, #ffe2a0 220deg, #e0b86a 280deg, #b08a4a 360deg);
- -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
- -webkit-mask-composite: xor;
- mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
- mask-composite: exclude;
+ background: conic-gradient(
+  from var(--uss-frame-turn, 0deg),
+  transparent 0deg,
+  transparent 300deg,
+  rgba(232, 176, 70, 0.5) 328deg,
+  rgba(255, 236, 170, 0.9) 338deg,
+  rgba(196, 140, 40, 0.45) 348deg,
+  transparent 360deg
+ );
+ -webkit-mask: radial-gradient(circle, transparent 58%, #000 66%, #000 74%, transparent 82%);
+ mask: radial-gradient(circle, transparent 58%, #000 66%, #000 74%, transparent 82%);
+ mix-blend-mode: screen;
  pointer-events: none;
- animation: uss-frame-spin 4.2s linear infinite;
- box-shadow:
-  0 0 5px rgba(232, 188, 96, 0.95),
-  0 0 12px rgba(200, 148, 56, 0.75),
-  0 0 22px rgba(168, 112, 36, 0.55);
- z-index: 1;
+ z-index: 4;
+ animation: uss-frame-spin 7.5s linear infinite;
+}
+
+.uss-has-frame::after {
+ content: "";
+ position: absolute;
+ left: 50%;
+ top: 50%;
+ width: 156%;
+ height: 156%;
+ transform: translate(-50%, -50%);
+ background: var(--uss-frame-img) center / contain no-repeat;
+ pointer-events: none;
+ z-index: 3;
+ animation: uss-frame-glow 4.8s ease-in-out infinite;
+}
+
+.uss-has-frame > .drawer-user-avatar,
+.uss-has-frame .nav-user-avatar,
+.uss-has-frame .oopz-bridge-member-avatar,
+.uss-has-frame .market-seller-card__avatar,
+.uss-has-frame .checkin-member-avatar,
+.uss-has-frame .community-author-avatar-img,
+.uss-has-frame .community-chat-roster-avatar-img,
+.uss-has-frame .community-chat-mention-pop__avatar-img,
+.uss-has-frame .min-note-avatar {
+ border: none;
+ box-shadow: none;
+}
+
+.nav-login-avatar-inner.uss-has-frame {
+ width: 2.45rem;
+ height: 2.45rem;
+ flex: none;
+ z-index: 2;
+}
+
+@media (max-width: 600px) {
+ .nav-login-avatar-inner.uss-has-frame {
+  width: 2rem;
+  height: 2rem;
+ }
+}
+
+.nav-login-avatar-inner.uss-has-frame .nav-user-avatar {
+ width: 100%;
+ height: 100%;
+ max-width: none;
+ max-height: none;
+}
+
+.drawer-profile-row > .uss-avatar-frame.uss-has-frame {
+ grid-column: 1;
+ grid-row: 1;
+ width: var(--drawer-avatar-display);
+ height: var(--drawer-avatar-display);
+ align-self: start;
+ justify-self: start;
+}
+
+.drawer-profile-row > .uss-avatar-frame > .drawer-user-avatar {
+ width: 100%;
+ height: 100%;
+ max-width: none;
 }
 
 .uss-has-frame img,
@@ -12029,6 +12140,15 @@ img.uss-has-frame {
 
 @keyframes uss-frame-spin {
  to { --uss-frame-turn: 360deg; }
+}
+
+@keyframes uss-frame-glow {
+ 0%, 100% {
+  filter: drop-shadow(0 0 2px rgba(212, 160, 48, 0.4));
+ }
+ 50% {
+  filter: drop-shadow(0 0 5px rgba(255, 214, 110, 0.62));
+ }
 }
 
 @property --uss-frame-turn {

@@ -775,6 +775,11 @@
         async adminListSiteFeedback(token) {
             return adminJson(token, '/api/admin/site-feedback');
         },
+        async adminDeleteSiteFeedback(token, noteId) {
+            return adminJson(token, '/api/admin/site-feedback/' + encodeURIComponent(noteId), {
+                method: 'DELETE',
+            });
+        },
         async adminGetVisitStats(token, query) {
             var q = query && typeof query === 'object' ? query : {};
             var parts = [];

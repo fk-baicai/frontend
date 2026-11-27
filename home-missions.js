@@ -109,9 +109,6 @@
         panel.dataset.expandedMission = "";
         panel.dataset.variantRef = "";
         api.rememberMissionsOnPanel(panel, { id_item: "home-mission-contracts" }, slice);
-        if (api.prefetchMissionDetails) {
-            api.prefetchMissionDetails(slice, { limit: slice.length, concurrency: 4 });
-        }
         if (!slice.length) {
             panel.innerHTML = '<p class="home-mission-status">没有符合条件的合约</p>';
         } else {
@@ -261,5 +258,9 @@
     api.wirePanel(panel);
     var cached = readBoard();
     if (cached) applyBoard(cached);
-    load();
+    if (cached && window.UssHomeBoot && typeof window.UssHomeBoot.afterPageReadyIdle === 'function') {
+        window.UssHomeBoot.afterPageReadyIdle(load, 500);
+    } else {
+        load();
+    }
 })();

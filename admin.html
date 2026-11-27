@@ -2754,7 +2754,7 @@
     </div>
 
     <script src="api-error.js"></script>
-    <script src="auth-api.js?v=18"></script>
+    <script src="auth-api.js?v=19"></script>
     <script src="admin-step-up.js?v=4"></script>
     <script src="admin-sc-image-review.js?v=12"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -3603,7 +3603,28 @@
                         li.style.marginBottom = '0.75rem';
                         var when = item.at ? new Date(item.at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : '';
                         var who = item.handle ? String(item.handle) : '未登录';
-                        li.textContent = when + ' · ' + who + (item.replyTo ? ' 回复 ' + item.replyTo : '') + ' · ' + String(item.text || '');
+                        var text = document.createElement('span');
+                        text.textContent = when + ' · ' + who + (item.replyTo ? ' 回复 ' + item.replyTo : '') + ' · ' + String(item.text || '');
+                        li.appendChild(text);
+                        if (item.id) {
+                            var del = document.createElement('button');
+                            del.type = 'button';
+                            del.className = 'btn-secondary';
+                            del.textContent = '删除';
+                            del.style.marginLeft = '0.6rem';
+                            del.addEventListener('click', async function () {
+                                if (!window.confirm('确定删除这条留言？')) return;
+                                del.disabled = true;
+                                try {
+                                    await window.UssAuthApi.adminDeleteSiteFeedback(s.token, item.id);
+                                    await loadSiteFeedback();
+                                } catch (err) {
+                                    del.disabled = false;
+                                    showErr('siteFeedbackErr', (err && err.message) || '删除失败');
+                                }
+                            });
+                            li.appendChild(del);
+                        }
                         ul.appendChild(li);
                     });
                 } catch (e) {

@@ -478,18 +478,33 @@
                 return;
             }
             replyHint.textContent = '';
-            replyBtn.disabled = true;
-            replyBtn.textContent = '发送中…';
-            try {
-                await window.UssAuthApi.communityReplyPost(sess.token, p.id, content);
-                replyTa.value = '';
-                await loadPost();
-            } catch (err) {
-                replyHint.textContent = (err && err.message) || '回复失败';
-            } finally {
-                replyBtn.disabled = !isLoggedIn();
-                replyBtn.textContent = '回复';
-            }
+            replyTa.value = '';
+            var pending = document.createElement('div');
+            pending.className = 'community-reply-item';
+            pending.setAttribute('data-pending', '1');
+            pending.appendChild(
+                buildAuthorRow(
+                    sess.bindingId,
+                    sess.avatarUrl,
+                    new Date().toISOString(),
+                    null,
+                    sess.rsiProfileHandle || sess.bindingId,
+                    sess.rsiAvatarUrl
+                )
+            );
+            var pendingBody = document.createElement('div');
+            pendingBody.className = 'community-reply-body';
+            applyPlainTextWithLinks(pendingBody, content);
+            pending.appendChild(pendingBody);
+            repliesBlock.insertBefore(pending, replyForm);
+            window.UssAuthApi.communityReplyPost(sess.token, p.id, content)
+                .then(function () {
+                    return loadPost();
+                })
+                .catch(function (err) {
+                    if (pending.parentNode) pending.remove();
+                    replyHint.textContent = (err && err.message) || '回复失败';
+                });
         });
         replyActions.appendChild(replyBtn);
         replyForm.appendChild(replyTa);

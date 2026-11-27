@@ -3629,12 +3629,14 @@
             posts.forEach(function (p) {
                 const pid = communityPostStableId(p);
                 if (!pid) return;
+                const isPending = String(pid).indexOf('pending-') === 0;
 
                 const card = document.createElement('a');
                 card.className = 'community-post-card community-post-card--compact';
                 const postHref = communityPostDetailHref(pid);
-                card.href = postHref;
+                card.href = isPending ? '#community-section' : postHref;
                 card.setAttribute('data-post-id', pid);
+                if (isPending) card.classList.add('community-post-card--pending');
 
                 card.addEventListener('click', function (ev) {
                     if (ev.defaultPrevented) return;
@@ -3644,6 +3646,7 @@
                     if (t && t.closest && t.closest('a.community-author-avatar-link')) return;
                     if (t && t.closest && t.closest('button')) return;
                     ev.preventDefault();
+                    if (isPending) return;
                     window.location.assign(postHref);
                 });
 
@@ -3655,7 +3658,7 @@
                 const replies = Array.isArray(p.replies) ? p.replies : [];
 
                 let delBtn = null;
-                if (sessionIsCommunityStaff() || communityPostIsMine(p)) {
+                if (!isPending && (sessionIsCommunityStaff() || communityPostIsMine(p))) {
                     delBtn = document.createElement('button');
                     delBtn.type = 'button';
                     delBtn.className = 'community-post-compact-delete';
@@ -4166,39 +4169,64 @@
             }
             search.addEventListener('input', syncRosterSearchFromInput);
             search.addEventListener('search', syncRosterSearchFromInput);
-            list.forEach(function (mem) {
+            function appendRosterMember(mem, isSelf) {
                 const bid = mem && mem.bindingId != null ? String(mem.bindingId).trim() : '';
                 if (!bid) return;
-                if (bid.toLowerCase() === me) return;
                 const row = document.createElement('button');
                 row.type = 'button';
                 row.className = 'community-chat-roster-item community-chat-roster-peer';
-                row.setAttribute('data-chat-target', 'dm');
-                row.setAttribute('data-peer', bid);
-                row.setAttribute('data-peer-label', bid);
+                if (isSelf) {
+                    row.classList.add('community-chat-roster-self');
+                    row.setAttribute('aria-label', bid + '（我）');
+                } else {
+                    row.setAttribute('data-chat-target', 'dm');
+                    row.setAttribute('data-peer', bid);
+                    row.setAttribute('data-peer-label', bid);
+                }
                 const av = document.createElement('span');
                 av.className = 'community-chat-roster-avatar';
                 const img = document.createElement('img');
                 img.className = 'community-chat-roster-avatar-img';
                 img.alt = bid;
-
                 communityPrepareAvatarImg(img, bid, mem.avatarUrl, null, true, mem.rsiAvatarUrl);
                 av.appendChild(img);
                 const lab = document.createElement('span');
                 lab.className = 'community-chat-roster-label';
-                lab.textContent = bid;
+                lab.textContent = isSelf ? bid + '（我）' : bid;
                 row.appendChild(av);
                 row.appendChild(lab);
-                const dmBadge = document.createElement('span');
-                dmBadge.className = 'community-chat-unread-badge community-chat-unread-badge--peer';
-                dmBadge.setAttribute('aria-hidden', 'true');
-                dmBadge.hidden = true;
-                row.appendChild(dmBadge);
+                if (!isSelf) {
+                    const dmBadge = document.createElement('span');
+                    dmBadge.className = 'community-chat-unread-badge community-chat-unread-badge--peer';
+                    dmBadge.setAttribute('aria-hidden', 'true');
+                    dmBadge.hidden = true;
+                    row.appendChild(dmBadge);
+                }
                 inner.appendChild(row);
+            }
+            let selfMem = null;
+            const others = [];
+            list.forEach(function (mem) {
+                const bid = mem && mem.bindingId != null ? String(mem.bindingId).trim() : '';
+                if (!bid) return;
+                if (me && bid.toLowerCase() === me) selfMem = mem;
+                else others.push(mem);
             });
+            if (!selfMem && me && sess) {
+                selfMem = {
+                    bindingId: sess.bindingId,
+                    avatarUrl: sess.avatarUrl,
+                    rsiAvatarUrl: sess.rsiAvatarUrl
+                };
+            }
+            if (selfMem) appendRosterMember(selfMem, true);
+            others.forEach(function (mem) { appendRosterMember(mem, false); });
             applyCommunityRosterSearchFilter(communityRosterSearchQuery);
             syncCommunityChatRosterActive();
             updateCommunityUnreadBadges();
+            if (window.UssAvatarFrame && typeof window.UssAvatarFrame.paintAll === 'function') {
+                window.UssAvatarFrame.paintAll();
+            }
         }
 
         async function loadCommunityRoster() {
@@ -4417,46 +4445,67 @@
                 setCommunityChatHint('字数上限，无法发送');
                 return;
             }
-            const btn = document.getElementById('communityChatSendBtn');
-            const chatMenuBtn = document.getElementById('communityChatSendMenuBtn');
-            if (btn) btn.disabled = true;
-            if (chatMenuBtn) chatMenuBtn.disabled = true;
-            try {
-                const payload =
-                    imgs.length > 0 ? { text: text, images: imgs } : text;
-                let data;
-                if (communityChatKind === 'dm' && communityChatDmPeer) {
-                    data = await window.UssAuthApi.communityDmSend(sess.token, communityChatDmPeer, payload);
-                } else {
-                    data = await window.UssAuthApi.communityChatSend(sess.token, payload);
-                }
-                if (input) input.value = '';
-                clearCommunityChatPendingImages();
-                if (data && data.entry) {
-                    appendCommunityChatLine(data.entry, communityChatKind);
-                    if (Array.isArray(data.assistantReplies)) {
-                        data.assistantReplies.forEach(function (replyRow) {
-                            appendCommunityChatLine(replyRow, communityChatKind);
-                        });
-                    }
-                    if (typeof data.maxSeq === 'number' && data.maxSeq > 0) {
-                        if (communityChatKind === 'dm') {
-                            communityDmMaxSeq = Math.max(communityDmMaxSeq || 0, data.maxSeq);
-                            markCommunityDmPeerRead(communityChatDmPeer, communityDmMaxSeq);
-                            touchCommunityDmPeer(communityChatDmPeer);
-                            reorderCommunityChatRosterPeers();
-                        } else {
-                            communityChatMaxSeq = Math.max(communityChatMaxSeq || 0, data.maxSeq);
-                            markCommunityFleetRead(communityChatMaxSeq);
+            if (input) input.value = '';
+            clearCommunityChatPendingImages();
+            const pendingSeq = 'p' + Date.now();
+            appendCommunityChatLine(
+                {
+                    seq: pendingSeq,
+                    text: text,
+                    images: imgs,
+                    bindingId: sess.bindingId,
+                    avatarUrl: sess.avatarUrl,
+                    createdAt: new Date().toISOString(),
+                },
+                communityChatKind
+            );
+            scrollCommunityChatToBottom(true);
+            refreshCommunitySessionUi();
+            const payload = imgs.length > 0 ? { text: text, images: imgs } : text;
+            const sendPromise =
+                communityChatKind === 'dm' && communityChatDmPeer
+                    ? window.UssAuthApi.communityDmSend(sess.token, communityChatDmPeer, payload)
+                    : window.UssAuthApi.communityChatSend(sess.token, payload);
+            sendPromise
+                .then(function (data) {
+                    const log = document.getElementById('communityChatLog');
+                    const pending =
+                        log &&
+                        log.querySelector(
+                            '.community-chat-line[data-seq="' + pendingSeq + '"][data-chat-kind="' + communityChatKind + '"]'
+                        );
+                    if (pending) pending.remove();
+                    if (data && data.entry) {
+                        appendCommunityChatLine(data.entry, communityChatKind);
+                        if (Array.isArray(data.assistantReplies)) {
+                            data.assistantReplies.forEach(function (replyRow) {
+                                appendCommunityChatLine(replyRow, communityChatKind);
+                            });
+                        }
+                        if (typeof data.maxSeq === 'number' && data.maxSeq > 0) {
+                            if (communityChatKind === 'dm') {
+                                communityDmMaxSeq = Math.max(communityDmMaxSeq || 0, data.maxSeq);
+                                markCommunityDmPeerRead(communityChatDmPeer, communityDmMaxSeq);
+                                touchCommunityDmPeer(communityChatDmPeer);
+                                reorderCommunityChatRosterPeers();
+                            } else {
+                                communityChatMaxSeq = Math.max(communityChatMaxSeq || 0, data.maxSeq);
+                                markCommunityFleetRead(communityChatMaxSeq);
+                            }
                         }
                     }
-                }
-                scrollCommunityChatToBottom(true);
-            } catch (e) {
-                setCommunityChatHint(formatCommunityChatHintError(e));
-            } finally {
-                refreshCommunitySessionUi();
-            }
+                    scrollCommunityChatToBottom(true);
+                })
+                .catch(function (e) {
+                    const log = document.getElementById('communityChatLog');
+                    const pending =
+                        log &&
+                        log.querySelector(
+                            '.community-chat-line[data-seq="' + pendingSeq + '"][data-chat-kind="' + communityChatKind + '"]'
+                        );
+                    if (pending) pending.remove();
+                    setCommunityChatHint(formatCommunityChatHintError(e));
+                });
         }
 
         async function refreshCommunityAll() {
@@ -4486,32 +4535,37 @@
                 return;
             }
             clearCommunityFormHint();
-            const btn = document.getElementById('communitySubmitBtn');
-            const postMenuBtn = document.getElementById('communityPostMenuBtn');
-            if (btn) {
-                btn.disabled = true;
-                btn.textContent = '发送中…';
-            }
-            if (postMenuBtn) postMenuBtn.disabled = true;
-            try {
-                await window.UssAuthApi.communityCreatePost(sess.token, { content: content, images: imgs });
-                if (ta) ta.value = '';
-                communityPendingImages.forEach(function (x) {
-                    try {
-                        URL.revokeObjectURL(x.previewUrl);
-                    } catch (e) {
-                        /* ignore */
-                    }
+            if (ta) ta.value = '';
+            communityPendingImages.forEach(function (x) {
+                try {
+                    URL.revokeObjectURL(x.previewUrl);
+                } catch (e) {
+                    /* ignore */
+                }
+            });
+            communityPendingImages = [];
+            renderCommunityPreviews();
+            const pending = {
+                id: 'pending-' + Date.now(),
+                content: content,
+                images: imgs,
+                bindingId: sess.bindingId,
+                avatarUrl: sess.avatarUrl,
+                createdAt: new Date().toISOString(),
+                replies: [],
+            };
+            const cached = readCommunityUiCache('posts');
+            const posts = cached && Array.isArray(cached.posts) ? cached.posts.slice() : [];
+            renderCommunityPosts([pending].concat(posts));
+            refreshCommunitySessionUi();
+            window.UssAuthApi.communityCreatePost(sess.token, { content: content, images: imgs })
+                .then(function () {
+                    return loadCommunityPosts();
+                })
+                .catch(function (e) {
+                    setCommunityFormHint(safeUserFacingMessage(e));
+                    loadCommunityPosts();
                 });
-                communityPendingImages = [];
-                renderCommunityPreviews();
-                await loadCommunityPosts();
-            } catch (e) {
-                setCommunityFormHint(safeUserFacingMessage(e));
-            } finally {
-                refreshCommunitySessionUi();
-                if (btn) btn.textContent = '发送帖子';
-            }
         }
 
         function updateCommunityChatInputPlaceholder() {

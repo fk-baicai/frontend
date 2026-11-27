@@ -203,7 +203,7 @@
 
     if (!document.querySelector('script[src*="item-notes.js"]')) {
         var notesScript = document.createElement('script');
-        notesScript.src = 'item-notes.js?v=5';
+        notesScript.src = 'item-notes.js?v=9';
         notesScript.defer = true;
         document.body.appendChild(notesScript);
     }
@@ -236,14 +236,34 @@
         document.body.appendChild(annScript);
     }
     if (!document.getElementById('ussAvatarFrameStyle')) {
+        var frameBase = String(window.USS_AUTH_API_BASE || window.USS_REGISTER_API_BASE || '').replace(/\/$/, '');
+        var frameImg = (frameBase || '') + '/api/site/avatar-frame.png?v=af2';
+        document.documentElement.style.setProperty('--uss-frame-img', 'url("' + frameImg + '")');
         var frameStyle = document.createElement('style');
         frameStyle.id = 'ussAvatarFrameStyle';
-        frameStyle.textContent = 'img.uss-has-frame{border-radius:50%!important;border:2px solid transparent!important;background:linear-gradient(rgb(8,22,37),rgb(8,22,37)) padding-box,conic-gradient(from var(--uss-frame-turn,0deg),#b08a4a 0deg,#ffe9b0 40deg,#fff8e4 64deg,#f0c878 105deg,#c9a05a 160deg,#ffe2a0 220deg,#e0b86a 280deg,#b08a4a 360deg) border-box;background-clip:padding-box,border-box;box-shadow:0 0 5px rgba(232,188,96,.95),0 0 12px rgba(200,148,56,.75),0 0 22px rgba(168,112,36,.55);animation:uss-frame-spin 4.2s linear infinite}.community-author-avatar.uss-has-frame,.community-chat-roster-avatar.uss-has-frame,.community-chat-mention-pop__avatar.uss-has-frame,.oopz-bridge-member-avatar-wrap.uss-has-frame,.nav-login-avatar-inner.uss-has-frame,.market-seller-card__avatar-wrap.uss-has-frame{position:relative;border-radius:50%;overflow:visible}.uss-has-frame img,.oopz-bridge-member-avatar-wrap.uss-has-frame .oopz-bridge-member-avatar,.market-seller-card__avatar-wrap.uss-has-frame .market-seller-card__avatar,.checkin-member-avatar.uss-has-frame{border-radius:50%}.community-author-avatar.uss-has-frame::after,.community-chat-roster-avatar.uss-has-frame::after,.community-chat-mention-pop__avatar.uss-has-frame::after,.oopz-bridge-member-avatar-wrap.uss-has-frame::after,.nav-login-avatar-inner.uss-has-frame::after,.market-seller-card__avatar-wrap.uss-has-frame::after{content:"";position:absolute;inset:-2px;border-radius:50%;padding:2px;background:conic-gradient(from var(--uss-frame-turn,0deg),#b08a4a 0deg,#ffe9b0 40deg,#fff8e4 64deg,#f0c878 105deg,#c9a05a 160deg,#ffe2a0 220deg,#e0b86a 280deg,#b08a4a 360deg);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none;animation:uss-frame-spin 4.2s linear infinite;box-shadow:0 0 5px rgba(232,188,96,.95),0 0 12px rgba(200,148,56,.75),0 0 22px rgba(168,112,36,.55);z-index:1}@keyframes uss-frame-spin{to{--uss-frame-turn:360deg}}@property --uss-frame-turn{syntax:"<angle>";inherits:false;initial-value:0deg}';
+        frameStyle.textContent = [
+            '.uss-avatar-frame.uss-has-frame{position:relative;display:inline-block;line-height:0;vertical-align:middle;overflow:visible;border-radius:50%}',
+            '.uss-avatar-frame.uss-has-frame>img{border-radius:50%;display:block;position:relative;z-index:1}',
+            '.community-author-avatar.uss-has-frame,.community-chat-roster-avatar.uss-has-frame,.community-chat-mention-pop__avatar.uss-has-frame,.oopz-bridge-member-avatar-wrap.uss-has-frame,.nav-login-avatar-inner.uss-has-frame,.market-seller-card__avatar-wrap.uss-has-frame,.uss-avatar-frame.uss-has-frame{position:relative;border-radius:50%;overflow:visible!important}',
+            '.community-author-avatar.uss-has-frame .community-author-avatar-link{overflow:visible}',
+            '.community-chat-line .community-author-avatar.uss-has-frame{margin:.28rem}',
+            '.community-chat-roster-avatar.uss-has-frame{margin:.2rem .12rem .2rem 0}',
+            '.uss-has-frame::before{content:"";position:absolute;inset:-4%;border-radius:50%;background:conic-gradient(from var(--uss-frame-turn,0deg),transparent 0deg,transparent 300deg,rgba(232,176,70,.5) 328deg,rgba(255,236,170,.9) 338deg,rgba(196,140,40,.45) 348deg,transparent 360deg);-webkit-mask:radial-gradient(circle,transparent 58%,#000 66%,#000 74%,transparent 82%);mask:radial-gradient(circle,transparent 58%,#000 66%,#000 74%,transparent 82%);mix-blend-mode:screen;pointer-events:none;z-index:4;animation:uss-frame-spin 7.5s linear infinite}',
+            '.uss-has-frame::after{content:"";position:absolute;left:50%;top:50%;width:156%;height:156%;transform:translate(-50%,-50%);background:var(--uss-frame-img) center/contain no-repeat;pointer-events:none;z-index:3;animation:uss-frame-glow 4.8s ease-in-out infinite}',
+            '.uss-has-frame>.drawer-user-avatar,.uss-has-frame .nav-user-avatar,.uss-has-frame .oopz-bridge-member-avatar,.uss-has-frame .market-seller-card__avatar,.uss-has-frame .checkin-member-avatar{border:none;box-shadow:none}',
+            '.nav-login-avatar-inner.uss-has-frame{width:2.45rem;height:2.45rem;flex:none;z-index:2}',
+            '@media (max-width:600px){.nav-login-avatar-inner.uss-has-frame{width:2rem;height:2rem}}',
+            '.nav-login-avatar-inner.uss-has-frame .nav-user-avatar{width:100%;height:100%;max-width:none;max-height:none}',
+            '.uss-has-frame img,.nav-login-avatar-inner.uss-has-frame,.oopz-bridge-member-avatar-wrap.uss-has-frame .oopz-bridge-member-avatar,.market-seller-card__avatar-wrap.uss-has-frame .market-seller-card__avatar,.checkin-member-avatar.uss-has-frame{border-radius:50%}',
+            '@keyframes uss-frame-spin{to{--uss-frame-turn:360deg}}',
+            '@keyframes uss-frame-glow{0%,100%{filter:drop-shadow(0 0 2px rgba(212,160,48,.4))}50%{filter:drop-shadow(0 0 5px rgba(255,214,110,.62))}}',
+            '@property --uss-frame-turn{syntax:"<angle>";inherits:false;initial-value:0deg}'
+        ].join('');
         document.head.appendChild(frameStyle);
     }
     if (!document.querySelector('script[src*="avatar-frame.js"]')) {
     var frameScript = document.createElement('script');
-    frameScript.src = 'avatar-frame.js?v=7';
+    frameScript.src = 'avatar-frame.js?v=16';
     frameScript.defer = true;
     document.body.appendChild(frameScript);
     }
