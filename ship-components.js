@@ -28,7 +28,7 @@
         mining: {
             label_zh: '舰船矿头',
             kicker: 'MINING',
-            lead: ['矿头', '模组'],
+            lead: ['矿头', '模组', '采矿器具'],
         },
         salvage: {
             label_zh: '打捞模组',
@@ -70,7 +70,7 @@
     var TYPE_ORDER_BY_GROUP = {
         component: ['cooling', 'power', 'shield', 'quantum', 'jump', 'radar'],
         weapon: ['ship_weapon', 'ship_missile', 'missile_rack', 'ship_turret', 'ship_emp'],
-        mining: ['mining_laser', 'ship_module'],
+        mining: ['mining_laser', 'ship_module', 'mining_gadget'],
         salvage: ['salvage_scraper'],
         fuel_nozzle: ['fuel_nozzle'],
         fps_weapon: [
@@ -115,6 +115,7 @@
         missile_rack: '导弹架',
         mining_laser: '矿头',
         ship_module: '模组',
+        mining_gadget: '采矿器具',
         ship_turret: '舰船炮台',
         ship_emp: 'EMP',
         salvage_scraper: '刮削模块',
@@ -803,6 +804,11 @@
             }
             var val = col.get(item);
             if (val == null || val === '' || val === '—') return;
+            if (typeof val === 'object') {
+                if (val.text == null || val.text === '' || val.text === '—') return;
+                out.push({ label: col.label, value: String(val.text) });
+                return;
+            }
             out.push({ label: col.label, value: String(val) });
         });
         return out;
@@ -1664,7 +1670,7 @@
             return catalog.group === 'module' ? 'mining' : catalog.group;
         }
         if (key === 'ship_weapon' || key === 'ship_turret' || key === 'ship_missile' || key === 'missile_rack' || key === 'ship_emp') return 'weapon';
-        if (key === 'mining_laser' || key === 'ship_module') return 'mining';
+        if (key === 'mining_laser' || key === 'ship_module' || key === 'mining_gadget') return 'mining';
         if (key === 'salvage_scraper') return 'salvage';
         if (key === 'fuel_nozzle') return 'fuel_nozzle';
         if (key === 'personal_weapon' || key.indexOf('weapon_') === 0) return 'fps_weapon';
@@ -2054,6 +2060,23 @@
             'wiki_sm_window',
             'wiki_sm_resist',
             'wiki_sm_charge',
+            'wiki_sm_inert',
+            'mfg',
+            'price',
+            'loc',
+            'expand',
+        ],
+        mining_gadget: [
+            'name',
+            'size',
+            'type',
+            'wiki_sm_instability',
+            'wiki_sm_window',
+            'wiki_sm_resist',
+            'wiki_sm_charge',
+            'wiki_sm_cluster',
+            'wiki_sm_overcharge',
+            'wiki_sm_shatter',
             'wiki_sm_inert',
             'mfg',
             'price',

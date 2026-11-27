@@ -249,7 +249,7 @@
             '</div>' +
             '</article>';
         var board = gridEl.querySelector('.home-exec-console');
-        var head = document.querySelector('.home-exec-hangar-head');
+        var head = document.querySelector('#home-exec-hangar-section .home-exec-hangar-head');
         if (board && head && head.parentNode !== board) {
             board.insertBefore(head, board.firstChild);
         }

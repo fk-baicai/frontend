@@ -59,7 +59,9 @@
         }
 </style>
     <link rel="canonical" href="https://ussxc.org/">
-    <link rel="stylesheet" href="styles.css?v=20261122a">
+    <link rel="stylesheet" href="ship-components.css?v=172">
+    <link rel="stylesheet" href="missions.css?v=66">
+    <link rel="stylesheet" href="styles.css?v=20261127n">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -102,8 +104,8 @@
 </script>
     <script src="auth-config.js"></script>
     <script src="home-status-loader.js?v=20261012a"></script>
-    <script src="nav-dropdown.js?v=13" defer></script>
-    <script src="nav-auth-tools.js?v=3" defer></script>
+    <script src="nav-dropdown.js?v=18" defer></script>
+    <script src="nav-auth-tools.js?v=4" defer></script>
     <script>
         (function () {
             try {
@@ -207,7 +209,7 @@
             <div class="nav-mega-col">
                 <ul class="nav-mega-list">
                     <li class="nav-mega-link-row"><a href="ship-components?group=component" class="nav-mega-link" data-nav-ship-group="component" id="navMegaLinkShipComponent"><span class="nav-mega-link-title">舰船组件</span><span class="nav-mega-link-desc">散热 · 电源 · 护盾 · 量子驱动器 · 跳跃驱动器 · 雷达</span></a><a href="ship-components?group=weapon" class="nav-mega-link" data-nav-ship-group="weapon" id="navMegaLinkShipWeapon"><span class="nav-mega-link-title">舰船武器</span><span class="nav-mega-link-desc">舰炮 · 导弹 · 导弹架 · 舰船炮台</span></a><a href="ship-components?group=fuel_nozzle" class="nav-mega-link" data-nav-ship-group="fuel_nozzle" id="navMegaLinkShipFuelNozzle"><span class="nav-mega-link-title">燃料喷嘴</span><span class="nav-mega-link-desc">氢燃料 · 量子燃料</span></a></li>
-                    <li class="nav-mega-link-row"><a href="ship-components?group=mining" class="nav-mega-link" data-nav-ship-group="mining" id="navMegaLinkShipMining"><span class="nav-mega-link-title">舰船矿头</span><span class="nav-mega-link-desc">矿头 · 模组</span></a><a href="ship-components?group=salvage" class="nav-mega-link" data-nav-ship-group="salvage" id="navMegaLinkShipSalvage"><span class="nav-mega-link-title">打捞模组</span><span class="nav-mega-link-desc">刮削模块</span></a></li>
+                    <li class="nav-mega-link-row"><a href="ship-components?group=mining" class="nav-mega-link" data-nav-ship-group="mining" id="navMegaLinkShipMining"><span class="nav-mega-link-title">舰船矿头</span><span class="nav-mega-link-desc">矿头 · 模组 · 采矿器具</span></a><a href="ship-components?group=salvage" class="nav-mega-link" data-nav-ship-group="salvage" id="navMegaLinkShipSalvage"><span class="nav-mega-link-title">打捞模组</span><span class="nav-mega-link-desc">刮削模块</span></a></li>
                     <li><a href="ship-catalog" class="nav-mega-link" id="navMegaLinkShipCatalog"><span class="nav-mega-link-title">舰船价格表</span><span class="nav-mega-link-desc">现金 · aUEC · 购买地点</span></a></li>
 </ul>
             </div>
@@ -250,6 +252,9 @@
                     <li class="nav-mega-tools-row">
                         <a class='nav-mega-link' data-nav-blueprint-page href='/blueprint-crafting'><span class="nav-mega-link-title">蓝图制造</span><span class="nav-mega-link-desc">选择蓝图 · 配置材料品质 · 模拟成品属性</span></a>
                         <a class='nav-mega-link' href='/executive-hangar'><span class="nav-mega-link-title">行政机库</span><span class="nav-mega-link-desc">Pyro 行政机库周期与插卡窗口</span></a>
+                    </li>
+                    <li class="nav-mega-tools-row">
+                        <a class='nav-mega-link' href='/missions'><span class="nav-mega-link-title">任务合约</span><span class="nav-mega-link-desc">全部合约 · 委托方 · 报酬 · 合法性</span></a>
                     </li>
                     <li class="nav-mega-tools-row">
                         <a class='nav-mega-link' href='/server-ip'><span class="nav-mega-link-title">服务器 IP</span><span class="nav-mega-link-desc">服务器运行状态/IP地址</span></a>
@@ -374,6 +379,10 @@
             <nav class="hero-tools" id="heroTools" aria-label="工具">
                 <div class="hero-tools-viewport">
                     <div class="hero-tools-track">
+                        <a class="hero-tool" draggable="false" href="/missions">
+                            <span class="hero-tool-icon" aria-hidden="true"><svg viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M971.53 1024H48.71V0h610l312.82 323.99V1024zM161.86 910.85h696.52V369.7l-247.7-256.55H161.86v797.7z"/><path d="M422.1 753.25L257.63 588.78l80.01-80.01 84.46 84.46 223.07-223.07 80.01 80.01z"/></svg></span>
+                            <span class="hero-tool-copy"><span class="hero-tool-name">任务合约</span><span class="hero-tool-desc">全部合约 · 报酬</span></span>
+                        </a>
                         <a class="hero-tool" draggable="false" href="/blueprint-crafting">
                             <span class="hero-tool-icon" aria-hidden="true"><svg viewBox="0 0 1153 1024" fill="currentColor" aria-hidden="true"><path d="M961.813765 1024H41.45749c-24.874494 0-41.45749-16.582996-41.45749-41.45749V41.45749c0-24.874494 16.582996-41.45749 41.45749-41.45749h920.356275c24.874494 0 41.45749 16.582996 41.45749 41.45749v319.222672c0 24.874494-16.582996 41.45749-41.45749 41.45749s-41.45749-16.582996-41.45749-41.45749V82.91498H82.91498v858.17004h837.441295v-87.060729c0-24.874494 16.582996-41.45749 41.45749-41.457489s41.45749 16.582996 41.45749 41.457489v128.518219c0 24.874494-16.582996 41.45749-41.45749 41.45749z"/><path d="M1111.060729 895.481781c-16.582996 0-33.165992-8.291498-37.311741-24.874494-66.331984-157.538462-228.016194-190.704453-302.639676-198.995951V829.149798c0 16.582996-12.437247 33.165992-24.874494 37.31174-16.582996 4.145749-33.165992 0-45.603239-12.437247l-261.182186-294.348178c-16.582996-16.582996-12.437247-41.45749 0-58.040485l261.182186-257.036438c12.437247-12.437247 29.020243-16.582996 45.603239-8.291498 16.582996 8.291498 24.874494 20.728745 24.874494 37.311741v120.226721c107.789474 4.145749 194.850202 37.311741 261.182186 103.643725 128.518219 128.518219 124.37247 331.659919 120.226721 356.534412 0 20.728745-16.582996 37.311741-33.165992 37.311741-4.145749 4.145749-4.145749 4.145749-8.291498 4.145749zM526.510121 538.947368l161.684211 182.412956v-95.352227c0-20.728745 16.582996-41.45749 41.45749-41.45749 8.291498 0 190.704453-4.145749 323.368421 111.935223-12.437247-45.603239-37.311741-95.352227-78.769231-136.809717-58.040486-58.040486-136.809717-82.91498-240.453441-78.76923-12.437247 0-20.728745-4.145749-29.020243-12.437247-8.291498-8.291498-12.437247-16.582996-12.437247-29.020243V381.408907l-165.82996 157.538461zM509.927126 306.785425H169.975709c-24.874494 0-41.45749-16.582996-41.45749-41.45749s16.582996-41.45749 41.45749-41.45749h339.951417c24.874494 0 41.45749 16.582996 41.457489 41.45749s-16.582996 41.45749-41.457489 41.45749zM364.825911 493.34413H169.975709c-24.874494 0-41.45749-16.582996-41.45749-41.45749s16.582996-41.45749 41.45749-41.45749h190.704453c24.874494 0 41.45749 16.582996 41.45749 41.45749s-16.582996 41.45749-37.311741 41.45749zM364.825911 675.757085H169.975709c-24.874494 0-41.45749-16.582996-41.45749-41.45749s16.582996-41.45749 41.45749-41.45749h190.704453c24.874494 0 41.45749 16.582996 41.45749 41.45749s-16.582996 41.45749-37.311741 41.45749z"/></svg></span>
                             <span class="hero-tool-copy"><span class="hero-tool-name">蓝图制造</span><span class="hero-tool-desc">材料品质 · 成品属性</span></span>
@@ -416,7 +425,7 @@
                 <div class="home-exec-hangar-head-text">
                     <h2 class="home-exec-hangar-title rsi-status-title">行政机库</h2>
                     <div class="home-exec-hangar-lead-row" tabindex="0">
-                        <p class="home-exec-hangar-lead">Pyro 行政机库 · 185 分钟周期 · <a href='/executive-hangar'>打开完整版</a></p>
+                        <p class="home-exec-hangar-lead">Pyro 行政机库 · 185 分钟周期 <a class="home-open-full" href="/executive-hangar" aria-label="打开完整版" title="打开完整版"><svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M444.302222 790.186667a42.666667 42.666667 0 0 1-30.72-71.68l191.715556-203.662223-191.715556-203.662222a42.666667 42.666667 0 0 1 62.008889-56.888889l219.591111 232.675556a42.666667 42.666667 0 0 1 0 56.888889l-219.591111 233.244444a42.666667 42.666667 0 0 1-31.288889 13.084445z"/><path d="M663.893333 557.511111H76.8a42.666667 42.666667 0 0 1 0-85.333333h587.093333a42.666667 42.666667 0 0 1 0 85.333333z"/><path d="M491.52 1009.777778a498.915556 498.915556 0 0 1-455.111111-292.977778A42.666667 42.666667 0 1 1 113.777778 682.666667a412.444444 412.444444 0 1 0 0-341.333334 42.666667 42.666667 0 0 1-75.093334-35.271111A497.777778 497.777778 0 0 1 698.026667 56.888889a497.777778 497.777778 0 0 1-206.506667 952.888889z"/></svg></a></p>
                         <span class="rsi-status-updated" id="homeExecHangarUpdated" hidden></span>
                     </div>
                 </div>
@@ -430,6 +439,45 @@
             </div>
         </div>
     </section>
+
+    <section class="home-exec-hangar-section" id="home-missions-section" aria-label="任务合约">
+        <div class="home-exec-hangar-wrap">
+            <div class="home-mission-card">
+                <header class="home-mission-head">
+                    <div>
+                        <h2 class="home-exec-hangar-title rsi-status-title">任务合约</h2>
+                        <div class="home-exec-hangar-lead-row">
+                            <p class="home-exec-hangar-lead">全部合约 · 委托方 · 报酬 <a class="home-open-full" href="/missions" aria-label="打开完整版" title="打开完整版"><svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M444.302222 790.186667a42.666667 42.666667 0 0 1-30.72-71.68l191.715556-203.662223-191.715556-203.662222a42.666667 42.666667 0 0 1 62.008889-56.888889l219.591111 232.675556a42.666667 42.666667 0 0 1 0 56.888889l-219.591111 233.244444a42.666667 42.666667 0 0 1-31.288889 13.084445z"/><path d="M663.893333 557.511111H76.8a42.666667 42.666667 0 0 1 0-85.333333h587.093333a42.666667 42.666667 0 0 1 0 85.333333z"/><path d="M491.52 1009.777778a498.915556 498.915556 0 0 1-455.111111-292.977778A42.666667 42.666667 0 1 1 113.777778 682.666667a412.444444 412.444444 0 1 0 0-341.333334 42.666667 42.666667 0 0 1-75.093334-35.271111A497.777778 497.777778 0 0 1 698.026667 56.888889a497.777778 497.777778 0 0 1-206.506667 952.888889z"/></svg></a></p>
+                        </div>
+                    </div>
+                    <p class="home-mission-count" id="hmCount">正在读取合约…</p>
+                </header>
+                <div class="home-mission-body">
+                    <aside class="home-mission-rail home-mission-scroll" aria-label="筛选">
+                        <label class="home-mission-field">搜索<input id="hmQuery" type="search" placeholder="合约名或委托方" autocomplete="off"></label>
+                        <label class="home-mission-field">星系<select id="hmSystem"></select></label>
+                        <label class="home-mission-field">委托方<select id="hmGiver"></select></label>
+                        <div class="home-mission-field">合法性<div class="home-mission-seg" id="hmLegal"></div></div>
+                        <div class="home-mission-field home-mission-field--types"><div class="home-mission-type-head"><span>类型</span><button type="button" class="home-mission-bp" id="hmBlueprint" aria-pressed="false">蓝图</button></div><div class="home-mission-types home-mission-scroll" id="hmTypes"></div></div>
+                    </aside>
+                    <div class="home-mission-stage">
+                        <div class="home-mission-list home-mission-scroll" id="homeMissionPanel" data-blueprint-panel aria-live="polite">
+                            <p class="home-mission-status" role="status">正在读取合约…</p>
+                        </div>
+                        <nav class="home-mission-pager" id="hmPager" aria-label="分页"></nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <script>
+        (function () {
+            var base = (window.USS_AUTH_API_BASE || "").replace(/\/$/, "");
+            window.__homeMissionPrefetch = fetch(base + "/api/sc/mission-contracts?page=0&limit=12").then(function (res) {
+                return res.json();
+            });
+        })();
+    </script>
 
     <section class="home-exec-hangar-section" id="home-funding-section" aria-label="资金统计">
         <div class="home-exec-hangar-wrap">
@@ -1221,17 +1269,20 @@
     <script defer src="script.js"></script>
     <script defer src="rsi-client.js?v=20260827b"></script>
     <script defer src="rsi-sync.js"></script>
-    <script defer src="auth-session-sync.js?v=20261115b"></script>
+    <script defer src="auth-session-sync.js?v=20261127a"></script>
     <script defer src="api-error.js?v=4"></script>
     <script defer src="auth-api.js"></script>
-    <script defer src="home-app.js?v=20261122a"></script>
+    <script defer src="home-app.js?v=20261127g"></script>
     <script defer src="oopz-bind.js"></script>
     <script defer src="oopz-user-prefs.js"></script>
     <script defer src="rsi-server-status.js?v=20261012b"></script>
     <script defer src="sc-festival-countdown.js?v=20261016a"></script>
-    <script defer src="home-exec-hangar.js?v=20261016c"></script>
+    <script defer src="item-notes.js?v=7"></script>
+    <script defer src="ship-component-blueprints.js?v=65"></script>
+    <script defer src="home-missions.js?v=10"></script>
+    <script defer src="home-exec-hangar.js?v=20261126d"></script>
     <script defer src="rsi-funding-stats.js?v=20261112c"></script>
     <script defer src="oopz-bridge.js"></script>
-    <script defer src="site-footer.js"></script>
+    <script defer src="site-footer.js?v=25"></script>
 </body>
 </html> 

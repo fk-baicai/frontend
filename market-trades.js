@@ -553,19 +553,23 @@
         return null;
     }
 
-    function partyChipHtml(name, avatarUrl) {
+    function partyChipHtml(name, avatarUrl, bindingId) {
         var src = mediaUrl(avatarUrl) || fallbackAvatar();
+        var handle = String(bindingId || '').trim().toLowerCase();
         return (
             '<span class="market-trades-person">' +
-            '<img class="market-trades-person__avatar" src="' + escapeHtml(src) + '" alt="" onerror="this.onerror=null;this.src=\'' + escapeHtml(fallbackAvatar()) + '\'">' +
+            '<img class="market-trades-person__avatar" src="' + escapeHtml(src) + '" alt=""' +
+            (handle ? ' data-avatar-handle="' + escapeHtml(handle) + '"' : '') +
+            ' onerror="this.onerror=null;this.src=\'' + escapeHtml(fallbackAvatar()) + '\'">' +
             '<span class="market-trades-person__name">' + escapeHtml(name || '—') + '</span>' +
             '</span>'
         );
     }
 
-    function reviewQuoteHtml(label, name, avatarUrl, rating, text, formHtml, at) {
+    function reviewQuoteHtml(label, name, avatarUrl, rating, text, formHtml, at, bindingId) {
         var timeHtml = dateDayHtml(at, 'market-trades-review__time');
         var src = mediaUrl(avatarUrl) || fallbackAvatar();
+        var handle = String(bindingId || '').trim().toLowerCase();
         var inner = formHtml
             ? formHtml
             : (rating
@@ -575,7 +579,9 @@
             '<div class="market-trades-review__side">' +
             '<span class="market-trades-review__who">' +
             '<span class="market-trades-review__who-main">' +
-            '<img class="market-trades-person__avatar" src="' + escapeHtml(src) + '" alt="" onerror="this.onerror=null;this.src=\'' + escapeHtml(fallbackAvatar()) + '\'">' +
+            '<img class="market-trades-person__avatar" src="' + escapeHtml(src) + '" alt=""' +
+            (handle ? ' data-avatar-handle="' + escapeHtml(handle) + '"' : '') +
+            ' onerror="this.onerror=null;this.src=\'' + escapeHtml(fallbackAvatar()) + '\'">' +
             '<span class="market-trades-review__who-label">' + escapeHtml(label) + '</span>' +
             '<span class="market-trades-review__who-name">' + escapeHtml(name || '—') + '</span>' +
             '</span>' +
@@ -608,11 +614,11 @@
             '<div class="market-trades-review__meta">' +
             '<p class="market-trades-review__party">' +
             '<span class="market-trades-review__party-k">卖家</span>' +
-            partyChipHtml(sellerName, partyAvatarUrl(p, 'seller')) +
+            partyChipHtml(sellerName, partyAvatarUrl(p, 'seller'), p.sellerBindingId) +
             '</p>' +
             '<div class="market-trades-review__quotes">' +
-            reviewQuoteHtml('买家评价', buyerName, partyAvatarUrl(p, 'buyer'), p.reviewRating, p.reviewText, buyerForm, buyerReviewAt(p)) +
-            reviewQuoteHtml('回复', sellerName, partyAvatarUrl(p, 'seller'), p.sellerReviewRating, p.sellerReviewText, sellerForm, sellerReviewAt(p)) +
+            reviewQuoteHtml('买家评价', buyerName, partyAvatarUrl(p, 'buyer'), p.reviewRating, p.reviewText, buyerForm, buyerReviewAt(p), p.buyerBindingId) +
+            reviewQuoteHtml('回复', sellerName, partyAvatarUrl(p, 'seller'), p.sellerReviewRating, p.sellerReviewText, sellerForm, sellerReviewAt(p), p.sellerBindingId) +
             '</div>' +
             '</div>' +
             '</article>'
@@ -698,8 +704,8 @@
         var title = primaryItemName(order);
         var price = formatPrice(order, p.quantity || 1);
         var partyHtml = role === 'seller'
-            ? ('<span class="market-card__purchase-party-k">买家</span>' + partyChipHtml(partyName(p, 'buyer'), partyAvatarUrl(p, 'buyer')))
-            : ('<span class="market-card__purchase-party-k">卖家</span>' + partyChipHtml(partyName(p, 'seller'), partyAvatarUrl(p, 'seller')));
+            ? ('<span class="market-card__purchase-party-k">买家</span>' + partyChipHtml(partyName(p, 'buyer'), partyAvatarUrl(p, 'buyer'), p.buyerBindingId))
+            : ('<span class="market-card__purchase-party-k">卖家</span>' + partyChipHtml(partyName(p, 'seller'), partyAvatarUrl(p, 'seller'), p.sellerBindingId));
         if (role === 'buyer') {
             var sellerTrades = sellerTradeCountFromOrder(order);
             if (sellerTrades != null) {

@@ -3,6 +3,8 @@
 .server-ip-body {
     margin: 0;
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
     background: var(--home-page-bg, #122d48);
     color: #e8f4ff;
     font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
@@ -34,10 +36,21 @@
 .server-ip-main {
     position: relative;
     z-index: 1;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
     max-width: 68rem;
     margin: 0 auto;
-    padding: 2rem 2rem 3.5rem;
+    padding: 2rem 2rem 1.5rem;
     box-sizing: border-box;
+}
+
+#serverIpMain {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .server-ip-hero {
@@ -135,10 +148,13 @@
 }
 
 .server-ip-details {
+    flex: 1 1 auto;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(9.5rem, 1fr));
     gap: 1.25rem;
     margin-top: 1.35rem;
+    min-height: 0;
 }
 
 .server-ip-detail-card {
@@ -277,6 +293,8 @@
 
     .server-ip-details {
         grid-template-columns: 1fr;
+        grid-template-rows: none;
+        flex: none;
     }
 }
 

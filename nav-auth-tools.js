@@ -143,6 +143,8 @@
             btn.setAttribute('aria-label', '账户');
             img.src = avatarSrc(sess);
             img.alt = '用户头像';
+            img.setAttribute('data-avatar-handle', String(sess.bindingId || '').trim().toLowerCase());
+            if (window.UssAvatarFrame) window.UssAvatarFrame.paint(img);
             img.onerror = function () {
                 img.onerror = null;
                 img.src = defaultAvatarSrc();

@@ -402,10 +402,13 @@
 
     function memberAvatarImgHtml(row) {
         var avSrc = checkinAvatarSrc(row.avatarUrl);
+        var handle = String(memberBindingId(row) || '').trim().toLowerCase();
         return (
             '<img class="checkin-member-avatar" src="' +
             esc(avSrc) +
-            '" alt="" width="44" height="44" decoding="async" onerror="this.onerror=null;this.src=\'' +
+            '" alt="" width="44" height="44" decoding="async"' +
+            (handle ? ' data-avatar-handle="' + esc(handle) + '"' : '') +
+            ' onerror="this.onerror=null;this.src=\'' +
             CHECKIN_AVATAR_FALLBACK +
             '\';" />'
         );

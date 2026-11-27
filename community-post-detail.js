@@ -225,6 +225,7 @@
         img.className = 'community-author-avatar-img';
         img.alt = displayName + ' 头像';
         img.decoding = 'async';
+        img.setAttribute('data-avatar-handle', String(bindingId || '').trim().toLowerCase());
         img.loading = 'lazy';
         var remote = avatarSrc(resolveAvatarUrl(bindingId, avatarUrl));
         var fallback = avatarFallback();

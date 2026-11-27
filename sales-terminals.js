@@ -8,11 +8,12 @@
     var hits = [];
     var hitIndex = -1;
     var hitSystem = '';
-    var state = { group: '', system: '', planet: '', place: '', shop: '', cat: '' };
+    var state = { side: 'buy', group: '', system: '', planet: '', moon: '', place: '', shop: '', cat: '' };
     var openSections = {};
     var els = {
         systems: document.getElementById('stSystem'),
         planets: document.getElementById('stPlanet'),
+        moons: document.getElementById('stMoon'),
         places: document.getElementById('stPlace'),
         terminals: document.getElementById('stTerminal'),
         status: document.getElementById('stStatus'),
@@ -34,8 +35,37 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
     }
-    function money(n) {
-        return Number(n).toLocaleString('zh-CN') + ' aUEC';
+    function scuCat(id) {
+        return id >= 9101 && id <= 9105;
+    }
+    function money(n, item) {
+        var unit = item && scuCat(item[2]) ? ' / SCU' : '';
+        return Number(n).toLocaleString('zh-CN') + ' aUEC' + unit;
+    }
+    function listings(shop) {
+        if (!shop) return null;
+        var key = state.side === 'sell' ? 'sells' : 'items';
+        return Array.isArray(shop[key]) ? shop[key] : null;
+    }
+    function offers(shop) {
+        if (state.side === 'sell') return Number(shop.sellCount) > 0 || (Array.isArray(shop.sells) && shop.sells.length > 0);
+        return Number(shop.itemCount) > 0 || (Array.isArray(shop.items) && shop.items.length > 0);
+    }
+    function priceWord() {
+        return state.side === 'sell' ? '出售价' : '买入价';
+    }
+    function qtyWord() {
+        return state.side === 'sell' ? '收购' : '可买';
+    }
+    function syncSideButtons() {
+        document.querySelectorAll('[data-side]').forEach(function (btn) {
+            var on = btn.getAttribute('data-side') === state.side;
+            btn.classList.toggle('is-on', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        if (els.superInput) {
+            els.superInput.placeholder = state.side === 'sell' ? '输入物品名称，查找哪台终端收购' : '输入物品名称，查找哪台终端在售';
+        }
     }
     function groupLabel(id) {
         var hit = (data.groups || []).filter(function (g) { return g.id === id; })[0];
@@ -60,6 +90,19 @@
     }
     function planetKey(shop) {
         return shop.planet || '__stations__';
+    }
+    var parents = { zh: {}, places: {} };
+    function applyParents() {
+        (data.shops || []).forEach(function (shop) {
+            var moon = parents.places[shop.place] || (shop.planet ? '__surface__' : '');
+            shop.moon = moon;
+            shop.moonZh = (parents.zh && parents.zh[moon]) || '';
+        });
+    }
+    function moonLabel(key) {
+        if (key === '__surface__') return '行星表面';
+        if (key === '__lagrange__') return '拉格朗日点';
+        return bi((parents.zh && parents.zh[key]) || '', key);
     }
     function bi(zh, en) {
         var z = String(zh || '').trim();
@@ -112,9 +155,13 @@
     }
     function locationLines(shop) {
         var deep = planetKey(shop) === '__stations__';
+        var moon = shop.moon || '';
+        var moonLine = '';
+        if (!deep && moon && moon !== '__surface__') moonLine = locStack(moon === '__lagrange__' ? '拉格朗日点' : shop.moonZh, moon === '__lagrange__' ? '' : moon, ICO.planet);
         return [
             locStack(shop.systemZh, shop.system, ICO.system),
             deep ? locStack('深空站点', '', ICO.station) : locStack(shop.planetZh, shop.planet, ICO.planet),
+            moonLine,
             locStack(shop.placeZh, shop.place, ICO.station),
         ].join('');
     }
@@ -127,12 +174,14 @@
     }
     function scoped(level) {
         return data.shops.filter(function (shop) {
-            if (!inGroup(shop)) return false;
+            if (!inGroup(shop) || !offers(shop)) return false;
             if (level === 'group') return true;
             if (shop.system !== state.system) return false;
             if (level === 'system') return true;
             if (planetKey(shop) !== state.planet) return false;
             if (level === 'planet') return true;
+            if (state.planet !== '__stations__' && (shop.moon || '__surface__') !== state.moon) return false;
+            if (level === 'moon') return true;
             if (shop.place !== state.place) return false;
             return true;
         });
@@ -141,6 +190,20 @@
     function uniqueSorted(list) {
         return list.filter(function (name, index) { return name && list.indexOf(name) === index; })
             .sort(function (a, b) { return a.localeCompare(b, 'zh-CN'); });
+    }
+    function sortPlanets(list) {
+        var named = uniqueSorted(list.filter(function (key) { return key && key !== '__stations__'; }));
+        if (list.indexOf('__stations__') >= 0) named.push('__stations__');
+        return named;
+    }
+    function sortMoons(list) {
+        var rank = { __surface__: 50, __lagrange__: 60 };
+        return uniqueSorted(list).sort(function (a, b) {
+            var ar = Object.prototype.hasOwnProperty.call(rank, a) ? rank[a] : 0;
+            var br = Object.prototype.hasOwnProperty.call(rank, b) ? rank[b] : 0;
+            if (ar !== br) return ar - br;
+            return moonLabel(a).localeCompare(moonLabel(b), 'zh-CN');
+        });
     }
     function sortSystems(list) {
         return uniqueSorted(list).sort(function (a, b) {
@@ -161,9 +224,11 @@
     }
     function readQuery() {
         var q = new URLSearchParams(window.location.search);
+        state.side = q.get('side') === 'sell' ? 'sell' : 'buy';
         state.group = q.get('group') || '';
         state.system = q.get('system') || '';
         state.planet = q.get('planet') || '';
+        state.moon = q.get('moon') || '';
         state.place = q.get('place') || '';
         state.shop = q.get('shop') || '';
         state.cat = q.get('cat') || '';
@@ -171,15 +236,35 @@
         if (linked) {
             state.system = linked.system;
             state.planet = planetKey(linked);
+            state.moon = linked.moon || '';
             state.place = linked.place;
             if (state.group && linked.group !== state.group) state.group = '';
+        }
+        if (!state.moon && state.place) {
+            var found = null;
+            var i;
+            for (i = 0; i < data.shops.length; i++) {
+                var shop = data.shops[i];
+                if (shop.place !== state.place) continue;
+                if (state.system && shop.system !== state.system) continue;
+                if (state.planet && planetKey(shop) !== state.planet) continue;
+                found = shop;
+                break;
+            }
+            if (found) {
+                state.system = found.system;
+                state.planet = planetKey(found);
+                state.moon = found.moon || '';
+            }
         }
     }
     function writeQuery() {
         var q = new URLSearchParams();
+        if (state.side === 'sell') q.set('side', 'sell');
         if (state.group) q.set('group', state.group);
         if (state.system) q.set('system', state.system);
         if (state.planet) q.set('planet', state.planet);
+        if (state.moon) q.set('moon', state.moon);
         if (state.place) q.set('place', state.place);
         if (state.shop) q.set('shop', state.shop);
         if (state.cat) q.set('cat', state.cat);
@@ -187,23 +272,44 @@
         history.replaceState(null, '', next ? '?' + next : location.pathname);
     }
     function renderLocate() {
-        var systems = sortSystems(data.shops.filter(inGroup).map(function (shop) { return shop.system; }));
+        var systems = sortSystems(data.shops.filter(function (shop) { return inGroup(shop) && offers(shop); }).map(function (shop) { return shop.system; }));
         fillSelect(els.systems, '选择星系', systems.map(function (name) { return { value: name, label: bi(fieldZh('system', name), name) }; }), state.system, true);
         if (!state.system || systems.indexOf(state.system) < 0) {
             state.system = '';
             state.planet = '';
+            state.moon = '';
             state.place = '';
             state.shop = '';
         }
-        var planetKeys = uniqueSorted(scoped('system').map(planetKey));
-        fillRegion(planetKeys, state.planet, !!state.system);
+        var planetKeys = sortPlanets(scoped('system').map(planetKey));
+        fillSelect(els.planets, '选择星球', planetKeys.map(function (name) {
+            return { value: name, label: planetLabel(name) };
+        }), state.planet, !!state.system);
         if (!state.planet || planetKeys.indexOf(state.planet) < 0) {
             state.planet = '';
+            state.moon = '';
             state.place = '';
             state.shop = '';
         }
-        var places = uniqueSorted(scoped('planet').map(function (shop) { return shop.place; }));
-        fillSelect(els.places, '选择站点', places.map(function (name) { return { value: name, label: bi(fieldZh('place', name), name) }; }), state.place, !!state.planet);
+        if (state.planet === '__stations__') {
+            state.moon = '';
+            fillSelect(els.moons, '深空没有卫星', [], '', false);
+        } else if (state.planet) {
+            var moonKeys = sortMoons(scoped('planet').map(function (shop) { return shop.moon || '__surface__'; }));
+            if (!state.moon || moonKeys.indexOf(state.moon) < 0) state.moon = moonKeys.length === 1 ? moonKeys[0] : '';
+            fillSelect(els.moons, '选择卫星', moonKeys.map(function (name) {
+                return { value: name, label: moonLabel(name) };
+            }), state.moon, true);
+            if (!state.moon) {
+                state.place = '';
+                state.shop = '';
+            }
+        } else {
+            fillSelect(els.moons, '选择卫星', [], '', false);
+        }
+        var placeReady = state.planet === '__stations__' || !!state.moon;
+        var places = placeReady ? uniqueSorted(scoped(state.planet === '__stations__' ? 'planet' : 'moon').map(function (shop) { return shop.place; })) : [];
+        fillSelect(els.places, '选择站点', places.map(function (name) { return { value: name, label: bi(fieldZh('place', name), name) }; }), state.place, placeReady);
         if (!state.place || places.indexOf(state.place) < 0) {
             state.place = '';
             state.shop = '';
@@ -228,29 +334,11 @@
         );
         if (!shopByCode(state.shop) || !shopsHere.some(function (shop) { return shopToken(shop) === state.shop || shop.code === state.shop; })) state.shop = '';
     }
-    function fillRegion(keys, current, enabled) {
-        var groups = [
-            ['星球', keys.filter(function (key) { return key !== '__stations__' && key !== 'Delamar'; })],
-            ['小行星', keys.filter(function (key) { return key === 'Delamar'; })],
-            ['深空', keys.filter(function (key) { return key === '__stations__'; })],
-        ];
-        var html = '<option value="" hidden>选择区域</option>';
-        groups.forEach(function (pair) {
-            if (!pair[1].length) return;
-            html += '<optgroup label="' + escapeHtml(pair[0]) + '">';
-            pair[1].forEach(function (key) {
-                html += '<option value="' + escapeHtml(key) + '"' + (key === current ? ' selected' : '') + '>' + escapeHtml(planetLabel(key)) + '</option>';
-            });
-            html += '</optgroup>';
-        });
-        els.planets.innerHTML = html;
-        els.planets.disabled = !enabled;
-        els.planets.value = keys.indexOf(current) >= 0 ? current : '';
-    }
     function sectionsFor(shop) {
         var ids = {};
-        if (!shop || !Array.isArray(shop.items)) return [];
-        shop.items.forEach(function (item) { ids[item[2]] = true; });
+        var stock = listings(shop);
+        if (!stock) return [];
+        stock.forEach(function (item) { ids[item[2]] = true; });
         var sections = [];
         var map = {};
         data.categories.forEach(function (cat) {
@@ -291,6 +379,8 @@
         return item[2] === 102 || item[2] === 9001;
     }
     function makerKey(item) {
+        var hit = shipCardHit(item);
+        if (hit && hit.maker) return hit.maker;
         var name = String(item[0] || '').replace(/（租赁）$/, '').trim();
         if (name.indexOf('C.O.') === 0) return 'C.O.';
         if (name.indexOf("Grey's") === 0) return "Grey's";
@@ -315,7 +405,41 @@
         Origin: 'assets/makers/origin.png',
         RSI: 'assets/makers/rsi.png',
         Tumbril: 'assets/makers/tumbril.png',
+        Kruger: 'assets/makers/kruger.png',
+        Banu: 'assets/makers/banu.png',
+        Aopoa: 'assets/makers/aopoa.png',
+        Vanduul: 'assets/makers/vanduul.png',
     };
+    var shipMakers = [];
+    var shipByModel = {};
+    function shipModelKey(name) {
+        return String(name || '').replace(/（租赁）$/, '').trim().toLowerCase();
+    }
+    function makerFromCardKey(full) {
+        if (full.indexOf('C.O. ') === 0) return { maker: 'C.O.', model: full.slice(5).trim() };
+        if (full.indexOf("Grey's Market ") === 0) return { maker: "Grey's", model: full.slice(14).trim() };
+        var parts = full.split(/\s+/);
+        return { maker: parts[0] || '', model: parts.slice(1).join(' ') };
+    }
+    function indexShipCards(map) {
+        shipByModel = {};
+        var seen = {};
+        Object.keys(map || {}).forEach(function (full) {
+            var split = makerFromCardKey(String(full).trim());
+            var model = shipModelKey(split.model);
+            if (split.maker && !seen[split.maker]) seen[split.maker] = true;
+            var rec = { maker: split.maker, card: map[full] };
+            var fullKey = shipModelKey(full);
+            if (fullKey && !shipByModel[fullKey]) shipByModel[fullKey] = rec;
+            if (model && !shipByModel[model]) shipByModel[model] = rec;
+        });
+        shipMakers = Object.keys(seen).sort(function (a, b) {
+            return makerLabel(a).localeCompare(makerLabel(b), 'zh-CN');
+        });
+    }
+    function shipCardHit(item) {
+        return shipByModel[shipModelKey(item && item[0])] || null;
+    }
     function makerLogoHtml(key) {
         var file = MAKER_LOGO[key];
         if (!file) return '';
@@ -330,7 +454,8 @@
         return true;
     }
     function visibleItems(shop) {
-        return shop.items.filter(catMatches);
+        var stock = listings(shop) || [];
+        return stock.filter(catMatches);
     }
     function itemKey(item) {
         return item[0] + '@' + item[1] + '@' + item[2];
@@ -352,11 +477,11 @@
     }
     function renderDetail(shop, item) {
         if (!shop) {
-            els.detail.innerHTML = '<p class="st-detail-kicker">QUOTE</p><p class="st-detail-empty">接入终端后，点选物品查看买入价。</p>';
+            els.detail.innerHTML = '<p class="st-detail-kicker">QUOTE</p><p class="st-detail-empty">接入终端后，点选物品查看' + priceWord() + '。</p>';
             return;
         }
         if (!item) {
-            els.detail.innerHTML = '<p class="st-detail-kicker">QUOTE</p><p class="st-detail-empty">点选一件物品，查看分类和买入价。</p>';
+            els.detail.innerHTML = '<p class="st-detail-kicker">QUOTE</p><p class="st-detail-empty">点选一件物品，查看分类和' + priceWord() + '。</p>';
             return;
         }
         var cat = catById[item[2]] || { sectionZh: '未分类', nameZh: '—' };
@@ -365,30 +490,45 @@
             ? '<a class="st-detail-jump" href="' + escapeHtml(href) + '" aria-label="打开详细页" title="打开详细页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>'
             : '';
         var photo = '';
+        if (shop.group === 'ship_buy') {
+            photo = '';
+        } else {
+        var wikiPhoto = item[6] && String(item[6]).indexOf('http') === 0 ? String(item[6]) : '';
         var imageId = item[4] ? String(item[4]).trim() : '';
-        if (imageId && item[2] !== 102 && item[2] !== 9001) {
-            photo = '<button type="button" class="st-detail-photo-btn" data-full="' + escapeHtml(apiUrl('/api/sc/components/image/' + encodeURIComponent(imageId) + '?layer=wiki')) + '">' +
-                '<img class="st-detail-photo" src="' + escapeHtml(apiUrl('/api/sc/components/image/' + encodeURIComponent(imageId) + '?layer=wiki&size=thumb')) + '" alt="" onerror="this.parentElement.remove()">' +
+        var localId = imageId && imageId.indexOf('term-') !== 0 && item[2] !== 102 && item[2] !== 9001 && !scuCat(item[2]) ? imageId : '';
+        if (localId) {
+            var localFull = apiUrl('/api/sc/components/image/' + encodeURIComponent(localId) + '?local=1');
+            var localThumb = localFull + '&size=thumb';
+            photo = '<button type="button" class="st-detail-photo-btn" data-full="' + escapeHtml(localFull) + '" data-wiki="' + escapeHtml(wikiPhoto) + '">' +
+                '<img class="st-detail-photo" src="' + escapeHtml(localThumb) + '" alt="" data-wiki="' + escapeHtml(wikiPhoto) + '" onerror="this.onerror=null;if(this.dataset.wiki){this.src=this.dataset.wiki;var b=this.parentElement;if(b)b.setAttribute(\'data-full\',this.dataset.wiki)}else if(this.parentElement)this.parentElement.remove()">' +
                 '</button>';
+        } else if (wikiPhoto) {
+            photo = '<button type="button" class="st-detail-photo-btn" data-full="' + escapeHtml(wikiPhoto) + '">' +
+                '<img class="st-detail-photo" src="' + escapeHtml(wikiPhoto) + '" alt="" onerror="this.parentElement.remove()">' +
+                '</button>';
+        }
         }
         els.detail.innerHTML =
             jump +
             '<p class="st-detail-kicker">QUOTE</p>' +
             '<h3 class="st-detail-name">' + biHtml(item[3], item[0]) + '</h3>' +
             '<div class="st-detail-row"><span>分类</span><strong>' + escapeHtml(isShipItem(item) ? ('船厂 · ' + makerLabel(makerKey(item))) : (cat.sectionZh + ' · ' + cat.nameZh)) + '</strong></div>' +
-            '<div class="st-detail-row"><span>买入价</span><strong class="st-detail-price">' + money(item[1]) + '</strong></div>' +
+            '<div class="st-detail-row"><span>' + priceWord() + '</span><strong class="st-detail-price">' + money(item[1], item) + '</strong></div>' +
+            (scuCat(item[2])
+                ? '<div class="st-detail-row"><span>' + qtyWord() + '</span><strong>' + (item[5] > 0 ? Number(item[5]).toLocaleString('zh-CN') + ' SCU' : '—') + '</strong></div>'
+                : '') +
             '<div class="st-detail-row"><span>终端</span><strong>' + biHtml(shop.nameZh, shop.name) + '</strong></div>' +
             '<div class="st-detail-loc"><span class="st-detail-loc-label">位置</span>' + locationLines(shop) + '</div>' +
             photo;
     }
     function renderKiosk() {
         var shop = shopByCode(state.shop);
-        if (shop && !Array.isArray(shop.items)) {
+        if (shop && listings(shop) === null) {
             els.shopName.innerHTML = biHtml(shop.nameZh, shop.name);
             els.shopPath.hidden = true;
             els.shopCount.textContent = '…';
             els.cats.innerHTML = '';
-            els.list.innerHTML = '<p class="st-empty">正在读取这个星系的在售物品。</p>';
+            els.list.innerHTML = '<p class="st-empty">正在读取这个星系的' + (state.side === 'sell' ? '收购' : '在售') + '物品。</p>';
             renderDetail(null, null);
             ensureSystem(shop.system).then(function () {
                 if (shopByCode(state.shop) === shop) renderKiosk();
@@ -400,13 +540,14 @@
         if (!shop) {
             els.shopName.textContent = '未接入终端';
             els.shopPath.hidden = false;
-            els.shopPath.textContent = '在窗口顶部选择星系、区域、站点，再选择终端';
+            els.shopPath.textContent = '在窗口顶部选择星系、星球、卫星、站点，再选择终端';
             els.shopCount.textContent = 'STANDBY';
             els.cats.innerHTML = '<button type="button" class="st-cat is-on" disabled>全部</button>';
-            els.list.innerHTML = '<div class="st-idle"><span class="st-idle-ring" aria-hidden="true"><span class="st-idle-arc"></span><span class="st-idle-arc st-idle-arc-rev"></span><span class="st-idle-core"></span></span><p class="st-empty">终端屏幕已就绪。选定终端后，这里列出全部在售物品。</p></div>';
+            els.list.innerHTML = '<div class="st-idle"><span class="st-idle-ring" aria-hidden="true"><span class="st-idle-arc"></span><span class="st-idle-arc st-idle-arc-rev"></span><span class="st-idle-core"></span></span><p class="st-empty">终端屏幕已就绪。选定终端后，这里列出' + (state.side === 'sell' ? '可出售的物品。' : '全部在售物品。') + '</p></div>';
             renderDetail(null, null);
             return;
         }
+        var stock = listings(shop) || [];
         var sections = sectionsFor(shop);
         var known = { '': true };
         sections.forEach(function (section) {
@@ -414,36 +555,43 @@
             section.cats.forEach(function (cat) { known['c:' + cat.id] = true; });
         });
         var makers = [];
-        var makerSeen = {};
-        if (shop.items.length && shop.items.every(isShipItem)) {
-            shop.items.forEach(function (item) {
-                var key = makerKey(item);
-                if (!key || makerSeen[key]) return;
-                makerSeen[key] = true;
-                makers.push(key);
+        if (shop.group === 'ship_buy' && stock.length && stock.every(isShipItem)) {
+            makers = shipMakers.length ? shipMakers.slice() : [];
+            if (!makers.length) {
+                var makerSeen = {};
+                stock.forEach(function (item) {
+                    var key = makerKey(item);
+                    if (!key || makerSeen[key]) return;
+                    makerSeen[key] = true;
+                    makers.push(key);
+                });
+                makers.sort(function (a, b) { return makerLabel(a).localeCompare(makerLabel(b), 'zh-CN'); });
+            }
+            makers = makers.filter(function (key) {
+                return stock.some(function (item) { return makerKey(item) === key; });
             });
-            makers.sort(function (a, b) { return makerLabel(a).localeCompare(makerLabel(b), 'zh-CN'); });
             makers.forEach(function (key) { known['m:' + key] = true; });
             known['s:__maker__'] = true;
         }
         if (!known[state.cat]) state.cat = '';
+        if (makers.length && !state.cat) state.cat = 's:__maker__';
         var rows = visibleItems(shop);
         if (pickedKey && !rows.some(function (item) { return itemKey(item) === pickedKey; })) pickedKey = '';
         var picked = rows.filter(function (item) { return itemKey(item) === pickedKey; })[0] || null;
         els.shopName.innerHTML = biHtml(shop.nameZh, shop.name);
         els.shopPath.hidden = true;
         els.shopPath.textContent = '';
-        els.shopCount.textContent = shop.items.length + ' ITEMS';
-        var catHtml = catButton('', '全部', shop.items.length, '', '', false);
+        els.shopCount.textContent = stock.length + ' ITEMS';
+        var catHtml = makers.length ? '' : catButton('', '全部', stock.length, '', '', false);
         if (makers.length) {
             var makerOn = state.cat.indexOf('m:') === 0;
             if ((makerOn || state.cat === 's:__maker__') && openSections.__maker__ !== false) openSections.__maker__ = true;
             var makerOpen = !!openSections.__maker__;
-            catHtml += catButton('s:__maker__', '船厂', shop.items.length, 'st-cat-parent' + (makerOpen ? ' is-open' : ''), '__maker__', makerOpen);
+            catHtml += catButton('s:__maker__', '船厂', stock.length, 'st-cat-parent' + (makerOpen ? ' is-open' : ''), '__maker__', makerOpen);
             if (makerOpen) {
                 catHtml += '<div class="st-cat-kids">';
                 makers.forEach(function (key) {
-                    var count = shop.items.filter(function (item) { return makerKey(item) === key; }).length;
+                    var count = stock.filter(function (item) { return makerKey(item) === key; }).length;
                     catHtml += catButton('m:' + key, makerLabel(key), count, 'st-cat-sub st-cat-maker', '', false, makerLogoHtml(key));
                 });
                 catHtml += '</div>';
@@ -453,7 +601,7 @@
             if (makers.length && section.cats.every(function (cat) { return cat.id === 102; })) return;
             if (section.cats.length === 1) {
                 var only = section.cats[0];
-                var onlyCount = shop.items.filter(function (item) { return item[2] === only.id; }).length;
+                var onlyCount = stock.filter(function (item) { return item[2] === only.id; }).length;
                 catHtml += catButton('c:' + only.id, only.nameZh, onlyCount, '', '', false);
                 return;
             }
@@ -461,7 +609,7 @@
             var childOn = section.cats.some(function (cat) { return state.cat === 'c:' + cat.id; });
             if ((childOn || state.cat === sectionKey) && openSections[section.section] !== false) openSections[section.section] = true;
             var open = !!openSections[section.section];
-            var sectionCount = shop.items.filter(function (item) {
+            var sectionCount = stock.filter(function (item) {
                 var cat = catById[item[2]];
                 return cat && cat.section === section.section;
             }).length;
@@ -469,7 +617,7 @@
             if (!open) return;
             catHtml += '<div class="st-cat-kids">';
             section.cats.forEach(function (cat) {
-                var count = shop.items.filter(function (item) { return item[2] === cat.id; }).length;
+                var count = stock.filter(function (item) { return item[2] === cat.id; }).length;
                 catHtml += catButton('c:' + cat.id, cat.nameZh, count, 'st-cat-sub', '', false);
             });
             catHtml += '</div>';
@@ -480,19 +628,20 @@
         } else if (rows.every(function (item) { return item[2] === 102 || item[2] === 9001; })) {
             els.list.innerHTML = '<div class="st-cards">' + rows.map(function (item) {
                 var on = itemKey(item) === pickedKey;
-                var src = shipArt[String(item[0] || '').replace(/（租赁）$/, '').trim()] || '';
+                var hit = shop.group === 'ship_buy' ? shipCardHit(item) : null;
+                var src = (hit && hit.card) || shipArt[String(item[0] || '').replace(/（租赁）$/, '').trim()] || '';
                 var photo = src
                     ? '<img class="st-card-img" src="' + escapeHtml(shipCardUrl(src)) + '" data-local="' + escapeHtml(src) + '" alt="" width="351" height="210" decoding="async" loading="lazy" onerror="if(this.dataset.local){this.src=this.dataset.local;this.removeAttribute(\'data-local\')}">'
                     : '<span class="st-card-img st-card-img-empty">暂无图片</span>';
-                return '<button type="button" class="st-card' + (on ? ' is-on' : '') + '" data-key="' + escapeHtml(itemKey(item)) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + photo + '<span class="st-card-copy"><span class="st-card-name">' + biHtml(item[3], item[0]) + '</span><span class="st-card-price">' + money(item[1]) + '</span></span></button>';
+                return '<button type="button" class="st-card' + (on ? ' is-on' : '') + '" data-key="' + escapeHtml(itemKey(item)) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + photo + '<span class="st-card-copy"><span class="st-card-name">' + biHtml(item[3], item[0]) + '</span><span class="st-card-price">' + money(item[1], item) + '</span></span></button>';
             }).join('') + '</div>';
         } else {
             els.list.innerHTML =
-                '<div class="st-list-head"><span>物品</span><span>分类</span><span>买入价</span></div>' +
+                '<div class="st-list-head"><span>物品</span><span>分类</span><span>' + priceWord() + '</span></div>' +
                 rows.map(function (item) {
                     var cat = catById[item[2]] || { nameZh: '—' };
                     var on = itemKey(item) === pickedKey;
-                    return '<button type="button" class="st-row' + (on ? ' is-on' : '') + '" data-key="' + escapeHtml(itemKey(item)) + '" aria-pressed="' + (on ? 'true' : 'false') + '"><span class="st-row-name">' + biHtml(item[3], item[0]) + '</span><span class="st-row-cat">' + escapeHtml(cat.nameZh) + '</span><span class="st-row-price">' + money(item[1]) + '</span></button>';
+                    return '<button type="button" class="st-row' + (on ? ' is-on' : '') + '" data-key="' + escapeHtml(itemKey(item)) + '" aria-pressed="' + (on ? 'true' : 'false') + '"><span class="st-row-name">' + biHtml(item[3], item[0]) + '</span><span class="st-row-cat">' + escapeHtml(cat.nameZh) + '</span><span class="st-row-price">' + money(item[1], item) + '</span></button>';
                 }).join('');
         }
         renderDetail(shop, picked);
@@ -504,6 +653,7 @@
     }
     function render() {
         if (els.title) els.title.textContent = state.group ? groupLabel(state.group) : '终端';
+        syncSideButtons();
         renderLocate();
         renderKiosk();
         writeQuery();
@@ -511,6 +661,7 @@
     els.systems.addEventListener('change', function () {
         state.system = els.systems.value;
         state.planet = '';
+        state.moon = '';
         state.place = '';
         state.shop = '';
         state.cat = '';
@@ -519,6 +670,15 @@
     });
     els.planets.addEventListener('change', function () {
         state.planet = els.planets.value;
+        state.moon = '';
+        state.place = '';
+        state.shop = '';
+        state.cat = '';
+        pickedKey = '';
+        render();
+    });
+    els.moons.addEventListener('change', function () {
+        state.moon = els.moons.value;
         state.place = '';
         state.shop = '';
         state.cat = '';
@@ -531,6 +691,17 @@
         state.cat = '';
         pickedKey = '';
         render();
+    });
+    document.querySelectorAll('[data-side]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var next = btn.getAttribute('data-side') === 'sell' ? 'sell' : 'buy';
+            if (next === state.side) return;
+            state.side = next;
+            state.cat = '';
+            pickedKey = '';
+            hideHits();
+            render();
+        });
     });
     els.terminals.addEventListener('change', function () {
         state.shop = els.terminals.value;
@@ -554,13 +725,19 @@
         return [
             locBit(ICO.system, biHtml(row.systemZh, row.system)),
             locBit(regionIcon, escapeHtml(row.planet)),
+            row.moon && row.moon !== '__surface__' ? locBit(ICO.planet, row.moon === '__lagrange__' ? '拉格朗日点' : biHtml(row.moonZh, row.moon)) : '',
             locBit(ICO.station, biHtml(row.placeZh, row.place)),
             locBit(ICO.shop, biHtml(row.shopZh, row.shop)),
-        ].join('<span class="st-hit-sep">·</span>');
+        ].filter(Boolean).join('<span class="st-hit-sep">·</span>');
+    }
+    function queryReady(needle) {
+        if (!needle) return false;
+        if (/[\u4e00-\u9fff]/.test(needle)) return true;
+        return needle.length >= 2;
     }
     function renderHits() {
         var needle = els.superInput.value.trim().toLowerCase();
-        if (needle.length < 2) {
+        if (!queryReady(needle)) {
             hideHits();
             return;
         }
@@ -576,16 +753,21 @@
             });
         }
         if (!catalog.length) {
-            els.results.innerHTML = '<p class="st-hit-empty">' + (pendingSystems.length ? '正在读取已打开星系的在售物品。' : '搜索索引还在准备，稍等一下。') + '</p>';
+            els.results.innerHTML = '<p class="st-hit-empty">' + (pendingSystems.length ? ('正在读取已打开星系的' + (state.side === 'sell' ? '收购' : '在售') + '物品。') : '搜索索引还在准备，稍等一下。') + '</p>';
             els.results.hidden = false;
             els.superInput.setAttribute('aria-expanded', 'true');
             return;
         }
         var found = [];
-        catalog.forEach(function (row) {
-            var at = row.blob.indexOf(needle);
+            catalog.forEach(function (row) {
+            if ((row.side || 'buy') !== state.side) return;
+            var atName = (row.nameZh || '').toLowerCase().indexOf(needle);
+            var atEn = (row.name || '').toLowerCase().indexOf(needle);
+            var at = atName >= 0 ? atName : atEn;
+            if (at < 0) at = row.blob.indexOf(needle);
             if (at < 0) return;
-            found.push({ row: row, rank: at === 0 ? 0 : 1 });
+            var rank = (atName === 0 || atEn === 0) ? 0 : (atName >= 0 || atEn >= 0 ? 1 : 2);
+            found.push({ row: row, rank: rank });
         });
         found.sort(function (a, b) {
             if (a.rank !== b.rank) return a.rank - b.rank;
@@ -597,7 +779,8 @@
         if (hitSystem && systems.indexOf(hitSystem) < 0) hitSystem = '';
         var pool = hitSystem ? found.filter(function (entry) { return entry.row.system === hitSystem; }) : found;
         var extra = 0;
-        hits = pool.map(function (entry) { return entry.row; });
+        hits = pool.slice(0, 40).map(function (entry) { return entry.row; });
+        extra = pool.length - hits.length;
         hitIndex = hits.length ? 0 : -1;
         var filters = '<div class="st-hit-systems" role="group" aria-label="按星系筛选">' +
             '<button type="button" class="st-hit-sys' + (hitSystem ? '' : ' is-on') + '" data-hit-system="">全部<span class="st-hit-sys-n">' + found.length + '</span></button>' +
@@ -608,12 +791,12 @@
             }).join('') +
             '</div>';
         if (!found.length) {
-            els.results.innerHTML = '<p class="st-hit-empty">没有找到在售的物品。</p>';
+            els.results.innerHTML = '<p class="st-hit-empty">没有找到' + (state.side === 'sell' ? '可出售' : '在售') + '的物品。</p>';
         } else if (!hits.length) {
-            els.results.innerHTML = filters + '<p class="st-hit-empty">这个星系里没有找到在售的物品。</p>';
+            els.results.innerHTML = filters + '<p class="st-hit-empty">这个星系里没有找到' + (state.side === 'sell' ? '可出售' : '在售') + '的物品。</p>';
         } else {
             els.results.innerHTML = filters + hits.map(function (row, index) {
-                return '<button type="button" class="st-hit' + (index === hitIndex ? ' is-active' : '') + '" role="option" data-hit="' + index + '"><span class="st-hit-top"><span class="st-hit-name">' + biHtml(row.nameZh, row.name) + '</span><span class="st-hit-price">' + money(row.price) + '</span></span><span class="st-hit-loc">' + locLine(row) + '</span></button>';
+                return '<button type="button" class="st-hit' + (index === hitIndex ? ' is-active' : '') + '" role="option" data-hit="' + index + '"><span class="st-hit-top"><span class="st-hit-name">' + biHtml(row.nameZh, row.name) + '</span><span class="st-hit-price">' + money(row.price, row.unit === 'scu' ? [0, 0, 9101] : null) + '</span></span><span class="st-hit-loc">' + locLine(row) + '</span></button>';
             }).join('') + (extra ? '<p class="st-hit-empty">还有 ' + extra + ' 条，继续输入可以缩小范围。</p>' : '') + (pendingSystems.length || indexQueue.length ? '<p class="st-hit-empty">其余星系还在读取，结果会继续补上。</p>' : '');
         }
         els.results.hidden = false;
@@ -624,6 +807,7 @@
         state.group = '';
         state.system = row.system;
         state.planet = row.planetKey;
+        state.moon = row.moonKey || '';
         state.place = row.place;
         state.shop = row.code;
         state.cat = '';
@@ -768,11 +952,13 @@
     var indexTimer = 0;
     var systemLoads = {};
     var searchLoad = null;
-    function pushCatalogItem(shop, item) {
+    function pushCatalogItem(shop, item, side) {
         catalog.push({
             name: item[0],
             nameZh: item[3] || '',
             price: item[1],
+            side: side,
+            unit: scuCat(item[2]) ? 'scu' : '',
             key: item[0] + '@' + item[1] + '@' + item[2],
             code: shopToken(shop),
             shop: shop.name,
@@ -781,23 +967,28 @@
             systemZh: shop.systemZh || '',
             planet: planetLabel(planetKey(shop)),
             planetKey: planetKey(shop),
+            moon: shop.moon || '',
+            moonZh: shop.moonZh || '',
+            moonKey: shop.moon || '',
             place: shop.place,
             placeZh: shop.placeZh || '',
-            blob: [item[0], item[3], shop.name, shop.nameZh, shop.system, shop.systemZh, shop.planet, shop.planetZh, shop.place, shop.placeZh].filter(Boolean).join(' ').toLowerCase(),
+            blob: [item[0], item[3], shop.name, shop.nameZh, shop.system, shop.systemZh, shop.planet, shop.planetZh, shop.moon, shop.moonZh, shop.place, shop.placeZh].filter(Boolean).join(' ').toLowerCase(),
         });
     }
     function drainIndex() {
         var budget = 0;
         while (indexQueue.length && budget < 3000) {
             var shop = indexQueue[0];
-            var items = shop.items || [];
+            var rows = (shop.items || []).map(function (item) { return { item: item, side: 'buy' }; })
+                .concat((shop.sells || []).map(function (item) { return { item: item, side: 'sell' }; }));
             var at = shop._indexAt || 0;
-            while (at < items.length && budget < 3000) {
-                pushCatalogItem(shop, items[at++]);
+            while (at < rows.length && budget < 3000) {
+                pushCatalogItem(shop, rows[at].item, rows[at].side);
+                at += 1;
                 budget++;
             }
             shop._indexAt = at;
-            if (at >= items.length) indexQueue.shift();
+            if (at >= rows.length) indexQueue.shift();
         }
         if (indexQueue.length) {
             indexTimer = setTimeout(drainIndex, 0);
@@ -831,10 +1022,12 @@
         systemLoads[name] = fetchJson(apiUrl('/api/sc/sales-terminals/system/' + encodeURIComponent(name))).then(function (json) {
             var rows = (json && json.shops) || [];
             var byId = {};
-            rows.forEach(function (row) { byId[row.id] = row.items || []; });
+            rows.forEach(function (row) { byId[row.id] = row; });
             (data.shops || []).forEach(function (shop) {
                 if (shop.system !== name || Array.isArray(shop.items)) return;
-                shop.items = byId[shop.id] || [];
+                var row = byId[shop.id] || {};
+                shop.items = row.items || [];
+                shop.sells = row.sells || [];
                 queueIndex(shop);
             });
         }).catch(function (err) {
@@ -846,13 +1039,19 @@
     fetchJson(apiUrl('/api/sc/ship-card-map'), 'ship-cards.json?v=2')
         .then(function (json) {
             shipArt = json || {};
+            indexShipCards(shipArt);
             if (data) renderKiosk();
         })
         .catch(function () {});
     var catalogReady = false;
-    fetchJson(apiUrl('/api/sc/sales-terminals'), 'sales-terminals-data.json?v=28')
-        .then(function (json) {
-            data = json;
+    Promise.all([
+        fetchJson(apiUrl('/api/sc/sales-terminals'), 'sales-terminals-data.json?v=30'),
+        fetchJson('sales-place-parents.json?v=3').catch(function () { return { zh: {}, places: {} }; }),
+    ])
+        .then(function (pair) {
+            data = pair[0];
+            parents = pair[1] && pair[1].places ? pair[1] : { zh: {}, places: {} };
+            applyParents();
             renderSource();
             codeUses = {};
             (data.shops || []).forEach(function (shop) { codeUses[shop.code] = (codeUses[shop.code] || 0) + 1; });

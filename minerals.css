@@ -333,6 +333,26 @@
 .min-note-name { color: #8ee0ff; }
 .min-note-time { color: rgba(200, 220, 235, 0.55); font-size: 0.75rem; }
 .min-note-text { margin: 0.25rem 0 0; white-space: pre-wrap; }
+.min-note-reply,
+.min-note-reply-cancel {
+ margin: 0.35rem 0 0;
+ padding: 0;
+ border: 0;
+ background: transparent;
+ color: #8ee0ff;
+ font: inherit;
+ font-size: 0.75rem;
+ cursor: pointer;
+}
+.min-note-reply-cancel { margin-left: 0.6rem; }
+.min-note-replying { margin: 0; color: rgba(200, 220, 235, 0.72); font-size: 0.78rem; }
+.min-note-replying[hidden] { display: none; }
+.min-note-replies {
+ margin: 0.35rem 0 0 2.6rem;
+ padding-left: 0.7rem;
+ border-left: 1px solid rgba(95, 184, 255, 0.22);
+}
+.min-note-reply-item { padding: 0.4rem 0 0; }
 
 .min-note-person {
     display: flex;
@@ -344,7 +364,7 @@
 .min-note-avatar {
     width: 36px;
     height: 36px;
-    border-radius: 8px;
+    border-radius: 50%;
     object-fit: cover;
     border: 1px solid rgba(95, 184, 255, 0.28);
     flex: none;

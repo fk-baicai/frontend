@@ -144,6 +144,14 @@ const server = http.createServer(function (req, res) {
     return serveStatic(req, res);
 });
 
+server.on('error', function (err) {
+    if (err && err.code === 'EADDRINUSE') {
+        console.error('[dev-server] port ' + PORT + ' is already in use: http://127.0.0.1:' + PORT + '/');
+        process.exit(1);
+    }
+    throw err;
+});
+
 server.listen(PORT, HOST, function () {
     console.log('[dev-server] frontend  http://127.0.0.1:' + PORT);
     console.log('[dev-server] 反代 → ' + API_TARGET + '（/api、/avatars、/community-uploads、/captcha、/market-uploads）');

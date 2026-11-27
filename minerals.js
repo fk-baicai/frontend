@@ -629,6 +629,9 @@
         avatar.alt = "";
         avatar.referrerPolicy = "no-referrer";
         avatar.src = assetUrl(note.avatarUrl) || (window.USS_DEFAULT_AVATAR || "default-avatar.webp");
+        avatar.setAttribute("data-avatar-handle", String(note.name || "").trim().toLowerCase());
+        if (note.avatarFrame) avatar.setAttribute("data-avatar-frame", "1");
+        else avatar.removeAttribute("data-avatar-frame");
         var meta = el("div", "min-note-meta");
         var who = el("p", "min-note-who");
         who.appendChild(el("strong", "min-note-name", note.name || "访客"));
@@ -656,7 +659,12 @@
         row.appendChild(meta);
         return row;
     }
-    function paintNotes(list, notes) {
+    function noteTotal(notes) {
+        return (notes || []).reduce(function (sum, note) {
+            return sum + 1 + ((note.replies && note.replies.length) || 0);
+        }, 0);
+    }
+    function paintNotes(list, notes, onReply) {
         list.textContent = "";
         if (!notes.length) {
             list.appendChild(el("p", "min-empty", "还没有留言。"));
@@ -666,8 +674,28 @@
             var item = el("article", "min-note-item");
             item.appendChild(personRow(note, true));
             item.appendChild(el("p", "min-note-text", note.text));
+            var reply = el("button", "min-note-reply", "");
+            reply.type = "button";
+            reply.setAttribute("aria-label", "回复");
+            reply.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>';
+            reply.addEventListener("click", function () { onReply(note); });
+            item.appendChild(reply);
+            var replies = note.replies || [];
+            if (replies.length) {
+                var box = el("div", "min-note-replies");
+                replies.forEach(function (child) {
+                    var row = el("div", "min-note-reply-item");
+                    row.appendChild(personRow(child, true));
+                    row.appendChild(el("p", "min-note-text", child.text));
+                    box.appendChild(row);
+                });
+                item.appendChild(box);
+            }
             list.appendChild(item);
         });
+        if (window.UssAvatarFrame && typeof window.UssAvatarFrame.paintAll === "function") {
+            window.UssAvatarFrame.paintAll();
+        }
     }
     function markNoteCount(slug, count) {
         noteCounts[slug] = count;
@@ -725,8 +753,30 @@
         text.maxLength = 120;
         text.required = true;
         text.rows = 3;
-        text.placeholder = viewer ? "以 " + viewer.name + " 的身份留言" : "写一条留言，所有人都能看到";
+        var idlePlaceholder = viewer ? "以 " + viewer.name + " 的身份留言" : "写一条留言，所有人都能看到";
+        text.placeholder = idlePlaceholder;
         text.setAttribute("aria-label", "留言");
+        var parent = null;
+        var hint = el("p", "min-note-replying");
+        hint.hidden = true;
+        function clearReply() {
+            parent = null;
+            hint.hidden = true;
+            hint.textContent = "";
+            text.placeholder = idlePlaceholder;
+        }
+        function setReply(note) {
+            parent = note;
+            hint.hidden = false;
+            hint.textContent = "";
+            hint.appendChild(document.createTextNode("回复 " + (note.name || "访客")));
+            var cancel = el("button", "min-note-reply-cancel", "取消");
+            cancel.type = "button";
+            cancel.addEventListener("click", clearReply);
+            hint.appendChild(cancel);
+            text.placeholder = "回复 " + (note.name || "访客");
+            text.focus();
+        }
         var send = el("button", "min-note-send", "发布");
         send.type = "submit";
         if (viewer) {
@@ -734,6 +784,7 @@
         } else {
             form.appendChild(name);
         }
+        form.appendChild(hint);
         form.appendChild(text);
         form.appendChild(send);
         form.addEventListener("submit", function (ev) {
@@ -741,10 +792,12 @@
             send.disabled = true;
             var headers = { "Content-Type": "application/json" };
             if (viewer) headers.Authorization = "Bearer " + viewer.token;
+            var payload = { name: viewer ? viewer.name : name.value, text: text.value };
+            if (parent && parent.id) payload.parent = parent.id;
             fetch("/api/minerals/" + encodeURIComponent(slug) + "/notes", {
                 method: "POST",
                 headers: headers,
-                body: JSON.stringify({ name: viewer ? viewer.name : name.value, text: text.value })
+                body: JSON.stringify(payload)
             }).then(function (res) {
                 return res.json().then(function (body) { return { ok: res.ok, body: body }; });
             }).then(function (result) {
@@ -755,8 +808,9 @@
                 }
                 if (!viewer) localStorage.setItem("min-note-name", name.value.trim());
                 text.value = "";
-                paintNotes(list, result.body.notes || []);
-                markNoteCount(slug, (result.body.notes || []).length);
+                clearReply();
+                paintNotes(list, result.body.notes || [], setReply);
+                markNoteCount(slug, noteTotal(result.body.notes));
             }).catch(function () {
                 send.disabled = false;
                 list.appendChild(el("p", "min-empty", "留言没有保存。"));
@@ -774,7 +828,7 @@
         else name.focus();
         fetch("/api/minerals/" + encodeURIComponent(slug) + "/notes")
             .then(function (res) { if (!res.ok) throw new Error("bad"); return res.json(); })
-            .then(function (body) { paintNotes(list, body.notes || []); })
+            .then(function (body) { paintNotes(list, body.notes || [], setReply); })
             .catch(function () { list.textContent = ""; list.appendChild(el("p", "min-empty", "留言没有读到。")); });
     }
     function renderChart() {

@@ -762,6 +762,7 @@
             if (itemType === 'ship_turret') return '炮台类型';
             if (itemType === 'mining_laser') return '激光类型';
             if (itemType === 'ship_module') return '模组类型';
+            if (itemType === 'mining_gadget') return '器具类型';
             if (itemType === 'personal_weapon') return '武器类型';
             if (itemType === 'personal_armor') return '护甲类型';
             if (itemType === 'magazine') return '弹匣类型';
@@ -809,6 +810,7 @@
         missile_rack: 'missile_rack',
         mining_laser: 'mining_laser',
         ship_module: 'mining_modifier',
+        mining_gadget: 'mining_modifier',
         salvage_scraper: 'weapon_modifier',
         fuel_nozzle: 'resource_network',
         ship_emp: 'emp',
@@ -1456,6 +1458,27 @@
                 fields: ['type', 'item_type', 'charges', 'duration'],
             },
             { title: '属性修正', nested: 'modifier_map', fields: ['laser_instability', 'optimal_charge_window_size', 'resistance', 'optimal_charge_rate', 'inert_materials', 'all_charge_rates', 'overcharge_rate', 'shatter_damage'] },
+        ],
+        mining_gadget: [
+            {
+                title: '器具参数',
+                fields: ['type', 'item_type', 'charges', 'duration'],
+            },
+            {
+                title: '属性修正',
+                nested: 'modifier_map',
+                fields: [
+                    'laser_instability',
+                    'optimal_charge_window_size',
+                    'resistance',
+                    'optimal_charge_rate',
+                    'cluster_factor',
+                    'inert_materials',
+                    'all_charge_rates',
+                    'overcharge_rate',
+                    'shatter_damage',
+                ],
+            },
         ],
         weapon_pistol: [
             {
@@ -2685,6 +2708,7 @@
         optimal_charge_window_size: { label: '最佳窗口', beneficialWhen: 'positive' },
         resistance: { label: '抗性', beneficialWhen: 'negative' },
         optimal_charge_rate: { label: '充能速率', beneficialWhen: 'positive' },
+        cluster_factor: { label: '富集系数', beneficialWhen: 'positive' },
         inert_materials: { label: '惰性材料过滤', beneficialWhen: 'negative', displayInvert: true },
         all_charge_rates: { label: '全部充能速率', beneficialWhen: 'positive' },
         overcharge_rate: { label: '过载速率', beneficialWhen: 'positive' },
@@ -2768,14 +2792,28 @@
 
     function buildMiningModifierTags(item, typeKey) {
         var map =
-            typeKey === 'ship_module'
+            typeKey === 'ship_module' || typeKey === 'mining_gadget'
                 ? getModuleModifierMap(item)
                 : typeKey === 'mining_laser'
                   ? getMiningLaserModifierMap(item)
                   : null;
         if (!map) return [];
         var order =
-            typeKey === 'mining_laser' ? MINING_LASER_MODIFIER_ORDER : MODULE_MODIFIER_LIST_ORDER.concat(['resistance', 'laser_instability']);
+            typeKey === 'mining_laser'
+                ? MINING_LASER_MODIFIER_ORDER
+                : typeKey === 'mining_gadget'
+                  ? [
+                        'laser_instability',
+                        'optimal_charge_window_size',
+                        'resistance',
+                        'optimal_charge_rate',
+                        'cluster_factor',
+                        'inert_materials',
+                        'all_charge_rates',
+                        'overcharge_rate',
+                        'shatter_damage',
+                    ]
+                  : MODULE_MODIFIER_LIST_ORDER.concat(['resistance', 'laser_instability']);
         var tags = [];
         var seen = Object.create(null);
         order.forEach(function (key) {
@@ -4007,6 +4045,64 @@
         ],
         attachment_missile: [],
     };
+    WIKI_TABLE_COLUMNS.mining_gadget = [
+        {
+            key: 'wiki_sm_instability',
+            label: '不稳定性',
+            get: function (item) {
+                return moduleModifierCell(item, 'laser_instability');
+            },
+        },
+        {
+            key: 'wiki_sm_window',
+            label: '最佳窗口',
+            get: function (item) {
+                return moduleModifierCell(item, 'optimal_charge_window_size');
+            },
+        },
+        {
+            key: 'wiki_sm_resist',
+            label: '抗性',
+            get: function (item) {
+                return moduleModifierCell(item, 'resistance');
+            },
+        },
+        {
+            key: 'wiki_sm_charge',
+            label: '充能速率',
+            get: function (item) {
+                return chargeRateModifierCell(getModuleModifierMap(item));
+            },
+        },
+        {
+            key: 'wiki_sm_cluster',
+            label: '富集系数',
+            get: function (item) {
+                return moduleModifierCell(item, 'cluster_factor');
+            },
+        },
+        {
+            key: 'wiki_sm_overcharge',
+            label: '过载速率',
+            get: function (item) {
+                return moduleModifierCell(item, 'overcharge_rate');
+            },
+        },
+        {
+            key: 'wiki_sm_shatter',
+            label: '碎裂伤害',
+            get: function (item) {
+                return moduleModifierCell(item, 'shatter_damage');
+            },
+        },
+        {
+            key: 'wiki_sm_inert',
+            label: '惰性过滤',
+            get: function (item) {
+                return moduleModifierCell(item, 'inert_materials');
+            },
+        },
+    ];
 
     function getWikiTableColumns(typeKey) {
         var resolved = resolveEquipmentTypeKey(typeKey);
@@ -4057,7 +4153,9 @@
             var rows = [];
             if (def.nested === 'modifier_map') {
                 rows = rowsFromMiningModifierMap(block[def.nested], def.fields);
-                if (sectionKey === 'ship_module') rows = moduleDescribedPowerRows(item).concat(rows);
+                if (sectionKey === 'ship_module' || sectionKey === 'mining_gadget') {
+                    rows = moduleDescribedPowerRows(item).concat(rows);
+                }
             } else if (def.nested === 'damages') {
                 rows = rowsFromPersonalWeaponDamages(block[def.nested], block.damage_per_shot);
             } else if (def.nested === 'modes') {

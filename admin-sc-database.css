@@ -390,6 +390,23 @@ code {
     font-size: 0.78rem;
     line-height: 1.45;
     white-space: pre-wrap;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 240, 255, 0.55) rgba(7, 19, 31, 0.35);
+}
+
+.sc-update-log::-webkit-scrollbar {
+    width: 8px;
+}
+
+.sc-update-log::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sc-update-log::-webkit-scrollbar-thumb {
+    background: rgba(0, 240, 255, 0.45);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    border-radius: 99px;
 }
 
 .sc-update-list {

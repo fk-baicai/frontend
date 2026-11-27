@@ -24,8 +24,8 @@ html:has(body.bp-craft-body) {
     --bp-radius: 6px;
     --bp-radius-lg: 10px;
     --bp-header-offset: var(--navbar-height, calc(37px + 4rem));
-    --bp-page-pad-y: 3rem;
-    --bp-page-pad-bottom: 4rem;
+    --bp-page-pad-y: 3.5rem;
+    --bp-page-pad-bottom: 3.5rem;
     --bp-work-h: calc(100dvh - var(--bp-header-offset) - var(--bp-page-pad-y) - var(--bp-page-pad-bottom) - 0.5rem);
     --bp-missions-gap: 1.35rem;
     --bp-glow: rgba(95, 184, 255, 0.35);
@@ -401,19 +401,19 @@ html:has(body.bp-craft-body) {
     border: 0;
     border-radius: 999px;
     background: transparent;
-    color: var(--bp-accent);
+    color: rgba(184, 220, 240, 0.42);
     cursor: pointer;
     flex: 0 0 auto;
     line-height: 0;
-    filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.45));
+    filter: none;
     transition: color 0.18s, filter 0.18s;
 }
 
 .bp-own-toggle:hover,
 .bp-own-toggle:focus-visible {
-    color: var(--bp-accent-hi);
+    color: rgba(200, 230, 245, 0.78);
     outline: none;
-    filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.7));
+    filter: none;
 }
 
 .bp-own-toggle.is-owned {
@@ -568,6 +568,28 @@ html:has(body.bp-craft-body) {
         0 0 16px rgba(95, 184, 255, 0.1);
 }
 
+.bp-list-item.is-owned {
+    background: rgba(57, 255, 154, 0.045);
+    box-shadow: inset 2px 0 0 rgba(57, 255, 154, 0.72);
+}
+
+.bp-list-item.is-owned:hover {
+    background: rgba(57, 255, 154, 0.08);
+    border-color: rgba(57, 255, 154, 0.22);
+    box-shadow:
+        inset 2px 0 0 rgba(57, 255, 154, 0.85),
+        0 0 12px rgba(57, 255, 154, 0.06);
+}
+
+.bp-list-item.is-owned.is-active,
+.bp-list-item.is-owned.is-active:hover {
+    background: rgba(95, 184, 255, 0.1);
+    border-color: rgba(95, 184, 255, 0.35);
+    box-shadow:
+        inset 3px 0 0 var(--bp-neon),
+        0 0 16px rgba(95, 184, 255, 0.1);
+}
+
 .bp-list-item__name {
     display: block;
     font-family: var(--bp-font-digit);
@@ -615,6 +637,12 @@ html:has(body.bp-craft-body) {
     color: var(--bp-amber);
     background: rgba(255, 176, 32, 0.1);
     box-shadow: 0 0 8px rgba(255, 176, 32, 0.12);
+}
+
+.bp-list-item__badge--owned {
+    border: 1px solid rgba(57, 255, 154, 0.32);
+    color: #8dffb8;
+    background: rgba(57, 255, 154, 0.08);
 }
 
 .bp-list-empty {
@@ -2020,10 +2048,11 @@ html:has(body.bp-craft-body) {
     min-width: 0;
     padding-left: 0;
     font-size: 0.82rem;
-    line-height: 1;
+    line-height: 1.2;
     display: flex;
-    align-items: center;
-    gap: 0.28rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.12rem;
     overflow: visible;
     word-break: normal;
 }

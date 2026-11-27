@@ -301,6 +301,10 @@
                 user.marketReviewCount !== undefined && user.marketReviewCount !== null
                     ? user.marketReviewCount
                     : prev.marketReviewCount,
+            avatarFrameOwned:
+                user.avatarFrameOwned !== undefined ? !!user.avatarFrameOwned : !!prev.avatarFrameOwned,
+            avatarFrameOn:
+                user.avatarFrameOn !== undefined ? !!user.avatarFrameOn : !!prev.avatarFrameOn,
             oopzId: user.oopzId !== undefined ? user.oopzId : prev.oopzId,
             oopzUid: user.oopzUid !== undefined ? user.oopzUid : prev.oopzUid,
             oopzName: user.oopzName !== undefined ? user.oopzName : prev.oopzName,

@@ -18,7 +18,7 @@
     width: max-content;
     max-width: none;
     margin: 0 auto;
-    padding: 2.75rem var(--home-content-pad-x) 3.25rem;
+    padding: 3rem var(--home-content-pad-x) 3rem;
     display: flex;
     flex-direction: row;
     align-items: flex-start;
@@ -28,7 +28,7 @@
 
 .cg-side {
     width: 17.5rem;
-    height: calc(700px / 1.2);
+    height: calc((100dvh - var(--navbar-height) - 3.2rem) / 1.2 - 6rem);
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
@@ -281,7 +281,7 @@
     z-index: 1;
     flex: none;
     width: calc(1400px / 1.2);
-    height: calc(700px / 1.2);
+    height: calc((100dvh - var(--navbar-height) - 3.2rem) / 1.2 - 6rem);
     overflow: hidden;
     border: 1px solid var(--home-surface-border);
     border-radius: var(--home-module-radius);

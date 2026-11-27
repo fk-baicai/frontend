@@ -53,7 +53,7 @@
         docking_collars: '对接环',
         external_fuel_tanks: '外置燃料箱',
         fuel_nozzle: '燃料喷嘴',
-        gadgets: '小工具',
+        gadgets: '器具',
         mining_laser_heads: '采矿激光头',
         mining_modules: '采矿模组',
         scraper_beams: '刮削束',
@@ -559,6 +559,14 @@
                 '</span>';
         }
         var manageCls = opts.manage ? ' market-card__footer--manage' : '';
+        var avatarHandle = String(
+            (order && order.bindingId) ||
+                (order && order.authorHandle) ||
+                (seller && seller.bindingId) ||
+                ''
+        )
+            .trim()
+            .toLowerCase();
         return (
             '<div class="market-card__footer' +
             manageCls +
@@ -566,7 +574,9 @@
             '<div class="market-card__footer-head">' +
             '<img class="market-card__avatar" src="' +
             escapeHtml(avatarUrl) +
-            '" alt="">' +
+            '" alt=""' +
+            (avatarHandle ? ' data-avatar-handle="' + escapeHtml(avatarHandle) + '"' : '') +
+            '>' +
             '<span class="market-card__author-name">' +
             escapeHtml(masked.display) +
             '</span>' +
@@ -2102,7 +2112,11 @@
             '<div class="market-seller-card__body">' +
             '<div class="market-seller-card__profile">' +
             '<div class="market-seller-card__avatar-wrap' + (online ? ' is-online' : '') + '">' +
-            '<img class="market-seller-card__avatar" src="' + escapeHtml(avatar) + '" alt="">' +
+            '<img class="market-seller-card__avatar" src="' + escapeHtml(avatar) + '" alt=""' +
+            (seller.bindingId
+                ? ' data-avatar-handle="' + escapeHtml(String(seller.bindingId).trim().toLowerCase()) + '"'
+                : '') +
+            '>' +
             (online ? '<span class="market-seller-card__avatar-live" aria-hidden="true"></span>' : '') +
             '</div>' +
             '<div class="market-seller-card__identity">' +

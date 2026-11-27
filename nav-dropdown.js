@@ -148,11 +148,12 @@
             var row = document.createElement('li');
             row.className = 'nav-mega-tools-row';
             row.innerHTML =
-                '<a class="nav-mega-link" data-nav-sales-in-tools href="/sales-terminals"><span class="nav-mega-link-title">终端</span><span class="nav-mega-link-desc">星系 · 区域 · 站点 · 在售物品</span></a>';
+                '<a class="nav-mega-link" data-nav-sales-in-tools href="/sales-terminals"><span class="nav-mega-link-title">终端</span><span class="nav-mega-link-desc">星系 · 星球 · 卫星 · 站点 · 在售物品</span></a>';
             toolsList.insertBefore(row, toolsList.firstChild);
         }
         var serverIp = toolsList && toolsList.querySelector('a[href*="server-ip"]');
-        if (serverIp) toolsList.appendChild(serverIp);
+        var hangar = toolsList && toolsList.querySelector('a[href*="executive-hangar"]');
+        if (serverIp && hangar) hangar.insertAdjacentElement('afterend', serverIp);
         decorateToolIcons(toolsList);
         placeToolsAfterCatalog();
     }
@@ -170,22 +171,118 @@
             '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16v16H4V4zm2 2v5h5V6H6zm7 0v5h5V6h-5zM6 13v5h5v-5H6zm7 0v5h5v-5h-5z"/></svg>',
         'server-ip':
             '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 3h16v6H4V3zm2 2v2h2V5H6zm8 0v2h4V5h-4zM4 10h16v6H4v-6zm2 2v2h2v-2H6zm8 0v2h4v-2h-4zM4 17h16v4H4v-4zm2 1.2v1.6h2v-1.6H6z"/></svg>',
+        missions:
+            '<svg viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M971.53 1024H48.71V0h610l312.82 323.99V1024zM161.86 910.85h696.52V369.7l-247.7-256.55H161.86v797.7z"/><path d="M422.1 753.25L257.63 588.78l80.01-80.01 84.46 84.46 223.07-223.07 80.01 80.01z"/></svg>',
     };
+
+    function toolPathKey(value) {
+        var raw = String(value || '').split('?')[0].split('#')[0].replace(/\\/g, '/');
+        var parts = raw.split('/');
+        var last = parts[parts.length - 1] || '';
+        return last.replace(/\.html$/i, '');
+    }
+
+    function syncToolCurrent(link) {
+        var here = toolPathKey(window.location.pathname);
+        var there = toolPathKey(link.getAttribute('href'));
+        if (here && there && here === there) link.classList.add('is-current');
+    }
+
+    function wireToolsPointer(toolsList) {
+        if (!toolsList || toolsList.dataset.pointerBound) return;
+        toolsList.dataset.pointerBound = '1';
+        toolsList.style.position = 'relative';
+        var follow = document.createElement('span');
+        follow.className = 'nav-mega-follow';
+        follow.setAttribute('aria-hidden', 'true');
+        follow.style.position = 'absolute';
+        follow.style.left = '0';
+        follow.style.top = '0';
+        follow.style.pointerEvents = 'none';
+        follow.style.zIndex = '0';
+        toolsList.appendChild(follow);
+        var active = null;
+
+        function pad() {
+            var root = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+            return { x: 0.48 * root, y: 0.38 * root };
+        }
+
+        function place(target, animate) {
+            if (!target) return;
+            var listRect = toolsList.getBoundingClientRect();
+            if (listRect.width < 1) return;
+            var rect = target.getBoundingClientRect();
+            var inset = pad();
+            var motion = animate !== false && toolsList.classList.contains('is-follow');
+            if (!motion) follow.style.transition = 'none';
+            follow.style.width = rect.width + inset.x * 2 + 'px';
+            follow.style.height = rect.height + inset.y * 2 + 'px';
+            follow.style.transform =
+                'translate(' +
+                (rect.left - listRect.left - inset.x) +
+                'px,' +
+                (rect.top - listRect.top - inset.y) +
+                'px)';
+            if (!motion) {
+                follow.offsetHeight;
+                follow.style.transition = '';
+            }
+            toolsList.classList.add('is-follow');
+            active = target;
+        }
+
+        toolsList.addEventListener('pointermove', function (event) {
+            var node = event.target;
+            if (!node || !node.closest) return;
+            var link = node.closest('.nav-mega-link');
+            if (!link || !toolsList.contains(link)) return;
+            if (link === active && toolsList.classList.contains('is-follow')) return;
+            place(link);
+        });
+        toolsList.addEventListener('pointerleave', function () {
+            toolsList.classList.remove('is-follow');
+            active = null;
+        });
+        toolsList.addEventListener('focusin', function (event) {
+            var node = event.target;
+            if (!node || !node.closest) return;
+            var link = node.closest('.nav-mega-link');
+            if (link && toolsList.contains(link)) place(link);
+        });
+        toolsList.addEventListener('focusout', function (event) {
+            var next = event.relatedTarget && event.relatedTarget.closest && event.relatedTarget.closest('.nav-mega-link');
+            if (next && toolsList.contains(next)) return;
+            toolsList.classList.remove('is-follow');
+            active = null;
+        });
+        window.addEventListener('resize', function () {
+            if (active && toolsList.classList.contains('is-follow')) place(active, false);
+        });
+    }
 
     function decorateToolIcons(toolsList) {
         if (!toolsList) return;
         toolsList.querySelectorAll('.nav-mega-link').forEach(function (link) {
+            syncToolCurrent(link);
             if (link.querySelector('.nav-mega-link-icon')) return;
             var href = link.getAttribute('href') || '';
             var key = Object.keys(TOOL_MENU_ICONS).filter(function (name) {
                 return href.indexOf(name) !== -1;
             })[0];
             if (!key) return;
+            var missions = key === 'missions';
             var icon = document.createElement('span');
-            icon.className = 'nav-mega-link-icon';
+            icon.className = 'nav-mega-link-icon' + (missions ? ' nav-mega-link-icon--missions' : '');
             icon.setAttribute('aria-hidden', 'true');
             icon.innerHTML = TOOL_MENU_ICONS[key];
-            icon.style.cssText = 'grid-row:1 / span 2;width:1.55rem;height:1.55rem;color:rgba(168, 198, 218, 0.72);display:flex;';
+            icon.style.cssText =
+                'grid-row:1 / span 2;display:flex;align-items:center;justify-content:center;width:' +
+                (missions ? '1rem' : '1.55rem') +
+                ';height:' +
+                (missions ? '1rem' : '1.55rem') +
+                ';' +
+                (missions ? 'justify-self:center;align-self:center;' : '');
             var svg = icon.querySelector('svg');
             if (svg) svg.style.cssText = 'width:100%;height:100%;display:block;';
             link.insertBefore(icon, link.firstChild);
@@ -195,15 +292,15 @@
             link.style.alignItems = 'center';
             link.style.minWidth = '0';
             link.style.width = '100%';
+            link.style.position = 'relative';
+            link.style.zIndex = '1';
             var title = link.querySelector('.nav-mega-link-title');
-            if (title) {
-                title.style.marginBottom = '0.12rem';
-                title.style.color = '#8ee0ff';
-            }
+            if (title) title.style.marginBottom = '0.12rem';
             var desc = link.querySelector('.nav-mega-link-desc');
             if (desc) desc.title = desc.textContent;
         });
         applyToolsMenuLayout(toolsList);
+        wireToolsPointer(toolsList);
         if (!toolsList.dataset.layoutBound) {
             toolsList.dataset.layoutBound = '1';
             window.addEventListener('resize', function () {
@@ -215,7 +312,7 @@
     function applyToolsMenuLayout(toolsList) {
         if (!toolsList) return;
         var narrow = window.matchMedia('(max-width: 900px)').matches;
-        toolsList.style.gridTemplateColumns = narrow ? 'minmax(0, 1fr)' : 'repeat(3, 15.5rem)';
+        toolsList.style.gridTemplateColumns = narrow ? 'minmax(0, 1fr)' : 'repeat(4, 13.25rem)';
         toolsList.style.columnGap = narrow ? '0' : '2.25rem';
         toolsList.style.rowGap = '1.25rem';
         toolsList.querySelectorAll('.nav-mega-link-desc').forEach(function (desc) {

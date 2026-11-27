@@ -710,7 +710,8 @@
         btn.setAttribute('data-uuid', item.uuid);
         btn.setAttribute('role', 'option');
         var isActive = state.selectedId === item.uuid;
-        btn.className = 'bp-list-item' + (isActive ? ' is-active' : '');
+        var owned = !!(item.uuid && state.owned[item.uuid]);
+        btn.className = 'bp-list-item' + (isActive ? ' is-active' : '') + (owned ? ' is-owned' : '');
         btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
 
         var name = btn.querySelector('.bp-list-item__name');
@@ -741,6 +742,12 @@
             btn.appendChild(badges);
         }
         badges.innerHTML = '';
+        if (owned) {
+            var ownBadge = document.createElement('span');
+            ownBadge.className = 'bp-list-item__badge bp-list-item__badge--owned';
+            ownBadge.textContent = '已拥有';
+            badges.appendChild(ownBadge);
+        }
         if (Number(item.unlocking_missions_count) > 0) {
             var missBadge = document.createElement('span');
             missBadge.className = 'bp-list-item__badge bp-list-item__badge--mission';
@@ -749,6 +756,20 @@
             badges.appendChild(missBadge);
         }
         if (!badges.childNodes.length) badges.remove();
+    }
+
+    function refreshOwnedListItem(id) {
+        if (!el.blueprintList || !id) return;
+        var btn = el.blueprintList.querySelector('.bp-list-item[data-uuid="' + id + '"]');
+        if (!btn) return;
+        var item = null;
+        for (var i = 0; i < state.items.length; i++) {
+            if (state.items[i] && state.items[i].uuid === id) {
+                item = state.items[i];
+                break;
+            }
+        }
+        if (item) populateBlueprintListItem(btn, item);
     }
 
     function createBlueprintListItemElement(item, index) {
@@ -3927,6 +3948,8 @@
                     publishBlueprintList(state.catalog);
                     state.listVirt.measured = false;
                     renderBlueprintList();
+                } else {
+                    refreshOwnedListItem(id);
                 }
                 syncOwnControls();
             });

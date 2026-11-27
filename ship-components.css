@@ -509,7 +509,6 @@ button.sc-lead-item.is-active {
     opacity: 1;
 }
 
-.sc-filter-deck__search,
 .sc-filter-deck__nav,
 .sc-catalog-tools,
 .sc-filter-deck__nav .sc-nav-row {
@@ -552,15 +551,15 @@ button.sc-lead-item.is-active {
 }
 
 .sc-nav-row--major .sc-tab.is-active {
-    color: #e8f4ff;
-    background: rgba(142, 224, 255, 0.14);
-    border-color: rgba(142, 224, 255, 0.42);
+    color: #c8f7ff;
+    background: rgba(158, 240, 255, 0.2);
+    border-color: rgba(184, 246, 255, 0.72);
 }
 
 .sc-nav-row--minor .sc-tab.is-active {
-    color: #8ee0ff;
-    background: rgba(142, 224, 255, 0.16);
-    border-color: rgba(142, 224, 255, 0.48);
+    color: #c8f7ff;
+    background: rgba(158, 240, 255, 0.24);
+    border-color: rgba(184, 246, 255, 0.82);
 }
 
 .sc-filter-deck .sc-tab.is-active::after {
@@ -1344,6 +1343,173 @@ button.sc-lead-item.is-active {
     transition: background 0.12s ease;
 }
 
+.sc-mission-note {
+    position: relative;
+    flex: none;
+    width: 1.75rem;
+    height: 1.75rem;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    color: #8ee0ff;
+}
+
+.sc-mission-note svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    fill: currentColor;
+    pointer-events: none;
+}
+
+.sc-mission-note:hover {
+    background: rgba(0, 240, 255, 0.14);
+}
+
+.sc-mission-note[data-count]::after {
+    content: attr(data-count);
+    position: absolute;
+    top: -0.15rem;
+    right: -0.2rem;
+    min-width: 0.9rem;
+    padding: 0 0.18rem;
+    border-radius: 999px;
+    background: #8ee0ff;
+    color: #08141f;
+    font-size: 0.62rem;
+    line-height: 0.9rem;
+    text-align: center;
+}
+
+.min-note-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(5, 13, 24, 0.55);
+}
+
+.min-note-panel {
+    width: min(46rem, calc(100vw - 2rem));
+    height: min(40rem, calc(100vh - 2rem));
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+    background: var(--navbar-bg, rgb(14, 41, 67));
+    border: 1px solid rgba(84, 173, 247, 0.3);
+    border-radius: 17px;
+    box-shadow: 0 16px 40px rgba(5, 13, 24, 0.45);
+    color: #e8f4ff;
+}
+
+.min-note-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 0.95rem 0.7rem;
+    border-bottom: 1px solid rgba(95, 184, 255, 0.16);
+}
+
+.min-note-title { margin: 0; color: #8ee0ff; font-size: 0.95rem; font-weight: 650; }
+
+.min-note-close,
+.min-note-send {
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.min-note-close {
+    padding: 0.35rem 0.7rem;
+    background: transparent;
+    color: #8ee0ff;
+}
+
+.min-note-list {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 0.4rem 0.55rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(95, 184, 255, 0.55) transparent;
+}
+
+.min-note-item { padding: 0.55rem 0.4rem; border-top: 1px solid rgba(95, 184, 255, 0.1); }
+.min-note-item:first-child { border-top: 0; }
+.min-note-who { display: flex; justify-content: space-between; gap: 0.75rem; margin: 0; }
+.min-note-name { color: #8ee0ff; }
+.min-note-time { color: rgba(200, 220, 235, 0.55); font-size: 0.75rem; }
+.min-note-text { margin: 0.25rem 0 0; white-space: pre-wrap; }
+.min-note-reply,
+.min-note-reply-cancel {
+ margin: 0.35rem 0 0;
+ padding: 0;
+ border: 0;
+ background: transparent;
+ color: #8ee0ff;
+ font: inherit;
+ font-size: 0.75rem;
+ cursor: pointer;
+}
+.min-note-reply-cancel { margin-left: 0.6rem; }
+.min-note-replying { margin: 0; color: rgba(200, 220, 235, 0.72); font-size: 0.78rem; }
+.min-note-replying[hidden] { display: none; }
+.min-note-replies {
+ margin: 0.35rem 0 0 2.6rem;
+ padding-left: 0.7rem;
+ border-left: 1px solid rgba(95, 184, 255, 0.22);
+}
+.min-note-reply-item { padding: 0.4rem 0 0; }
+.min-note-person { display: flex; align-items: center; gap: 0.55rem; min-width: 0; }
+.min-note-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(95, 184, 255, 0.28);
+    flex: none;
+}
+.min-note-meta { min-width: 0; flex: 1; }
+.min-note-rank {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0.12rem 0 0;
+    color: #e8d5a0;
+    font-size: 0.78rem;
+}
+.min-note-rank-icon { width: 18px; height: 18px; object-fit: contain; }
+.min-note-form {
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.75rem 0.95rem 0.9rem;
+    border-top: 1px solid rgba(95, 184, 255, 0.16);
+}
+.min-note-form textarea { min-height: 6.5rem; resize: vertical; }
+.min-note-form input,
+.min-note-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid rgba(95, 184, 255, 0.35);
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    padding: 0.45rem 0.6rem;
+}
+.min-note-send {
+    justify-self: end;
+    min-height: 2.25rem;
+    padding: 0.35rem 1rem;
+    background: #8ee0ff;
+    color: #08141f;
+    font-weight: 700;
+}
+.min-note-send:disabled { opacity: 0.5; }
+.min-empty { margin: 0.6rem 0.4rem; color: rgba(200, 220, 235, 0.62); }
+
 .sc-blueprint-mission-toggle:hover,
 .sc-blueprint-mission-item.is-open .sc-blueprint-mission-toggle {
     background: rgba(95, 184, 255, 0.08);
@@ -1443,9 +1609,34 @@ button.sc-lead-item.is-active {
     word-break: break-word;
 }
 
+.sc-mission-summary-value--tag {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.28rem;
+    min-width: 0;
+}
+
+.sc-mission-summary-value--tag .sc-blueprint-mission-type,
+.sc-mission-summary-value--tag .sc-blueprint-mission-rep,
+.sc-mission-summary-value--tag .sc-blueprint-mission-giver,
+.sc-mission-summary-value--tag .sc-blueprint-mission-legality,
+.sc-mission-summary-value--tag .sc-blueprint-mission-reward {
+    display: inline-flex;
+    align-items: center;
+    width: auto;
+    max-width: 100%;
+    flex: 0 1 auto;
+}
+
 .sc-mission-summary-item--reward .sc-mission-summary-value {
     color: #8ee0ff;
     font-weight: 600;
+}
+
+.sc-mission-summary-item--reward .sc-mission-summary-value--tag {
+    color: inherit;
+    font-weight: inherit;
 }
 
 .sc-mission-summary-item--warn .sc-mission-summary-value {
@@ -1676,25 +1867,48 @@ button.sc-lead-item.is-active {
     list-style: none;
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.28rem;
+    display: grid;
+    grid-template-columns: 1.1rem max-content max-content;
+    justify-content: start;
+    width: fit-content;
+    max-width: 100%;
+    column-gap: 0.7rem;
+    row-gap: 0.28rem;
 }
 
 .sc-rep-tier {
     display: grid;
-    grid-template-columns: 1.1rem minmax(0, 1fr) auto;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
     align-items: center;
-    gap: 0.35rem 0.5rem;
-    padding: 0.28rem 0.15rem;
+    padding: 0.22rem 0.62rem 0.22rem 0.28rem;
     border-radius: 4px;
     color: rgba(160, 195, 220, 0.52);
-    transition: color 0.15s ease, background 0.15s ease;
+    transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sc-rep-tier:hover {
+    color: rgba(244, 251, 255, 0.96);
+    background: rgba(0, 240, 255, 0.14);
+    box-shadow: 0 0 14px rgba(0, 240, 255, 0.18);
+}
+
+.sc-rep-tier:hover .sc-rep-tier-check {
+    border-color: rgba(142, 224, 255, 0.9);
+}
+
+.sc-rep-tier:hover .sc-rep-tier-xp {
+    color: #8ee0ff;
 }
 
 .sc-rep-tier--required {
     color: rgba(232, 244, 255, 0.94);
-    background: rgba(95, 184, 255, 0.08);
+    background: rgba(95, 184, 255, 0.1);
+}
+
+.sc-rep-tier--required:hover {
+    background: rgba(0, 240, 255, 0.22);
+    box-shadow: 0 0 16px rgba(0, 240, 255, 0.28);
 }
 
 .sc-rep-tier-check {
@@ -1722,6 +1936,7 @@ button.sc-lead-item.is-active {
     font-size: 0.72rem;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
+    text-align: right;
     color: rgba(148, 186, 212, 0.72);
     white-space: nowrap;
 }
@@ -1880,11 +2095,25 @@ button.sc-mission-chip--link {
     padding-left: clamp(0.1rem, 0.4vw, 0.4rem);
     font-size: 0.82rem;
     color: rgba(232, 244, 255, 0.92);
-    line-height: 1;
+    line-height: 1.2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.12rem;
+    align-self: center;
+}
+
+.sc-blueprint-mission-title-line {
     display: flex;
     align-items: center;
     gap: 0.28rem;
-    align-self: center;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.sc-blueprint-mission-title-line .sc-blueprint-mission-blueprint {
+    flex: 0 0 auto;
 }
 
 .sc-blueprint-mission-title-text {
@@ -1892,6 +2121,17 @@ button.sc-mission-chip--link {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.sc-blueprint-mission-title-en {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.68rem;
+    line-height: 1.2;
+    color: rgba(160, 195, 220, 0.55);
 }
 
 .sc-blueprint-mission-scope,
@@ -1913,6 +2153,145 @@ button.sc-mission-chip--link {
     color: rgba(140, 180, 210, 0.55);
 }
 
+.sc-blueprint-mission-item.is-open .sc-mission-variant-bar {
+    margin: 0.15rem 0 0.2rem 1.15rem;
+    padding: 0.15rem 0 0.15rem 0.15rem;
+    border: 0;
+    border-left: 2px solid rgba(126, 198, 255, 0.92);
+    background: transparent;
+}
+
+.sc-mission-variant-bar {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+}
+
+.sc-mission-variant-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: 100%;
+    margin: 0;
+    padding: 0.42rem 0.75rem 0.42rem 0.2rem;
+    border: 0;
+    border-radius: 0;
+    border-top: 0;
+    background: transparent;
+    color: #e8f4ff;
+    font: inherit;
+    font-size: 0.84rem;
+    line-height: 1.35;
+    text-align: left;
+    cursor: pointer;
+}
+
+.sc-mission-variant-btn:nth-child(even) {
+    background: transparent;
+}
+
+.sc-mission-variant-branch {
+    width: 0.7rem;
+    height: 2px;
+    justify-self: start;
+    background: rgba(126, 198, 255, 0.92);
+}
+
+.sc-mission-variant-name {
+    display: flex;
+    flex: 1 1 10rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.08rem;
+    min-width: 0;
+    overflow: hidden;
+    color: #e8f4ff;
+    font-weight: 500;
+}
+
+.sc-mission-variant-tags {
+    display: flex;
+    flex: 1 1 22rem;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.28rem;
+    min-width: 0;
+    max-width: 62%;
+}
+
+.sc-mission-variant-inherited,
+.sc-mission-variant-diff {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+    gap: 0.18rem;
+}
+
+.sc-mission-variant-inherited .sc-blueprint-mission-meta {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    width: 100%;
+}
+
+.sc-mission-variant-diff {
+    gap: 0.28rem;
+}
+
+.sc-mission-variant-cargo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    width: auto;
+    min-width: 0;
+    padding: 0.12rem 0.38rem;
+    border: 1px solid rgba(95, 184, 255, 0.32);
+    border-radius: 3px;
+    background: rgba(16, 42, 64, 0.72);
+    color: #e8f4ff;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.2;
+    text-align: left;
+    white-space: normal;
+}
+
+.sc-mission-variant-cargo--diff {
+    border-color: rgba(255, 196, 120, 0.55);
+    background: rgba(72, 48, 16, 0.55);
+    color: #ffe7c2;
+}
+
+.sc-mission-variant-mark-k {
+    margin-right: 0;
+    color: rgba(255, 214, 150, 0.82);
+    text-align: left;
+}
+
+.sc-mission-variant-bar .sc-blueprint-mission-detail {
+    border-top: 0;
+    background: transparent;
+}
+
+.sc-mission-variant-reward {
+    flex: 0 0 auto;
+    align-self: center;
+    margin-left: auto;
+    min-width: 4.85rem;
+    color: #8ee0ff;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.sc-mission-variant-btn.is-active,
+.sc-mission-variant-btn:hover {
+    background: rgba(95, 184, 255, 0.08);
+    color: #e8f4ff;
+}
+
 .sc-blueprint-mission-meta {
     display: inline-flex;
     align-items: center;
@@ -1926,6 +2305,7 @@ button.sc-mission-chip--link {
 }
 
 .sc-blueprint-mission-type,
+.sc-blueprint-mission-rep,
 .sc-blueprint-mission-giver,
 .sc-blueprint-mission-legality {
     box-sizing: border-box;
@@ -1933,6 +2313,23 @@ button.sc-mission-chip--link {
     align-items: center;
     padding: 0.14rem 0.32rem;
     line-height: 1.15;
+}
+
+.sc-blueprint-mission-rep {
+    font-size: 0.64rem;
+    font-weight: 500;
+    color: #f4fbff;
+    border: 1px solid rgba(95, 184, 255, 0.45);
+    border-radius: 3px;
+    background: #1a4a68;
+    white-space: nowrap;
+}
+
+.sc-blueprint-mission-rep--empty {
+    color: rgba(215, 231, 244, 0.4);
+    border-color: transparent;
+    background: transparent;
+    font-weight: 400;
 }
 
 .sc-blueprint-mission-type {
@@ -2002,6 +2399,26 @@ button.sc-mission-chip--link {
     background: rgba(255, 120, 80, 0.1);
 }
 
+.sc-blueprint-mission-blueprint {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.14rem 0.32rem;
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #d7f6ff;
+    border: 1.5px solid rgba(95, 184, 255, 0.55);
+    border-radius: 3px;
+    background: rgba(47, 128, 180, 0.28);
+    white-space: nowrap;
+}
+
+.sc-mission-chip-pct {
+    margin-left: 0.28em;
+    color: #8ee0ff;
+    font-variant-numeric: tabular-nums;
+}
+
 .sc-blueprint-mission-reward {
     flex: 0 0 auto;
     align-self: center;
@@ -2024,6 +2441,12 @@ button.sc-mission-chip--link {
     color: #8ee0ff;
     line-height: 1 !important;
     white-space: nowrap;
+}
+
+.sc-blueprint-mission-reward--cost,
+.sc-mission-kv-value--cost {
+    color: #ffc14a;
+    font-weight: 650;
 }
 
 @media (max-width: 900px) {

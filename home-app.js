@@ -1370,6 +1370,10 @@
                 memberKind: u.memberKind !== undefined && u.memberKind !== null ? u.memberKind : p.memberKind,
                 hasFleetPrivilege:
                     u.hasFleetPrivilege !== undefined ? !!u.hasFleetPrivilege : p.hasFleetPrivilege,
+                avatarFrameOwned:
+                    u.avatarFrameOwned !== undefined ? !!u.avatarFrameOwned : !!p.avatarFrameOwned,
+                avatarFrameOn:
+                    u.avatarFrameOn !== undefined ? !!u.avatarFrameOn : !!p.avatarFrameOn,
             };
         }
 
@@ -2102,6 +2106,7 @@
                     const img = document.createElement('img');
                     img.className = 'community-chat-mention-pop__avatar-img';
                     img.alt = '';
+                    img.setAttribute('data-avatar-handle', String(it.handle || it.bindingId || '').trim().toLowerCase());
                     if (it.isAll) {
                         img.src = defaultSiteAvatarSrc();
                     } else {
@@ -2991,6 +2996,7 @@
 
         function communityPrepareAvatarImg(img, bindingId, avatarUrl, authorLabel, eager, rsiFallbackUrl) {
             img.decoding = 'async';
+            img.setAttribute('data-avatar-handle', String(bindingId || '').trim().toLowerCase());
             img.loading = eager ? 'eager' : 'lazy';
             if (eager) {
                 try {
@@ -5229,6 +5235,8 @@
                 if (dImg) {
                     dImg.src = sessionAvatarSrc();
                     dImg.alt = '用户头像';
+                    dImg.setAttribute('data-avatar-handle', String((sess && sess.bindingId) || '').trim().toLowerCase());
+                    if (window.UssAvatarFrame) window.UssAvatarFrame.paint(dImg);
                 }
                 if (typeof window.refreshOopzBindSection === 'function') {
                     window.refreshOopzBindSection();

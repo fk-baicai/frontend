@@ -181,6 +181,7 @@
         missile_rack: '导弹架',
         mining_laser: '矿头',
         ship_module: '模组',
+        mining_gadget: '采矿器具',
         salvage_scraper: '刮削模块',
         fuel_nozzle: '燃料喷嘴',
         personal_weapon: '武器',
@@ -219,6 +220,7 @@
         missile_rack: 'weapon',
         mining_laser: 'mining',
         ship_module: 'mining',
+        mining_gadget: 'mining',
         personal_weapon: 'fps_weapon',
         personal_armor: 'fps_armor',
         magazine: 'fps_magazine',
@@ -868,9 +870,12 @@
     function renderModifierTagsHtml(item) {
         var wiki = window.ShipComponentWiki;
         if (!wiki || typeof wiki.buildMiningModifierTags !== 'function') return '';
-        if (item.type !== 'mining_laser' && item.type !== 'ship_module') return '';
+        if (item.type !== 'mining_laser' && item.type !== 'ship_module' && item.type !== 'mining_gadget') return '';
         var tags = wiki.buildMiningModifierTags(item, item.type);
-        if (item.type === 'ship_module' && typeof wiki.moduleDescribedPowerRows === 'function') {
+        if (
+            (item.type === 'ship_module' || item.type === 'mining_gadget') &&
+            typeof wiki.moduleDescribedPowerRows === 'function'
+        ) {
             tags = wiki.moduleDescribedPowerRows(item).concat(tags);
         }
         if (!tags.length) return '';
@@ -885,7 +890,7 @@
     function renderSpecSectionHtml(section, item) {
         if (
             section.title === '属性修正' &&
-            item.type === 'ship_module'
+            (item.type === 'ship_module' || item.type === 'mining_gadget')
         ) {
             var tagsHtml = renderModifierTagsHtml(item);
             if (tagsHtml) {

@@ -8,7 +8,7 @@
     var listCache = Object.create(null);
     var detailCache = Object.create(null);
     var craftBlueprintCache = Object.create(null);
-    var DETAIL_SCHEMA_VERSION = 16;
+    var DETAIL_SCHEMA_VERSION = 17;
 
     var GROUP_TO_SECTOR = {
         component: 'ship',
@@ -29,15 +29,12 @@
     }
 
     function isUsableMissionDetail(detail) {
-        if (
-            !detail ||
-            !Array.isArray(detail.blueprint_pools) ||
-            !detail.blueprint_pools.length ||
-            detail.__detailSchemaVersion !== DETAIL_SCHEMA_VERSION
-        ) {
-            return false;
-        }
-        return true;
+        if (!detail || detail.__detailSchemaVersion !== DETAIL_SCHEMA_VERSION) return false;
+        if (Array.isArray(detail.blueprint_pools) && detail.blueprint_pools.length) return true;
+        return !!(
+            (detail.description_zh && String(detail.description_zh).trim()) ||
+            (detail.fields && detail.fields.length)
+        );
     }
 
     function apiUrl(path) {
@@ -168,7 +165,7 @@
         {
             id: 'overview',
             title: '任务概况',
-            labels: ['任务类型', '发布方', '派系', '合法性', '等级要求'],
+            labels: ['任务类型', '发布方', '派系', '合法性', '等级要求', '运送货物', '不同处'],
         },
         {
             id: 'combat',
@@ -209,7 +206,7 @@
         if (label === '战斗任务' && value === '否') return true;
         if (label === '防守目标' && value !== '是') return true;
         if (label === '可共享' && value !== '是') return true;
-        if (label === '合法性' && value === '合法') return true;
+        if (label === '合法性' && value === '合法') return false;
         if (
             label === '一次性' ||
             label === '失败可重接' ||
@@ -270,13 +267,53 @@
             if (group.id === 'rewards' && detail && Array.isArray(detail.blueprint_pools) && detail.blueprint_pools.length) {
                 var pool = detail.blueprint_pools[0];
                 var dropValue =
-                    (pool.drop_chance_percent != null ? pool.drop_chance_percent + '%' : '有') + ' 掉落池';
+                    (pool.drop_chance_percent != null ? pool.drop_chance_percent + '%' : '');
                 items.push({ label: '蓝图掉落', value: dropValue, kind: 'reward' });
             }
             if (items.length) groups.push({ id: group.id, title: group.title, items: items });
         });
 
         return groups;
+    }
+
+    function parseRepFieldAmount(value) {
+        var match = String(value || '')
+            .replace(/,/g, '')
+            .match(/([+-]?\d+(?:\.\d+)?)/);
+        if (!match) return null;
+        var n = Number(match[1]);
+        return Number.isFinite(n) ? n : null;
+    }
+
+    function renderSummaryValueTag(item) {
+        if (!item) return '';
+        if (item.label === '任务类型') {
+            return renderMissionTypeCell({ mission_type_zh: item.value });
+        }
+        if (item.label === '发布方') {
+            return renderMissionGiverCell({ mission_giver_zh: item.value });
+        }
+        if (item.label === '合法性') {
+            return renderMissionLegalityCell({ legality_zh: item.value });
+        }
+        if (item.label === '声望报酬') {
+            var amount = parseRepFieldAmount(item.value);
+            if (amount != null) {
+                return renderMissionRepCell({
+                    reputation_amount: amount,
+                    reputation_min: amount,
+                    reputation_max: amount,
+                });
+            }
+        }
+        if (item.label === 'aUEC 奖励') {
+            return (
+                '<span class="sc-blueprint-mission-reward sc-price">' +
+                escapeHtml(item.value) +
+                '</span>'
+            );
+        }
+        return escapeHtml(item.value || '');
     }
 
     function renderSummaryGroupSection(group) {
@@ -295,8 +332,8 @@
                 '<dt class="sc-mission-summary-label">' +
                 escapeHtml(item.label) +
                 '</dt>' +
-                '<dd class="sc-mission-summary-value">' +
-                escapeHtml(item.value) +
+                '<dd class="sc-mission-summary-value sc-mission-summary-value--tag">' +
+                renderSummaryValueTag(item) +
                 '</dd></div>';
         });
         html += '</dl></section>';
@@ -354,7 +391,7 @@
         html +=
             '<div class="sc-rep-ladder-head">' +
             '<span class="sc-rep-ladder-faction">' +
-            escapeHtml(ladder.faction || '派系') +
+            escapeHtml(ladder.faction || '') +
             '</span>';
         if (ladder.has_requirement) {
             html += '<span class="sc-rep-ladder-range">';
@@ -392,7 +429,7 @@
             html +=
                 '<p class="sc-rep-ladder-hostile">' +
                 escapeHtml(ladder.hostile.standing_zh) +
-                '（负声望）</p>';
+                '</p>';
         }
         html += '</div>';
         return html;
@@ -492,9 +529,33 @@
         }
     }
 
+    function formatDropPercent(value) {
+        if (value == null || !Number.isFinite(Number(value))) return '';
+        var n = Number(value);
+        var text = n % 1 === 0 ? String(n) : String(Math.round(n * 100) / 100);
+        return text + '%';
+    }
+
     function renderBlueprintPoolChip(item, navContext) {
         var label = (item && (item.name_zh || item.name_en)) || '';
         if (!label) return '';
+        var pct = formatDropPercent(item && item.drop_chance_percent);
+        var text = escapeHtml(label) + (pct ? '<span class="sc-mission-chip-pct">' + escapeHtml(pct) + '</span>' : '');
+        var craftHref = buildBlueprintCraftHref({
+            uuid: (item && (item.blueprint_uuid || item.uuid)) || '',
+            nav_group: item && (item.nav_group || item.component_group),
+            nav_type: item && (item.nav_type || item.component_type),
+            component_id: item && item.component_id,
+        });
+        if (craftHref) {
+            return (
+                '<a class="sc-mission-chip sc-mission-chip--link" href="' +
+                escapeHtml(craftHref) +
+                '" target="_blank" rel="noopener noreferrer">' +
+                text +
+                '</a>'
+            );
+        }
         var href = componentDetailHref(item, navContext);
         if (href) {
             return (
@@ -503,7 +564,7 @@
                 '" data-component-id="' +
                 escapeHtml(item.component_id || item.uuid || '') +
                 '">' +
-                escapeHtml(label) +
+                text +
                 '</a>'
             );
         }
@@ -513,11 +574,11 @@
                 '<button type="button" class="sc-mission-chip sc-mission-chip--link sc-mission-chip--resolve" data-pool-item-ref="' +
                 escapeHtml(ref) +
                 '">' +
-                escapeHtml(label) +
+                text +
                 '</button>'
             );
         }
-        return '<span class="sc-mission-chip">' + escapeHtml(label) + '</span>';
+        return '<span class="sc-mission-chip">' + text + '</span>';
     }
 
     async function navigatePoolItemRef(ref, navContext) {
@@ -585,9 +646,6 @@
             var html = '<div class="sc-mission-pool-list">';
             pools.forEach(function (pool) {
                 html += '<div class="sc-mission-pool">';
-                if (pool.drop_chance_percent != null) {
-                    html += '<div class="sc-mission-pool-head">' + escapeHtml(pool.drop_chance_percent + '% 掉落池') + '</div>';
-                }
                 html += '<div class="sc-mission-chips">';
                 (pool.items || []).forEach(function (item) {
                     html += renderBlueprintPoolChip(item, navContext);
@@ -740,6 +798,9 @@
                 cls
             );
         }
+        if (row.label === '接取费用') {
+            return '<span class="' + cls + ' sc-mission-kv-value--cost">' + escapeHtml(row.value) + '</span>';
+        }
         if (wide) {
             return '<div class="' + cls + ' ' + cls + '--wide">' + escapeHtml(row.value) + '</div>';
         }
@@ -752,7 +813,10 @@
             row.label === 'aUEC 奖励' ||
             row.label === '声望报酬' ||
             row.label === '物品奖励' ||
-            row.label === '蓝图掉落';
+            row.label === '蓝图掉落' ||
+            row.label === '接取费用' ||
+            row.label === '运送货物' ||
+            row.label === '不同处';
         return (
             '<div class="sc-mission-kv' +
             (wide ? ' sc-mission-kv--wide' : '') +
@@ -991,7 +1055,7 @@
         if (!typeLabel) {
             return '<span class="sc-blueprint-mission-type sc-blueprint-mission-type--empty">—</span>';
         }
-        return '<span class="sc-blueprint-mission-type">' + escapeHtml(typeLabel) + '</span>';
+        return '<span class="sc-blueprint-mission-type" data-mission-type="' + escapeHtml(typeLabel) + '">' + escapeHtml(typeLabel) + '</span>';
     }
 
     function renderMissionGiverCell(m) {
@@ -1013,49 +1077,112 @@
         return '<span class="' + cls + '">' + escapeHtml(legality) + '</span>';
     }
 
+    function renderMissionBlueprintCell(m) {
+        if (!m || !m.has_blueprint) return '';
+        var label = String(m.blueprint_tag_zh || '').trim();
+        if (!label) return '';
+        return '<span class="sc-blueprint-mission-blueprint">' + escapeHtml(label) + '</span>';
+    }
+
     function renderMissionMetaGroup(m) {
         return (
             '<span class="sc-blueprint-mission-meta">' +
             renderMissionTypeCell(m) +
+            renderMissionRepCell(m) +
             renderMissionGiverCell(m) +
             renderMissionLegalityCell(m) +
             '</span>'
         );
     }
 
-    function renderMissionRewardCell(m) {
-        var auecLabel = missionAuecLabel(m);
-        if (!auecLabel) {
-            return '<span class="sc-blueprint-mission-reward sc-blueprint-mission-reward--empty">—</span>';
+    function variantMetaForTags(summary, variant) {
+        var amount = Number(variant && variant.reputation_amount);
+        var hasAmount = Number.isFinite(amount);
+        var min = hasAmount
+            ? amount
+            : variant && variant.reputation_min != null
+              ? Number(variant.reputation_min)
+              : null;
+        var max = hasAmount
+            ? amount
+            : variant && variant.reputation_max != null
+              ? Number(variant.reputation_max)
+              : min;
+        return Object.assign({}, summary || {}, {
+            mission_type_zh: (variant && variant.mission_type_zh) || (summary && summary.mission_type_zh),
+            mission_type: (variant && variant.mission_type) || (summary && summary.mission_type),
+            mission_giver_zh: (variant && variant.mission_giver_zh) || (summary && summary.mission_giver_zh),
+            legality_zh: (variant && variant.legality_zh) || (summary && summary.legality_zh),
+            reputation_amount: hasAmount ? amount : null,
+            reputation_min: Number.isFinite(min) ? min : null,
+            reputation_max: Number.isFinite(max) ? max : null,
+        });
+    }
+
+    function formatMissionRepAmount(amount) {
+        var n = Number(amount);
+        if (!Number.isFinite(n)) return '';
+        return (n > 0 ? '+' : '') + n.toLocaleString('zh-CN');
+    }
+
+    function renderMissionRepCell(m) {
+        var min = m && m.reputation_min != null ? Number(m.reputation_min) : Number(m && m.reputation_amount);
+        var max = m && m.reputation_max != null ? Number(m.reputation_max) : min;
+        if (!Number.isFinite(min) || min === 0) {
+            return '<span class="sc-blueprint-mission-rep sc-blueprint-mission-rep--empty">—</span>';
         }
-        return (
-            '<span class="sc-blueprint-mission-reward sc-price">' + escapeHtml(auecLabel) + '</span>'
-        );
+        var text = '声望' + formatMissionRepAmount(min);
+        if (Number.isFinite(max) && max !== min) text += '–' + formatMissionRepAmount(max);
+        return '<span class="sc-blueprint-mission-rep">' + escapeHtml(text) + '</span>';
+    }
+
+    function renderMissionRewardCell(m) {
+        var costLabel = m && m.cost_auec_label;
+        var auecLabel = missionAuecLabel(m);
+        var html = '';
+        if (costLabel && !auecLabel) {
+            html = '<span class="sc-blueprint-mission-reward sc-blueprint-mission-reward--cost">' + escapeHtml(costLabel) + '</span>';
+        } else if (!auecLabel) {
+            html = '<span class="sc-blueprint-mission-reward sc-blueprint-mission-reward--empty">—</span>';
+        } else {
+            html = '<span class="sc-blueprint-mission-reward sc-price">' + escapeHtml(auecLabel) + '</span>';
+            if (costLabel) {
+                html += '<span class="sc-blueprint-mission-reward sc-blueprint-mission-reward--cost">' + escapeHtml(costLabel) + '</span>';
+            }
+        }
+        return '<span class="sc-blueprint-mission-pay">' + html + '</span>';
     }
 
     function renderMissionTableHeadHtml() {
         return (
             '<div class="sc-blueprint-mission-table-head" aria-hidden="true">' +
             '<span class="sc-bp-mission-th sc-bp-mission-th--name">任务</span>' +
-            '<span class="sc-bp-mission-th sc-bp-mission-th--meta">类型 / 发布方 / 合法性</span>' +
+            '<span class="sc-bp-mission-th sc-bp-mission-th--meta">类型 / 声望报酬 / 发布方 / 合法性</span>' +
             '<span class="sc-bp-mission-th sc-bp-mission-th--reward">aUEC</span>' +
             '<span class="sc-bp-mission-th sc-bp-mission-th--exp"></span>' +
             '</div>'
         );
     }
 
+    function missionEnglishTitle(m) {
+        var en = stripMissionPlaceholders((m && (m.title_en || m.title)) || '');
+        var shown = missionDisplayTitle(m);
+        if (!en || en === shown) return '';
+        return en;
+    }
+
     function renderMissionItem(m, expandedId) {
         var ref = missionRef(m);
-        var isOpen = ref && expandedId === ref;
-        var titleSuffix = '';
+        var isOpen = ref && splitOpenRefs(expandedId).indexOf(ref) >= 0;
+        var titleSuffix = renderMissionBlueprintCell(m);
         var dropLabel = formatBlueprintDropLabel(m.chance);
         if (dropLabel) {
-            titleSuffix = ' <span class="sc-blueprint-mission-scope">' + escapeHtml(dropLabel) + '</span>';
+            titleSuffix += ' <span class="sc-blueprint-mission-scope">' + escapeHtml(dropLabel) + '</span>';
         }
         if (m.variant_count != null && Number(m.variant_count) > 1) {
             titleSuffix +=
                 ' <span class="sc-blueprint-mission-variants">' +
-                escapeHtml(String(m.variant_count) + ' 变体') +
+                escapeHtml(String(m.variant_count) + ' 个方案') +
                 '</span>';
         }
 
@@ -1068,16 +1195,35 @@
             '" aria-expanded="' +
             (isOpen ? 'true' : 'false') +
             '">' +
+            (ref
+                ? '<span class="sc-mission-note" role="button" tabindex="0" data-mission-note="' +
+                  escapeHtml(ref) +
+                  '" data-label="' +
+                  escapeHtml(missionDisplayTitle(m)) +
+                  '" aria-label="查看' +
+                  escapeHtml(missionDisplayTitle(m)) +
+                  '的留言"></span>'
+                : '') +
             '<span class="sc-blueprint-mission-title">' +
+            '<span class="sc-blueprint-mission-title-line">' +
             '<span class="sc-blueprint-mission-title-text">' +
             escapeHtml(missionDisplayTitle(m)) +
             '</span>' +
             titleSuffix +
             '</span>' +
+            (missionEnglishTitle(m)
+                ? '<span class="sc-blueprint-mission-title-en">' +
+                  escapeHtml(missionEnglishTitle(m)) +
+                  '</span>'
+                : '') +
+            '</span>' +
             renderMissionMetaGroup(m) +
             renderMissionRewardCell(m) +
             '<span class="sc-blueprint-mission-chevron" aria-hidden="true"></span>' +
             '</button>';
+
+        var manyVariants = variantList(m).length > 1;
+        if (isOpen && manyVariants) html += renderVariantPicker(m, '');
 
         html +=
             '<div class="sc-blueprint-mission-detail" id="sc-mission-detail-' +
@@ -1085,18 +1231,143 @@
             '" data-mission-detail="' +
             escapeHtml(ref) +
             '"' +
-            (isOpen ? '' : ' hidden') +
+            (isOpen && !manyVariants ? '' : ' hidden') +
             '>';
-        if (isOpen && detailCache[ref] && isUsableMissionDetail(detailCache[ref])) {
+        html += '<div class="sc-blueprint-mission-detail-body">';
+        if (isOpen && !manyVariants && detailCache[ref] && isUsableMissionDetail(detailCache[ref])) {
             html += renderMissionDetailBody(detailCache[ref], readNavContext(), m);
-        } else if (isOpen) {
+        } else if (isOpen && !manyVariants) {
             html += '<p class="sc-acquire-loading">加载任务详情…</p>';
         }
-        html += '</div></li>';
+        html += '</div></div></li>';
         return html;
     }
 
-    function renderMissionDetailBody(detail, navContext, summary) {
+    function sameContractTitle(summary, variant) {
+        var parentEn = String((summary && summary.title_en) || '').trim().toLowerCase();
+        var variantEn = String((variant && variant.title_en) || '').trim().toLowerCase();
+        return !!(parentEn && variantEn && parentEn === variantEn);
+    }
+
+    function variantDisplayTitle(summary, variant) {
+        var parent = missionDisplayTitle(summary);
+        if (sameContractTitle(summary, variant) && looksChineseMissionText(parent)) return parent;
+        return (variant && variant.label) || missionDisplayTitle(variant);
+    }
+
+    function variantEnglishTitle(summary, variant) {
+        if (sameContractTitle(summary, variant)) return '';
+        return missionEnglishTitle(variant);
+    }
+
+    function variantList(summary) {
+        var list = summary && summary.variants;
+        return Array.isArray(list) ? list.filter(Boolean) : [];
+    }
+
+    function sortedVariantList(summary) {
+        return variantList(summary).slice().sort(function (a, b) {
+            var ar = Number(a && a.reward_min) || 0;
+            var br = Number(b && b.reward_min) || 0;
+            if (ar !== br) return ar - br;
+            return String((a && a.cargo_zh) || '').localeCompare(String((b && b.cargo_zh) || ''), 'zh');
+        });
+    }
+
+    function selectedVariant(summary, selectedRef) {
+        var list = sortedVariantList(summary);
+        if (!list.length) return null;
+        var hit = list.find(function (v) {
+            return String(v.uuid || v.debug_name || '') === String(selectedRef || '');
+        });
+        return hit || list[0];
+    }
+
+    function inheritedTagValues(summary) {
+        return [missionTypeLabel(summary), missionGiverLabel(summary), missionLegalityLabel(summary)]
+            .map(function (value) {
+                return String(value || '').trim();
+            })
+            .filter(Boolean);
+    }
+
+    function renderVariantDiffMarks(marks) {
+        if (!marks.length) return '';
+        return (
+            '<span class="sc-mission-variant-diff">' +
+            marks
+                .map(function (mark) {
+                    return (
+                        '<span class="sc-mission-variant-cargo sc-mission-variant-cargo--diff"><span class="sc-mission-variant-mark-k">' +
+                        escapeHtml(mark.label || '') +
+                        '</span>' +
+                        escapeHtml(mark.value) +
+                        '</span>'
+                    );
+                })
+                .join('') +
+            '</span>'
+        );
+    }
+
+    function renderVariantPicker(summary, selectedRef) {
+        var list = sortedVariantList(summary);
+        if (list.length < 2) return '';
+        var current = selectedRef ? selectedVariant(summary, selectedRef) : null;
+        var inheritedValues = inheritedTagValues(summary);
+        var html = '<div class="sc-mission-variant-bar" role="menu" aria-label="任务方案">';
+        list.forEach(function (v, i) {
+            var id = String(v.uuid || v.debug_name || i);
+            var on = current && String(current.uuid || current.debug_name || '') === id;
+            var reward = missionAuecLabel(v);
+            var marks = Array.isArray(v.marks) ? v.marks.filter(function (mark) {
+                return mark && String(mark.value || '').trim();
+            }) : [];
+            if (!marks.length && v.cargo_zh) marks = [{ label: '运送货物', value: v.cargo_zh }];
+            var diffMarks = marks.filter(function (mark) {
+                return inheritedValues.indexOf(String(mark.value || '').trim()) < 0;
+            });
+            html +=
+                '<button type="button" class="sc-mission-variant-btn' +
+                (on ? ' is-active' : '') +
+                '" role="menuitem" aria-selected="' +
+                (on ? 'true' : 'false') +
+                '" data-variant-ref="' +
+                escapeHtml(id) +
+                '"><span class="sc-mission-variant-branch" aria-hidden="true"></span>' +
+                '<span class="sc-mission-variant-name">' +
+                escapeHtml(variantDisplayTitle(summary, v)) +
+                (variantEnglishTitle(summary, v)
+                    ? '<span class="sc-blueprint-mission-title-en">' +
+                      escapeHtml(variantEnglishTitle(summary, v)) +
+                      '</span>'
+                    : '') +
+                '</span>' +
+                '<span class="sc-mission-variant-tags">' +
+                '<span class="sc-mission-variant-inherited">' +
+                renderMissionMetaGroup(variantMetaForTags(summary, v)) +
+                '</span>' +
+                renderVariantDiffMarks(diffMarks) +
+                '</span>' +
+                (reward
+                    ? '<span class="sc-mission-variant-reward">' + escapeHtml(reward) + '</span>'
+                    : '<span class="sc-mission-variant-reward"></span>') +
+                '</button>';
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function anchorVariantDetail(detailEl, variant) {
+        if (!detailEl || !variant) return;
+        var id = String(variant.uuid || variant.debug_name || '');
+        var item = detailEl.closest('.sc-blueprint-mission-item');
+        if (!item || !id) return;
+        var btn = item.querySelector('.sc-mission-variant-btn[data-variant-ref="' + cssEscape(id) + '"]');
+        if (btn) btn.insertAdjacentElement('afterend', detailEl);
+    }
+
+    function renderMissionDetailBody(detail, navContext, summary, variantSource) {
         if (!detail) return '<p class="sc-acquire-empty">暂无任务详情</p>';
         var ctx = navContext || readNavContext();
         var body = missionBriefingZh(detail, summary);
@@ -1327,6 +1598,7 @@
                 return embedded;
             }
             listCache[cacheKey] = missions;
+            prefetchMissionDetails(missions);
             return missions;
         } catch (e) {
             if (embedded.length) {
@@ -1335,6 +1607,52 @@
             }
             throw e;
         }
+    }
+
+    var prefetchSerial = 0;
+
+    function prefetchMissionDetails(missions, options) {
+        var opts = options || {};
+        var limit = Math.max(1, Number(opts.limit) || 36);
+        var concurrency = Math.max(1, Math.min(6, Number(opts.concurrency) || 4));
+        var serial = ++prefetchSerial;
+        var queue = [];
+        var seen = Object.create(null);
+        (missions || []).forEach(function (m) {
+            var variants = variantList(m);
+            if (variants.length > 1) {
+                variants.slice(0, 3).forEach(function (v) {
+                    if (!v || !v.uuid) return;
+                    var id = String(v.uuid);
+                    if (seen[id]) return;
+                    seen[id] = true;
+                    queue.push({ id: id, debug: v.debug_name || '' });
+                });
+                return;
+            }
+            var id = missionRef(m);
+            if (!id || seen[id]) return;
+            seen[id] = true;
+            queue.push({ id: id, debug: (m && m.debug_name) || '' });
+        });
+        queue = queue.slice(0, limit);
+        var index = 0;
+        var running = 0;
+        function pump() {
+            if (serial !== prefetchSerial) return;
+            while (running < concurrency && index < queue.length) {
+                var job = queue[index++];
+                if (detailCache[job.id] && isUsableMissionDetail(detailCache[job.id])) continue;
+                running += 1;
+                fetchMissionDetail(job.id, job.debug)
+                    .catch(function () {})
+                    .finally(function () {
+                        running -= 1;
+                        pump();
+                    });
+            }
+        }
+        pump();
     }
 
     async function fetchMissionDetail(ref, debugName) {
@@ -1358,9 +1676,7 @@
             throw new Error((data && data.message) || '任务详情加载失败');
         }
         var mission = data.mission;
-        if (!Array.isArray(mission.blueprint_pools) || !mission.blueprint_pools.length) {
-            throw new Error('任务蓝图数据不完整，请重启后端后重试');
-        }
+        if (!Array.isArray(mission.blueprint_pools)) mission.blueprint_pools = [];
         mission.__detailSchemaVersion = DETAIL_SCHEMA_VERSION;
         detailCache[cacheKey] = mission;
         detailCache[id] = mission;
@@ -1380,65 +1696,118 @@
         if (!detailEl) return;
 
         var summary = findMissionInList(missions, ref);
-        var debugName = summary && summary.debug_name ? summary.debug_name : '';
+        var variant = selectedVariant(summary, variantRefFor(panelRoot, ref));
+        var fetchRef = (variant && variant.uuid) || ref;
+        var debugName =
+            (variant && variant.debug_name) || (summary && summary.debug_name ? summary.debug_name : '');
+        var bodyEl = detailEl.querySelector('.sc-blueprint-mission-detail-body') || detailEl;
+        var briefingSource = variant || summary;
 
-        if (detailCache[ref] && isUsableMissionDetail(detailCache[ref])) {
+        if (detailCache[fetchRef] && isUsableMissionDetail(detailCache[fetchRef])) {
             detailEl.hidden = false;
-            detailEl.innerHTML = renderMissionDetailBody(detailCache[ref], readNavContext(container), summary);
+            bodyEl.innerHTML = renderMissionDetailBody(detailCache[fetchRef], readNavContext(container), briefingSource, summary);
+            anchorVariantDetail(detailEl, variant);
             return;
         }
 
         detailEl.hidden = false;
-        if (summary && missionBriefingZh(null, summary)) {
-            detailEl.innerHTML =
-                renderMissionDetailBody(
-                    {
-                        fields: [],
-                        description_zh: summary.description_zh,
-                        description_en: summary.description_en || '',
-                        loc_matched: summary.loc_matched,
-                    },
-                    readNavContext(container),
-                    summary
-                ) + '<p class="sc-acquire-loading">加载完整任务详情…</p>';
-        } else {
-            detailEl.innerHTML = '<p class="sc-acquire-loading">加载任务详情…</p>';
+        if (!bodyEl.textContent.trim()) {
+            bodyEl.innerHTML = '<p class="sc-acquire-loading">加载任务详情…</p>';
         }
         try {
-            var detail = await fetchMissionDetail(ref, debugName);
-            if (!String(detail.description_zh || '').trim() && summary && summary.description_zh) {
-                detail.description_zh = summary.description_zh;
+            var detail = await fetchMissionDetail(fetchRef, debugName);
+            if (!String(detail.description_zh || '').trim() && briefingSource && briefingSource.description_zh) {
+                detail.description_zh = briefingSource.description_zh;
             }
-            if (panelRoot.dataset.expandedMission !== ref) return;
-            detailEl.innerHTML = renderMissionDetailBody(detail, readNavContext(container), summary);
-            if (summary && detail.title_zh) {
+            if (splitOpenRefs(panelRoot.dataset.expandedMission).indexOf(ref) < 0) return;
+            if (variantList(summary).length > 1 && String(variantRefFor(panelRoot, ref) || '') !== String(fetchRef)) return;
+            bodyEl.innerHTML = renderMissionDetailBody(detail, readNavContext(container), briefingSource, summary);
+            anchorVariantDetail(detailEl, variant);
+            if (summary && detail.title_zh && variantList(summary).length < 2) {
                 summary.title_zh = stripMissionFlowTitleSuffix(detail.title_zh);
                 summary.description_zh = detail.description_zh;
                 summary.loc_matched = detail.loc_matched;
             }
         } catch (e) {
-            if (panelRoot.dataset.expandedMission !== ref) return;
+            if (splitOpenRefs(panelRoot.dataset.expandedMission).indexOf(ref) < 0) return;
             detailEl.innerHTML =
                 '<p class="sc-acquire-empty">' + escapeHtml((e && e.message) || '任务详情加载失败') + '</p>';
         }
     }
 
+    function splitOpenRefs(value) {
+        return String(value || '')
+            .split('|')
+            .map(function (part) { return part.trim(); })
+            .filter(Boolean);
+    }
+
+    function readVariantMap(panelRoot) {
+        try {
+            var parsed = JSON.parse((panelRoot && panelRoot.dataset.variantRefs) || '{}');
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function writeVariantMap(panelRoot, map) {
+        if (!panelRoot) return;
+        panelRoot.dataset.variantRefs = JSON.stringify(map || {});
+    }
+
+    function variantRefFor(panelRoot, ref) {
+        var map = readVariantMap(panelRoot);
+        return map[ref] || '';
+    }
+
+    async function loadOpenMissionDetails(container, expandedValue) {
+        var panelRoot = container.closest('[data-blueprint-panel]') || container;
+        var refs = splitOpenRefs(expandedValue);
+        for (var i = 0; i < refs.length; i++) {
+            var opened = findMissionInList(missionsForContainer(container), refs[i]);
+            if (variantList(opened).length > 1 && !variantRefFor(panelRoot, refs[i])) continue;
+            await loadMissionDetail(container, refs[i]);
+        }
+    }
+
     async function toggleMissionDetail(container, ref) {
         var panelRoot = container.closest('[data-blueprint-panel]') || container;
-        var expanded = panelRoot.dataset.expandedMission || '';
-        var missions = missionsForContainer(container);
-        var nextRef = expanded === ref ? '' : ref;
-        panelRoot.dataset.expandedMission = nextRef;
-        if (typeof container._bpOnExpandedChange === 'function') {
-            container._bpOnExpandedChange(nextRef);
+        var toggle = container.querySelector('.sc-blueprint-mission-toggle[data-mission-ref="' + cssEscape(ref) + '"]');
+        var item = toggle && toggle.closest('.sc-blueprint-mission-item');
+        if (!item) return;
+        var open = splitOpenRefs(panelRoot.dataset.expandedMission);
+        var at = open.indexOf(ref);
+        var detailEl = item.querySelector('[data-mission-detail]');
+        var map = readVariantMap(panelRoot);
+        if (at >= 0) {
+            open.splice(at, 1);
+            delete map[ref];
+            writeVariantMap(panelRoot, map);
+            item.classList.remove('is-open');
+            toggle.setAttribute('aria-expanded', 'false');
+            var bar = item.querySelector('.sc-mission-variant-bar');
+            if (bar) bar.remove();
+            if (detailEl) detailEl.hidden = true;
+        } else {
+            open.push(ref);
+            item.classList.add('is-open');
+            toggle.setAttribute('aria-expanded', 'true');
+            var summary = findMissionInList(missionsForContainer(container), ref);
+            if (variantList(summary).length > 1) {
+                if (!item.querySelector('.sc-mission-variant-bar')) {
+                    toggle.insertAdjacentHTML('afterend', renderVariantPicker(summary, variantRefFor(panelRoot, ref)));
+                }
+            } else if (detailEl) {
+                detailEl.hidden = false;
+            }
         }
-        container.innerHTML = wrapBlueprintPanelHtml(
-            container._bpCraftBanner || '',
-            renderMissionListHtml(missions, nextRef)
-        );
-
-        if (!nextRef) return;
-        await loadMissionDetail(container, nextRef);
+        var next = open.join('|');
+        panelRoot.dataset.expandedMission = next;
+        if (typeof container._bpOnExpandedChange === 'function') {
+            container._bpOnExpandedChange(next);
+        }
+        if (at < 0 && detailEl && !detailEl.hidden) await loadMissionDetail(container, ref);
     }
 
     function wirePanel(container) {
@@ -1453,6 +1822,12 @@
         container.addEventListener('click', function (ev) {
             var chipLink = ev.target.closest('.sc-mission-chip--link[href]');
             if (chipLink && container.contains(chipLink)) {
+                var href = chipLink.getAttribute('href') || '';
+                if (href.indexOf('blueprint-crafting') >= 0) {
+                    ev.preventDefault();
+                    window.open(chipLink.href, '_blank', 'noopener,noreferrer');
+                    return;
+                }
                 var cid = chipLink.getAttribute('data-component-id');
                 if (cid) rememberComponentDetailId(cid);
                 stashListReturnForDetailNav();
@@ -1462,6 +1837,44 @@
             if (chipResolve && container.contains(chipResolve)) {
                 ev.preventDefault();
                 navigatePoolItemRef(chipResolve.getAttribute('data-pool-item-ref'), readNavContext(container));
+                return;
+            }
+            var variantBtn = ev.target.closest('.sc-mission-variant-btn');
+            if (variantBtn && container.contains(variantBtn)) {
+                ev.preventDefault();
+                var panelRoot = container.closest('[data-blueprint-panel]') || container;
+                var parentBtn = variantBtn.closest('.sc-blueprint-mission-item');
+                parentBtn = parentBtn && parentBtn.querySelector('.sc-blueprint-mission-toggle');
+                var parentRef = (parentBtn && parentBtn.getAttribute('data-mission-ref')) || '';
+                var nextVariant = variantBtn.getAttribute('data-variant-ref') || '';
+                if (!parentRef || !nextVariant) return;
+                var detailEl = variantBtn.closest('.sc-blueprint-mission-item');
+                detailEl = detailEl && detailEl.querySelector('[data-mission-detail]');
+                var variantMap = readVariantMap(panelRoot);
+                if (variantMap[parentRef] === nextVariant && detailEl && !detailEl.hidden) {
+                    detailEl.hidden = true;
+                    variantBtn.classList.remove('is-active');
+                    variantBtn.setAttribute('aria-selected', 'false');
+                    delete variantMap[parentRef];
+                    writeVariantMap(panelRoot, variantMap);
+                    return;
+                }
+                var openRefs = splitOpenRefs(panelRoot.dataset.expandedMission);
+                if (openRefs.indexOf(parentRef) < 0) openRefs.push(parentRef);
+                panelRoot.dataset.expandedMission = openRefs.join('|');
+                variantMap[parentRef] = nextVariant;
+                writeVariantMap(panelRoot, variantMap);
+                if (detailEl) {
+                    detailEl.hidden = false;
+                    variantBtn.insertAdjacentElement('afterend', detailEl);
+                }
+                var bar = variantBtn.closest('.sc-mission-variant-bar');
+                if (bar) bar.querySelectorAll('.sc-mission-variant-btn').forEach(function (el) {
+                    var on = el === variantBtn;
+                    el.classList.toggle('is-active', on);
+                    el.setAttribute('aria-selected', on ? 'true' : 'false');
+                });
+                loadMissionDetail(container, parentRef);
                 return;
             }
             var btn = ev.target.closest('.sc-blueprint-mission-toggle');
@@ -1515,7 +1928,10 @@
                 craftBanner,
                 renderMissionListHtml(missions, expandedId)
             );
-            if (expandedId) await loadMissionDetail(container, expandedId);
+            if (expandedId) {
+                panelRoot.dataset.expandedMission = expandedId;
+                await loadOpenMissionDetails(container, expandedId);
+            }
         } catch (e) {
             if (!container.isConnected) return;
             var craftBlueprintFallback = craftBlueprintCache[String(item.id_item || item.uuid || '')];
@@ -1533,7 +1949,10 @@
                     craftBannerFallback,
                     renderMissionListHtml(embedded, expandedEmbedded)
                 );
-                if (expandedEmbedded) await loadMissionDetail(container, expandedEmbedded);
+                if (expandedEmbedded) {
+                    panelRoot.dataset.expandedMission = expandedEmbedded;
+                    await loadOpenMissionDetails(container, expandedEmbedded);
+                }
                 return;
             }
             var expandedId = options.expandedId || container.dataset.expandedMission || '';
@@ -1568,8 +1987,10 @@
         buildBlueprintCraftHref: buildBlueprintCraftHref,
         stashDetailReturnForCraft: stashDetailReturnForCraft,
         fetchMissionDetail: fetchMissionDetail,
+        prefetchMissionDetails: prefetchMissionDetails,
         renderMissionListHtml: renderMissionListHtml,
         clearCache: function () {
+            prefetchSerial += 1;
             listCache = Object.create(null);
             detailCache = Object.create(null);
             craftBlueprintCache = Object.create(null);

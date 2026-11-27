@@ -326,10 +326,30 @@
         }
         #secVisitStats .vs-kpis {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 0.65rem;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.75rem;
             margin-bottom: 0.9rem;
         }
+        #secVisitStats .vs-kpi small {
+            display: block;
+            margin-top: 0.25rem;
+            color: rgba(168, 216, 232, 0.72);
+            font-size: 0.78rem;
+        }
+        #secVisitStats .vs-plain {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        #secVisitStats .vs-plain li {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.45rem 0;
+            border-top: 1px solid rgba(95, 184, 255, 0.12);
+        }
+        #secVisitStats .vs-plain li:first-child { border-top: 0; }
+        #secVisitStats .vs-plain b { color: #8ee0ff; font-weight: 650; }
         #secVisitStats .vs-kpi {
             padding: 0.75rem 0.85rem;
             border: 1px solid rgba(95, 184, 255, 0.22);
@@ -338,7 +358,8 @@
         }
         #secVisitStats .vs-kpi b {
             display: block;
-            font-size: 1.35rem;
+            margin-top: 0.2rem;
+            font-size: 1.8rem;
             letter-spacing: 0.02em;
             color: #fff;
         }
@@ -2147,62 +2168,31 @@
             </section>
             <section id="secVisitStats" style="display: none;">
                 <h2>访问统计</h2>
-                <p class="hint">统计站点页面浏览（PV）、独立会话（UV）、登录用户、来源与设备。时间为北京时间，不含超管/管理页。新数据在成员访问前台后写入，刷新本页即可看到。</p>
+                <p class="hint">只看有多少人来过、打开了多少页、登录成员看了什么。时间按北京时间，不含管理页。</p>
                 <div class="vs-toolbar">
-                    <label>范围
+                    <label>看
                         <select id="visitRange">
-                            <option value="today">今日</option>
-                            <option value="7d" selected>近 7 日</option>
-                            <option value="30d">近 30 日</option>
-                            <option value="custom">自定义</option>
+                            <option value="today">今天</option>
+                            <option value="7d" selected>近 7 天</option>
+                            <option value="30d">近 30 天</option>
+                            <option value="custom">自己选日期</option>
                         </select>
                     </label>
                     <label>从 <input type="date" id="visitFrom" /></label>
                     <label>到 <input type="date" id="visitTo" /></label>
                     <button type="button" class="btn-secondary" id="btnReloadVisitStats">刷新</button>
-                    <span class="hint" id="visitRangeMeta"></span>
                 </div>
+                <p class="hint" id="visitRangeMeta"></p>
                 <div id="visitStatsErr" class="err" hidden></div>
                 <div class="vs-kpis" id="visitKpis"></div>
-                <div class="vs-grid">
-                    <div class="vs-panel">
-                        <h3>浏览趋势</h3>
-                        <div class="vs-bars" id="visitTrend"></div>
-                    </div>
-                    <div class="vs-panel">
-                        <h3>时段分布（北京时间）</h3>
-                        <div class="vs-bars" id="visitHours"></div>
-                    </div>
-                </div>
                 <div class="vs-grid vs-grid--tables">
                     <div class="vs-panel">
-                        <h3>热门页面</h3>
-                        <div class="vs-table-clip">
-                            <table class="vs-table"><thead><tr><th>页面</th><th>PV</th><th>UV</th></tr></thead><tbody id="visitTopPages"></tbody></table>
-                        </div>
+                        <h3>大家最常看</h3>
+                        <ol class="vs-plain" id="visitTopPages"></ol>
                     </div>
                     <div class="vs-panel">
-                        <h3>用户访问（登录成员）</h3>
-                        <div class="vs-table-clip">
-                            <table class="vs-table"><thead><tr><th>绑定 ID</th><th>PV</th><th>最近页面</th></tr></thead><tbody id="visitTopUsers"></tbody></table>
-                        </div>
-                    </div>
-                </div>
-                <div class="vs-grid">
-                    <div class="vs-panel">
-                        <h3>来源 / 设备 / 浏览器</h3>
-                        <div class="vs-dist" id="visitDist"></div>
-                    </div>
-                    <div class="vs-panel vs-panel--recent">
-                        <h3>最近访问</h3>
-                        <div class="vs-recent-wrap">
-                            <table class="vs-table"><thead><tr><th>时间</th><th>页面</th><th>访客</th></tr></thead><tbody id="visitRecent"></tbody></table>
-                        </div>
-                        <div class="vs-recent-pager">
-                            <button type="button" class="btn-secondary" id="visitRecentPrev">上一页</button>
-                            <span id="visitRecentPageLbl">1 / 1</span>
-                            <button type="button" class="btn-secondary" id="visitRecentNext">下一页</button>
-                        </div>
+                        <h3>登录后来过</h3>
+                        <ol class="vs-plain" id="visitTopUsers"></ol>
                     </div>
                 </div>
             </section>
@@ -2556,6 +2546,16 @@
                 <ul id="annList" style="margin-top:1rem"></ul>
             </section>
 
+            <section id="secSiteFeedback" style="display: none;">
+                <h2>站点留言</h2>
+                <p class="hint">充电弹层里留言板送来的内容。</p>
+                <div class="row" style="margin-top:0.5rem">
+                    <button type="button" class="btn-secondary" id="btnReloadSiteFeedback">刷新</button>
+                </div>
+                <div id="siteFeedbackErr" class="err" hidden></div>
+                <ul id="siteFeedbackList" style="margin-top:1rem"></ul>
+            </section>
+
             <section id="secWhitelist" style="display: none;">
                 <h2>注册白名单 / 炮兵助手权限</h2>
                 <div class="whitelist-arty-grid" style="display:grid; grid-template-columns:repeat(2, minmax(220px, 1fr)); gap:1rem; align-items:stretch;">
@@ -2799,6 +2799,7 @@
                 setSectionVisible('secAuditLog', !superPage);
                 setSectionVisible('secUsers', superPage);
                 setSectionVisible('secAnnouncements', superPage);
+                setSectionVisible('secSiteFeedback', superPage);
                 setSectionVisible('secWhitelist', superPage);
                 setSectionVisible('secAdmins', superPage);
                 setSectionVisible('secComponentImageReview', superPage);
@@ -2988,14 +2989,10 @@
                     document.getElementById('btnReloadAnnouncements').onclick = loadAnnouncements;
                     document.getElementById('annCtaPreset').onchange = syncAnnCtaPreset;
                     loadAnnouncements();
+                    document.getElementById('btnReloadSiteFeedback').onclick = loadSiteFeedback;
+                    loadSiteFeedback();
                     document.getElementById('btnReloadVisitStats').onclick = loadVisitStats;
                     document.getElementById('visitRange').onchange = loadVisitStats;
-                    document.getElementById('visitRecentPrev').onclick = function () {
-                        showVisitRecentPage(visitRecentState.page - 1);
-                    };
-                    document.getElementById('visitRecentNext').onclick = function () {
-                        showVisitRecentPage(visitRecentState.page + 1);
-                    };
                     document.getElementById('visitFrom').onchange = onVisitCustomDates;
                     document.getElementById('visitTo').onchange = onVisitCustomDates;
                     loadVisitStats();
@@ -3589,6 +3586,31 @@
                 return '全部成员';
             }
 
+            async function loadSiteFeedback() {
+                var s = loadSess();
+                showErr('siteFeedbackErr', '');
+                try {
+                    var data = await window.UssAuthApi.adminListSiteFeedback(s.token);
+                    var ul = document.getElementById('siteFeedbackList');
+                    var list = (data && data.items) || [];
+                    ul.innerHTML = '';
+                    if (!list.length) {
+                        ul.textContent = '还没有留言';
+                        return;
+                    }
+                    list.forEach(function (item) {
+                        var li = document.createElement('li');
+                        li.style.marginBottom = '0.75rem';
+                        var when = item.at ? new Date(item.at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : '';
+                        var who = item.handle ? String(item.handle) : '未登录';
+                        li.textContent = when + ' · ' + who + (item.replyTo ? ' 回复 ' + item.replyTo : '') + ' · ' + String(item.text || '');
+                        ul.appendChild(li);
+                    });
+                } catch (e) {
+                    showErr('siteFeedbackErr', (e && e.message) || '加载留言失败');
+                }
+            }
+
             async function loadAnnouncements() {
                 var s = loadSess();
                 showErr('annErr', '');
@@ -3838,86 +3860,33 @@
                     var data = await window.UssAuthApi.adminGetVisitStats(s.token, query);
                     var k = data.kpis || {};
                     var c = data.compare || {};
-                    document.getElementById('visitRangeMeta').textContent =
-                        (data.from || '') + ' ~ ' + (data.to || '') + '（对比上一同等时段）';
+                    document.getElementById('visitRangeMeta').textContent = (data.from || '') + ' 到 ' + (data.to || '');
+                    function vsWords(value) {
+                        var n = Number(value);
+                        if (!isFinite(n)) return '没有上一时段可以比';
+                        if (Math.abs(n) < 0.5) return '和上一时段差不多';
+                        return (n > 0 ? '比上一时段多 ' : '比上一时段少 ') + Math.abs(Math.round(n)) + '%';
+                    }
                     document.getElementById('visitKpis').innerHTML =
-                        '<div class="vs-kpi"><span>浏览量 PV</span><b>' +
-                        (k.pv || 0) +
-                        vsDeltaHtml(c.pv) +
-                        '</b></div>' +
-                        '<div class="vs-kpi"><span>独立会话 UV</span><b>' +
+                        '<div class="vs-kpi"><span>来过的人</span><b>' +
                         (k.uv || 0) +
-                        vsDeltaHtml(c.uv) +
-                        '</b></div>' +
-                        '<div class="vs-kpi"><span>登录用户</span><b>' +
+                        '</b><small>' + vsWords(c.uv) + '</small></div>' +
+                        '<div class="vs-kpi"><span>打开的页面</span><b>' +
+                        (k.pv || 0) +
+                        '</b><small>' + vsWords(c.pv) + '</small></div>' +
+                        '<div class="vs-kpi"><span>登录的成员</span><b>' +
                         (k.loggedInUsers || 0) +
-                        vsDeltaHtml(c.loggedInUsers) +
-                        '</b></div>' +
-                        '<div class="vs-kpi"><span>登录浏览 / 游客浏览</span><b>' +
-                        (k.loggedInPv || 0) +
-                        ' / ' +
-                        (k.guestPv || 0) +
-                        '</b></div>' +
-                        '<div class="vs-kpi"><span>跳出率</span><b>' +
-                        (k.bounceRate || 0) +
-                        '%</b></div>' +
-                        '<div class="vs-kpi"><span>人均页数</span><b>' +
-                        (k.pagesPerSession || 0) +
-                        '</b></div>' +
-                        '<div class="vs-kpi"><span>平均停留</span><b>' +
-                        vsFmtDur(k.avgDurationSec) +
-                        '</b></div>' +
-                        '<div class="vs-kpi"><span>新访客 / 回访</span><b>' +
-                        (k.newVisitors || 0) +
-                        ' / ' +
-                        (k.returningVisitors || 0) +
-                        '</b></div>';
-                    vsRenderBars(
-                        document.getElementById('visitTrend'),
-                        (data.trend || []).map(function (d) {
-                            return { label: String(d.date || '').slice(5), value: Number(d.pv) || 0 };
-                        })
-                    );
-                    vsRenderBars(
-                        document.getElementById('visitHours'),
-                        (data.hours || []).map(function (v, i) {
-                            return { label: String(i), value: Number(v) || 0 };
-                        })
-                    );
-                    document.getElementById('visitTopPages').innerHTML = (data.topPages || [])
+                        '</b><small>' + vsWords(c.loggedInUsers) + '</small></div>';
+                    document.getElementById('visitTopPages').innerHTML = (data.topPages || []).slice(0, 6)
                         .map(function (p) {
-                            return (
-                                '<tr><td>' +
-                                (p.title || p.path) +
-                                '</td><td>' +
-                                (p.pv || 0) +
-                                '</td><td>' +
-                                (p.uv || 0) +
-                                '</td></tr>'
-                            );
+                            return '<li><span>' + (p.title || p.path) + '</span><b>' + (p.pv || 0) + ' 次</b></li>';
                         })
-                        .join('') || '<tr><td colspan="3">暂无</td></tr>';
-                    document.getElementById('visitTopUsers').innerHTML = (data.topUsers || [])
+                        .join('') || '<li><span>这段时间还没有人来</span></li>';
+                    document.getElementById('visitTopUsers').innerHTML = (data.topUsers || []).slice(0, 6)
                         .map(function (u) {
-                            return (
-                                '<tr><td>' +
-                                (u.bindingId || '—') +
-                                '</td><td>' +
-                                (u.pv || 0) +
-                                '</td><td>' +
-                                (u.lastTitle || '—') +
-                                '</td></tr>'
-                            );
+                            return '<li><span>' + (u.bindingId || '—') + '</span><b>' + (u.pv || 0) + ' 次</b></li>';
                         })
-                        .join('') || '<tr><td colspan="3">暂无登录访问</td></tr>';
-                    vsRenderDist(document.getElementById('visitDist'), [
-                        { title: '来源', items: data.sources || [] },
-                        { title: '设备', items: data.devices || [] },
-                        { title: '浏览器', items: data.browsers || [] },
-                        { title: '外部域名', items: data.topHosts || [] },
-                    ]);
-                    visitRecentState.items = data.recent || [];
-                    showVisitRecentPage(1);
+                        .join('') || '<li><span>这段时间没有登录成员</span></li>';
                 } catch (e) {
                     showErr('visitStatsErr', (e && e.message) || '加载访问统计失败');
                 }
