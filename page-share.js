@@ -814,18 +814,32 @@
     }
 
     async function imageToDataAsync(img) {
+        if (img && img._shareReady) return img._shareReady;
         var ready = imageToData(img);
         if (ready) return ready;
         var src = (img && (img.currentSrc || img.src)) || '';
         if (!src) return '';
         if (src.indexOf('data:') === 0) return src;
         try {
-            var res = await fetch(shareImageUrl(src));
+            var res = await fetch(shareImageUrl(src), { credentials: 'same-origin' });
             if (!res.ok) return '';
             return await blobToData(await res.blob());
         } catch (e) {
             return '';
         }
+    }
+
+    function isMarketDetailHost(el) {
+        return !!(el && (el.id === 'marketDetailBody' || (el.classList && el.classList.contains('market-detail__body'))));
+    }
+
+    async function prefetchShareImagesIn(root) {
+        if (!root || !root.querySelectorAll) return;
+        var imgs = root.querySelectorAll('img');
+        await Promise.all(Array.prototype.map.call(imgs, async function (img) {
+            var data = await imageToDataAsync(img);
+            if (data) img._shareReady = data;
+        }));
     }
 
     async function prefetchShareImages(cards) {
@@ -839,7 +853,37 @@
         }));
     }
 
+    function trimMarketDetailClone(clone) {
+        if (!clone) return;
+        var removeSel =
+            '.market-detail__actions, .market-detail__qty, #marketDetailQtyPicker, .market-detail__dash-link, ' +
+            '.market-detail__hint, .market-detail__nudge, .market-detail__takedown-btn, .market-seller-card__copy, ' +
+            '.market-seller-card__reviews-toggle, .market-seller-card__review-reply-toggle, #marketDetailShareBtn, ' +
+            '#marketDetailContactBtn, #marketDetailPurchaseBtn, #marketDetailLotteryBtn, #marketDetailTakedownBtn';
+        clone.querySelectorAll(removeSel).forEach(function (n) {
+            if (n.parentNode) n.parentNode.removeChild(n);
+        });
+        clone.querySelectorAll('.market-seller-card__review.is-hidden').forEach(function (n) {
+            if (n.parentNode) n.parentNode.removeChild(n);
+        });
+        clone.querySelectorAll('.market-seller-card__review-reply.is-collapsed').forEach(function (n) {
+            if (n.parentNode) n.parentNode.removeChild(n);
+        });
+        var reviews = clone.querySelectorAll('.market-seller-card__review-list .market-seller-card__review');
+        for (var i = 3; i < reviews.length; i++) {
+            if (reviews[i].parentNode) reviews[i].parentNode.removeChild(reviews[i]);
+        }
+        clone.querySelectorAll('.market-seller-card__reviews').forEach(function (box) {
+            box.classList.remove('is-collapsed');
+        });
+        clone.querySelectorAll('a[href]').forEach(function (a) {
+            a.removeAttribute('href');
+            a.style.textDecoration = 'none';
+        });
+    }
+
     function imageToData(img) {
+        if (img && img._shareReady) return img._shareReady;
         if (!img || !img.naturalWidth) return '';
         try {
             var c = document.createElement('canvas');
@@ -873,11 +917,23 @@
     }
 
     function loadSvgImage(svg) {
-        var url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
         return new Promise(function (resolve, reject) {
+            var url;
+            try {
+                url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+            } catch (e) {
+                reject(new Error('生成图片失败'));
+                return;
+            }
             var img = new Image();
-            img.onload = function () { resolve(img); };
-            img.onerror = function () { reject(new Error('生成图片失败')); };
+            img.onload = function () {
+                URL.revokeObjectURL(url);
+                resolve(img);
+            };
+            img.onerror = function () {
+                URL.revokeObjectURL(url);
+                reject(new Error('生成图片失败'));
+            };
             img.src = url;
         });
     }
@@ -892,18 +948,33 @@
         });
     }
 
-    function collectPageCss() {
+    function collectPageCss(host) {
+        var slim = isMarketDetailHost(host);
+        var sheetAllow = slim
+            ? /(?:^|\/)(?:styles|market|ship-components|page-share)(?:\.[^/]+)?\.css(?:\?|$)/i
+            : null;
         var text = '';
         for (var i = 0; i < document.styleSheets.length; i++) {
             var sheet = document.styleSheets[i];
+            if (sheetAllow && sheet.href && !sheetAllow.test(sheet.href)) continue;
             var rules;
             try { rules = sheet.cssRules; } catch (e) { rules = null; }
             if (!rules) continue;
             var base = sheet.href || window.location.href;
             for (var r = 0; r < rules.length; r++) text += absCssUrls(rules[r].cssText, base) + '\n';
         }
+        if (slim) {
+            text = text.replace(/@font-face\s*\{[\s\S]*?\}\s*/gi, '');
+            text = text.replace(/@keyframes\s+[\w-]+\s*\{[\s\S]*?\}\s*/gi, '');
+        }
         text += '.market-hero::before{content:none !important;background-image:none !important;}';
         text += '.sc-workspace-wrap,.sc-workspace,.sc-filter-deck,.sc-filter-deck__nav,.sc-catalog-tools,.sc-facet-bar{width:100% !important;max-width:none !important;overflow:visible !important;box-sizing:border-box !important;}';
+        if (slim) {
+            text += '.market-detail__body,.market-detail__grid,.market-detail__section,.market-seller-card{max-width:100%!important;}';
+            text += '.market-seller-card__contact-wrap,.market-seller-card__reviews{overflow:visible!important;max-height:none!important;}';
+        }
+        var maxCss = slim ? 420000 : 900000;
+        if (text.length > maxCss) text = text.slice(0, maxCss) + '\n/* share-css-truncated */';
         return text.replace(/]]>/g, ']]]]><![CDATA[>');
     }
 
@@ -1094,100 +1165,367 @@
         });
     }
 
-    async function raster(el) {
+    function captureMarketDetailBox(el) {
         var box = captureBox(el);
-        var w = box.w;
-        var h = box.h;
-        var scale = 2;
-        if (w * scale > 2400) scale = 2400 / w;
-        if (h * scale > 8000) scale = Math.min(scale, 8000 / h);
-        if (scale < 1) scale = 1;
-        var fullW = Math.max(1, Math.round(w * scale));
-        var fullH = Math.max(1, Math.round(h * scale));
-        var clone = el.cloneNode(true);
-        Array.prototype.forEach.call(clone.querySelectorAll('.uss-share-btn'), function (btn) {
-            if (btn.parentNode) btn.parentNode.removeChild(btn);
-        });
-        await mirrorNode(el, clone);
-        var shipCatalog = clone.querySelector && clone.querySelector('.sc-ship-catalog');
-        if (shipCatalog) {
-            shipCatalog.style.zoom = '1';
-            shipCatalog.style.width = w + 'px';
-            shipCatalog.style.maxWidth = 'none';
-            Array.prototype.forEach.call(shipCatalog.querySelectorAll('.scat-art img'), function (img) {
-                var src = img.getAttribute('src') || '';
-                if (!src) return;
-                var box = document.createElement('div');
-                box.setAttribute('style', 'display:block;width:100%;height:100%;background-image:url("' + src.replace(/"/g, '%22') + '");background-size:cover;background-position:center center;background-repeat:no-repeat;');
-                if (img.parentNode) img.parentNode.replaceChild(box, img);
+        var maxH = 3600;
+        if (box.h > maxH) box.h = maxH;
+        return box;
+    }
+
+    function objectPositionOffset(token, extra) {
+        var part = String(token || 'center').trim();
+        if (part === 'left' || part === 'top' || part === '0' || part === '0%') return 0;
+        if (part === 'right' || part === 'bottom' || part === '100%') return extra;
+        if (part === 'center') return extra / 2;
+        if (part.indexOf('%') >= 0) return extra * (parseFloat(part) / 100);
+        var px = parseFloat(part);
+        return isFinite(px) ? px : extra / 2;
+    }
+
+    function cropObjectFit(img, width, height, fit, position) {
+        var sw = img.naturalWidth;
+        var sh = img.naturalHeight;
+        if (!sw || !sh) return '';
+        var dw = Math.max(1, Math.round(width));
+        var dh = Math.max(1, Math.round(height));
+        var canvas = document.createElement('canvas');
+        canvas.width = dw;
+        canvas.height = dh;
+        var ctx = canvas.getContext('2d');
+        var cover = fit !== 'contain';
+        var factor = cover ? Math.max(dw / sw, dh / sh) : Math.min(dw / sw, dh / sh);
+        var w = sw * factor;
+        var h = sh * factor;
+        var parts = String(position || '50% 50%').trim().split(/\s+/);
+        var x = objectPositionOffset(parts[0], dw - w);
+        var y = objectPositionOffset(parts[1] || 'center', dh - h);
+        ctx.drawImage(img, x, y, w, h);
+        try { return canvas.toDataURL('image/png'); } catch (e) { return ''; }
+    }
+
+    function mixHex(from, to, t) {
+        function ch(hex, i) { return parseInt(hex.slice(i, i + 2), 16); }
+        function v(a, b) { return Math.round(a + (b - a) * t); }
+        return 'rgb(' + v(ch(from, 1), ch(to, 1)) + ',' + v(ch(from, 3), ch(to, 3)) + ',' + v(ch(from, 5), ch(to, 5)) + ')';
+    }
+
+    function qualityRingData(score, cssPx, hole, thickness) {
+        var pct = Math.max(0, Math.min(100, Number(score) || 0)) / 100;
+        var d = Math.max(64, Math.round(cssPx * 4));
+        var canvas = document.createElement('canvas');
+        canvas.width = d;
+        canvas.height = d;
+        var ctx = canvas.getContext('2d');
+        var cx = d / 2;
+        var cy = d / 2;
+        var line = Math.max(2, (thickness > 0 ? thickness : cssPx * 0.1) * (d / cssPx));
+        var radius = (d - line) / 2;
+        ctx.lineWidth = line;
+        ctx.strokeStyle = 'rgba(95,184,255,0.12)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        var steps = Math.max(1, Math.round(180 * pct));
+        ctx.shadowColor = 'rgba(0,240,255,0.55)';
+        ctx.shadowBlur = d * 0.06;
+        for (var i = 0; i < steps; i++) {
+            var t = steps === 1 ? 0 : i / (steps - 1);
+            ctx.strokeStyle = mixHex('#00f0ff', '#8ee0ff', t);
+            var a0 = -Math.PI / 2 + (i / steps) * Math.PI * 2 * pct;
+            var a1 = -Math.PI / 2 + ((i + 1) / steps) * Math.PI * 2 * pct + 0.02;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, a0, a1);
+            ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(1, radius - line / 2), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = hole || '#081625';
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(1, radius - line / 2), 0, Math.PI * 2);
+        ctx.fill();
+        try { return canvas.toDataURL('image/png'); } catch (e) { return ''; }
+    }
+
+    function rgbaFromCss(color, alpha) {
+        var m = String(color || '').match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+        var a = alpha == null ? 1 : alpha;
+        if (m) return 'rgba(' + Math.round(m[1]) + ',' + Math.round(m[2]) + ',' + Math.round(m[3]) + ',' + a + ')';
+        return color || 'rgba(158,200,224,' + a + ')';
+    }
+
+    function sortIconData(kind, color, cssW, cssH, opacity) {
+        var w = Math.max(8, Math.round((cssW || 8.8) * 4));
+        var h = Math.max(8, Math.round((cssH || 11.5) * 4));
+        var canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = rgbaFromCss(color, opacity == null ? 0.38 : opacity);
+        ctx.beginPath();
+        if (kind === 'asc') {
+            ctx.moveTo(w * 0.5, 0);
+            ctx.lineTo(w, h);
+            ctx.lineTo(0, h);
+        } else if (kind === 'desc') {
+            ctx.moveTo(0, 0);
+            ctx.lineTo(w, 0);
+            ctx.lineTo(w * 0.5, h);
+        } else {
+            var mid = h * 0.5;
+            var gap = Math.max(1, h * 0.08);
+            ctx.moveTo(w * 0.5, 0);
+            ctx.lineTo(w, mid - gap);
+            ctx.lineTo(0, mid - gap);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(w * 0.5, h);
+            ctx.lineTo(0, mid + gap);
+            ctx.lineTo(w, mid + gap);
+        }
+        ctx.closePath();
+        ctx.fill();
+        try { return canvas.toDataURL('image/png'); } catch (e) { return ''; }
+    }
+
+    function paintSortIcons(live, cloned, scale) {
+        var liveBtns = live.querySelectorAll('.sc-sort-btn');
+        var cloneBtns = cloned.querySelectorAll('.sc-sort-btn');
+        var n = Math.min(liveBtns.length, cloneBtns.length);
+        if (!n) return;
+        if (cloned.ownerDocument && cloned.ownerDocument.head) {
+            var hide = cloned.ownerDocument.createElement('style');
+            hide.textContent = '.sc-sort-btn::after,.sc-sort-btn::before{content:none!important;display:none!important;background:none!important;mask:none!important;-webkit-mask:none!important;width:0!important;height:0!important;}';
+            cloned.ownerDocument.head.appendChild(hide);
+        }
+        for (var i = 0; i < n; i++) {
+            var src = liveBtns[i];
+            var copy = cloneBtns[i];
+            var th = src.closest ? src.closest('.sc-sortable') : src.parentElement;
+            var kind = '';
+            if (th && th.classList) {
+                if (th.classList.contains('is-sorted-asc')) kind = 'asc';
+                else if (th.classList.contains('is-sorted-desc')) kind = 'desc';
+            }
+            var after;
+            try { after = getComputedStyle(src, '::after'); } catch (eAfter) { after = null; }
+            var cssW = after ? parseFloat(after.width) : 0;
+            var cssH = after ? parseFloat(after.height) : 0;
+            if (!(cssW > 0)) cssW = 8.8;
+            if (!(cssH > 0)) cssH = kind ? 7.2 : 11.5;
+            var color = getComputedStyle(src).color;
+            var opacity = after && after.opacity !== '' ? parseFloat(after.opacity) : (kind ? 1 : 0.38);
+            var url = sortIconData(kind, color, cssW, cssH, isFinite(opacity) ? opacity : 0.38);
+            if (!url) continue;
+            var img = (cloned.ownerDocument || document).createElement('img');
+            img.src = url;
+            img.alt = '';
+            img.width = Math.max(1, Math.round(cssW));
+            img.height = Math.max(1, Math.round(cssH));
+            img.style.cssText = 'flex-shrink:0;width:' + cssW + 'px;height:' + cssH + 'px;display:block;object-fit:fill;pointer-events:none;';
+            copy.appendChild(img);
+        }
+    }
+
+    function paintBlueprintListItems(live, cloned) {
+        var liveItems = live.querySelectorAll('.bp-list-item');
+        var cloneItems = cloned.querySelectorAll('.bp-list-item');
+        var n = Math.min(liveItems.length, cloneItems.length);
+        if (!n) return;
+        var doc = cloned.ownerDocument || document;
+        for (var i = 0; i < n; i++) {
+            var src = liveItems[i];
+            var copy = cloneItems[i];
+            var cs = getComputedStyle(src);
+            copy.style.boxShadow = 'none';
+            if (getComputedStyle(copy).position === 'static') copy.style.position = 'relative';
+            var shadow = cs.boxShadow || '';
+            var match = shadow.match(/((?:rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-fA-F]{3,8}))\s+(\d+(?:\.\d+)?)px\s+0px\s+0px(?:\s+0px)?\s+inset/i);
+            if (!match) match = shadow.match(/inset\s+(\d+(?:\.\d+)?)px\s+0px\s+0px(?:\s+0px)?\s+((?:rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-fA-F]{3,8}))/i);
+            var color = '';
+            var width = 0;
+            if (match) {
+                if (match[0].indexOf('inset') === 0) {
+                    width = parseFloat(match[1]);
+                    color = match[2];
+                } else {
+                    color = match[1];
+                    width = parseFloat(match[2]);
+                }
+            }
+            if (!(width > 0) || !color) continue;
+            var bar = doc.createElement('span');
+            bar.setAttribute('aria-hidden', 'true');
+            bar.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:' + width + 'px;background:' + color + ';border-radius:' + (cs.borderTopLeftRadius || '6px') + ' 0 0 ' + (cs.borderBottomLeftRadius || '6px') + ';pointer-events:none;';
+            copy.insertBefore(bar, copy.firstChild);
+        }
+    }
+
+    function prepareShareClone(live, cloned, scale) {
+        if (!live || !cloned) return;
+        try { pinBlueprintFrame(live, cloned); } catch (ePinBp) {}
+        try { pinKioskFrame(live, cloned); } catch (ePinSt) {}
+        var pixel = scale > 0 ? scale : 1;
+        var nodes = [cloned];
+        if (cloned.querySelectorAll) nodes = nodes.concat(Array.prototype.slice.call(cloned.querySelectorAll('*')));
+        for (var i = 0; i < nodes.length; i++) {
+            var dst = nodes[i];
+            if (!dst || dst.nodeType !== 1) continue;
+            var cs;
+            try { cs = getComputedStyle(dst); } catch (eCs) { continue; }
+            if (dst.classList && dst.classList.contains('st-kiosk') && cs.boxShadow && cs.boxShadow !== 'none') dst.style.boxShadow = 'none';
+            var border = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0) + (parseFloat(cs.borderLeftWidth) || 0);
+            if (border > 0 && dst.tagName !== 'HTML2CANVASPSEUDOELEMENT') {
+                dst.style.boxSizing = 'border-box';
+                dst.style.backgroundClip = 'padding-box';
+                dst.style.borderTopWidth = cs.borderTopWidth;
+                dst.style.borderRightWidth = cs.borderRightWidth;
+                dst.style.borderBottomWidth = cs.borderBottomWidth;
+                dst.style.borderLeftWidth = cs.borderLeftWidth;
+                dst.style.borderTopStyle = cs.borderTopStyle;
+                dst.style.borderRightStyle = cs.borderRightStyle;
+                dst.style.borderBottomStyle = cs.borderBottomStyle;
+                dst.style.borderLeftStyle = cs.borderLeftStyle;
+                dst.style.borderTopColor = cs.borderTopColor;
+                dst.style.borderRightColor = cs.borderRightColor;
+                dst.style.borderBottomColor = cs.borderBottomColor;
+                dst.style.borderLeftColor = cs.borderLeftColor;
+                dst.style.borderRadius = cs.borderRadius;
+            }
+        }
+        if (!live.querySelectorAll || !cloned.querySelectorAll) return;
+        var liveImgs = live.querySelectorAll('img');
+        var cloneImgs = cloned.querySelectorAll('img');
+        var count = Math.min(liveImgs.length, cloneImgs.length);
+        for (var n = 0; n < count; n++) {
+            var src = liveImgs[n];
+            var copy = cloneImgs[n];
+            var fit = 'fill';
+            var position = '50% 50%';
+            try {
+                var ics = getComputedStyle(src);
+                fit = ics.objectFit;
+                position = ics.objectPosition;
+            } catch (eFit) { continue; }
+            if ((fit !== 'cover' && fit !== 'contain') || !src.naturalWidth) continue;
+            var box = src.getBoundingClientRect();
+            if (box.width < 2 || box.height < 2) continue;
+            var data = cropObjectFit(src, box.width * pixel, box.height * pixel, fit, position);
+            if (!data) continue;
+            copy.setAttribute('src', data);
+            copy.style.objectFit = 'fill';
+            copy.style.width = box.width + 'px';
+            copy.style.height = box.height + 'px';
+        }
+        var liveRings = live.querySelectorAll('.bp-meter__ring');
+        var cloneRings = cloned.querySelectorAll('.bp-meter__ring');
+        var rings = Math.min(liveRings.length, cloneRings.length);
+        if (rings && cloned.ownerDocument) {
+            var hide = cloned.ownerDocument.createElement('style');
+            hide.textContent = '.bp-meter__ring::before{content:none!important;display:none!important;background:none!important;}';
+            if (cloned.ownerDocument.head) cloned.ownerDocument.head.appendChild(hide);
+        }
+        paintSortIcons(live, cloned, pixel);
+        paintBlueprintListItems(live, cloned);
+        for (var r = 0; r < rings; r++) {
+            var ring = liveRings[r];
+            var ringCopy = cloneRings[r];
+            var score = parseFloat(getComputedStyle(ring).getPropertyValue('--bp-score'));
+            var ringBox = ring.getBoundingClientRect();
+            var hole = '#081625';
+            var thick = 4;
+            try {
+                var before = getComputedStyle(ring, '::before');
+                if (before.backgroundColor && before.backgroundColor !== 'rgba(0, 0, 0, 0)') hole = before.backgroundColor;
+                var inset = parseFloat(before.top);
+                if (inset > 0) thick = inset;
+            } catch (eRing) {}
+            var ringUrl = qualityRingData(isFinite(score) ? score : 0, ringBox.width || 40, hole, thick);
+            if (!ringUrl) continue;
+            ringCopy.style.background = 'none';
+            ringCopy.style.backgroundImage = 'url("' + ringUrl + '")';
+            ringCopy.style.backgroundSize = '100% 100%';
+            ringCopy.style.backgroundRepeat = 'no-repeat';
+            ringCopy.style.boxShadow = 'none';
+        }
+    }
+
+    function loadPainter() {
+        if (typeof window.html2canvas === 'function') return Promise.resolve(window.html2canvas);
+        if (!loadPainter.task) {
+            loadPainter.task = new Promise(function (resolve, reject) {
+                var script = document.createElement('script');
+                script.src = '/html2canvas.min.js?v=1';
+                script.onload = function () {
+                    if (typeof window.html2canvas === 'function') resolve(window.html2canvas);
+                    else reject(new Error('生成图片失败'));
+                };
+                script.onerror = function () { reject(new Error('生成图片失败')); };
+                document.head.appendChild(script);
             });
         }
-        var liveHero = el.querySelector && el.querySelector('.market-hero');
-        var hero = clone.querySelector && clone.querySelector('.market-hero');
-        if (liveHero && hero) {
+        return loadPainter.task;
+    }
+
+    function rasterOptions(el, used, w, h, pin, marketDetail) {
+        var opts = {
+            backgroundColor: null,
+            scale: used,
+            useCORS: true,
+            logging: false,
+            foreignObjectRendering: false,
+            imageTimeout: 12000,
+            onclone: function (_doc, cloned) {
+                if (!cloned || !cloned.querySelectorAll) return;
+                try {
+                    prepareShareClone(el, cloned, used);
+                    Array.prototype.forEach.call(cloned.querySelectorAll('.uss-share-btn'), function (btn) {
+                        if (btn.parentNode) btn.parentNode.removeChild(btn);
+                    });
+                    if (marketDetail) trimMarketDetailClone(cloned);
+                    var shipCatalog = cloned.querySelector('.sc-ship-catalog');
+                    if (shipCatalog) shipCatalog.style.zoom = '1';
+                } catch (eClone) {}
+            }
+        };
+        if (pin) {
+            opts.width = Math.ceil(w);
+            opts.height = Math.ceil(h);
+        }
+        return opts;
+    }
+
+    async function raster(el) {
+        var paint = await loadPainter();
+        var marketDetail = isMarketDetailHost(el);
+        var box = marketDetail ? captureMarketDetailBox(el) : captureBox(el);
+        var w = box.w;
+        var h = box.h;
+        var maxSide = 8192;
+        var scale = 2;
+        if (w * scale > maxSide) scale = maxSide / w;
+        if (h * scale > maxSide) scale = Math.min(scale, maxSide / h);
+        if (scale < 0.25) scale = 0.25;
+        var attempts = [scale];
+        if (scale > 1) attempts.push(Math.min(1, scale));
+        if (scale > 0.5) attempts.push(0.5);
+        var lastErr = null;
+        var pin = el.classList && (el.classList.contains('bp-shell') || el.classList.contains('st-kiosk'));
+        for (var a = 0; a < attempts.length; a++) {
+            var used = attempts[a];
             try {
-                var heroRes = await fetch(new URL('images/hero/B2.webp', window.location.href).href);
-                if (heroRes.ok) {
-                    var heroData = await blobToData(await heroRes.blob());
-                    if (heroData) {
-                        var heroImg = document.createElement('img');
-                        heroImg.setAttribute('alt', '');
-                        heroImg.setAttribute('src', heroData);
-                        heroImg.setAttribute('style', 'position:absolute;left:-10px;top:-10px;width:calc(100% + 20px);height:calc(100% + 20px);object-fit:cover;object-position:center;z-index:0;pointer-events:none;');
-                        hero.insertBefore(heroImg, hero.firstChild);
-                    }
-                }
-            } catch (eHero) { /* hero stays without photo */ }
-        }
-        pinBlueprintFrame(el, clone);
-        pinKioskFrame(el, clone);
-        if (el.id === 'scDetailArticle') {
-            var detailPage = el.closest('.sc-detail-page');
-            var detailWrap = document.createElement('div');
-            detailWrap.className = 'sc-detail-page';
-            if (detailPage) {
-                var detailVars = getComputedStyle(detailPage);
-                for (var detailIndex = 0; detailIndex < detailVars.length; detailIndex++) {
-                    var detailProp = detailVars[detailIndex];
-                    if (detailProp.indexOf('--') === 0) detailWrap.style.setProperty(detailProp, detailVars.getPropertyValue(detailProp));
-                }
+                var canvas = await paint(el, rasterOptions(el, used, w, h, pin, marketDetail));
+                if (!canvas || !canvas.width || !canvas.height) throw new Error('empty');
+                return { canvas: canvas, scale: used, mime: 'image/png' };
+            } catch (err) {
+                lastErr = err;
             }
-            var detailSpecs = clone.querySelector('.sc-detail-specs');
-            if (detailSpecs) {
-                detailSpecs.style.display = 'flex';
-                detailSpecs.style.flexDirection = 'column';
-                detailSpecs.style.width = '100%';
-            }
-            detailWrap.appendChild(clone);
-            clone = detailWrap;
         }
-        clone.style.margin = '0';
-        clone.style.width = w + 'px';
-        clone.style.maxWidth = w + 'px';
-        if (el.classList && (el.classList.contains('bp-shell') || el.classList.contains('st-kiosk'))) {
-            clone.style.height = h + 'px';
-            clone.style.maxHeight = h + 'px';
-        }
-        var css = collectPageCss();
-        var inner = new XMLSerializer().serializeToString(clone);
-        var canvas = document.createElement('canvas');
-        canvas.width = fullW;
-        canvas.height = fullH;
-        var ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#122d48';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        var sliceCss = Math.round(1400);
-        for (var y = 0; y < h; y += sliceCss) {
-            var sh = Math.min(sliceCss, h - y);
-            var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + sh + '">' +
-                '<foreignObject x="0" y="0" width="' + w + '" height="' + sh + '">' +
-                '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + w + 'px;height:' + h + 'px;background:#122d48;transform:translateY(-' + y + 'px);' + rootVarCss() + '">' +
-                '<style><![CDATA[' + css + '*[hidden]{display:none!important}]]></style>' + inner +
-                '</div></foreignObject></svg>';
-            var image = await loadSvgImage(svg);
-            ctx.drawImage(image, 0, 0, w, sh, 0, Math.round(y * scale), Math.round(w * scale), Math.round(sh * scale));
-        }
-        return { canvas: canvas, scale: scale, mime: 'image/png' };
+        throw lastErr || new Error('生成图片失败');
     }
 
     function fitShareUrl(ctx, url, maxWidth, scale) {
@@ -1246,23 +1584,61 @@
         return canvas;
     }
 
+    function blobFromCanvas(canvas) {
+        return new Promise(function (resolve) {
+            try {
+                canvas.toBlob(function (blob) { resolve(blob || null); }, 'image/png');
+            } catch (err) {
+                try {
+                    var url = canvas.toDataURL('image/png');
+                    var bin = atob(url.split(',')[1] || '');
+                    var bytes = new Uint8Array(bin.length);
+                    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                    resolve(new Blob([bytes], { type: 'image/png' }));
+                } catch (err2) {
+                    resolve(null);
+                }
+            }
+        });
+    }
+
+    function shrinkCanvas(src) {
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(src.width * 0.5));
+        canvas.height = Math.max(1, Math.round(src.height * 0.5));
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+        return canvas;
+    }
+
+    function downloadBlob(png) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(png);
+        a.download = 'ussxc-share.png';
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 1500);
+    }
+
     async function copyCanvas(canvas) {
-        var png = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/png'); });
+        var png = await blobFromCanvas(canvas);
+        var steps = 0;
+        while (!png && canvas && canvas.width > 400 && steps < 3) {
+            canvas = shrinkCanvas(canvas);
+            png = await blobFromCanvas(canvas);
+            steps += 1;
+        }
         if (!png) throw new Error('生成图片失败');
+        var long = canvas.height > 3200 || canvas.width > 4096 || steps > 0;
         var copied = false;
-        if (navigator.clipboard && window.ClipboardItem) {
+        if (!long && navigator.clipboard && window.ClipboardItem) {
             try {
                 await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
                 copied = true;
             } catch (e) { copied = false; }
         }
         if (copied) return;
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(png);
-        a.download = 'ussxc-share.png';
-        a.click();
-        setTimeout(function () { URL.revokeObjectURL(a.href); }, 1500);
-        throw new Error('download');
+        downloadBlob(png);
+        throw new Error(long ? 'long' : 'download');
     }
 
     async function share(host, btn) {
@@ -1275,7 +1651,7 @@
             await copyCanvas(canvas);
             toast('图片已复制');
         } catch (err) {
-            toast(err && err.message === 'download' ? '无法复制，已下载图片' : '生成图片失败');
+            toast(err && err.message === 'long' ? '图片较长，已下载' : (err && err.message === 'download' ? '无法复制，已下载图片' : '生成图片失败'));
         } finally {
             if (btn) btn.disabled = false;
         }

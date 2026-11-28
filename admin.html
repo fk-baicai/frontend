@@ -1210,7 +1210,8 @@
         }
         #userEditModal .user-edit-field > input[type="text"],
         #userEditModal .user-edit-field > input[type="email"],
-        #userEditModal .user-edit-field > input[type="password"] {
+        #userEditModal .user-edit-field > input[type="password"],
+        #userEditModal .user-edit-field > select {
             width: 100%;
             box-sizing: border-box;
         }
@@ -2653,8 +2654,8 @@
                 <div id="auditLogErr" class="err" hidden></div>
             </section>
             <section id="secUsers" style="display: none;">
-                <h2>用户（修改绑定 ID / 邮箱 / 密码 / OOPZ）</h2>
-                <p class="hint">密码留空则不修改。OOPZ ID 绑定后用户端不可自行更换或解绑，仅管理员可在此修改或解绑。仅超级管理员可改「fkbaicai」账户；超级管理员还可删除其他用户（不可删除超级管理员账户及本人）。</p>
+                <h2>用户（修改绑定 ID / 邮箱 / 密码 / OOPZ / 舰队成员）</h2>
+                <p class="hint">密码留空则不修改。OOPZ ID 绑定后用户端不可自行更换或解绑，仅管理员可在此修改或解绑。可在编辑用户时切换「舰队成员」权限（控制签到、舰队社区、OOPZ 绑定等舰队区功能）。管理员账号与注册白名单 Handle 的舰队特权不受此项影响。仅超级管理员可改「fkbaicai」账户；超级管理员还可删除其他用户（不可删除超级管理员账户及本人）。</p>
                 <div id="usersErr" class="err" hidden></div>
                 <div id="usersOk" class="ok" hidden></div>
                 <div class="users-toolbar">
@@ -2673,6 +2674,7 @@
                         <thead>
                             <tr>
                                 <th>绑定 ID</th>
+                                <th>舰队成员</th>
                                 <th>OOPZ ID</th>
                                 <th>邮箱</th>
                                 <th>用户 UUID</th>
@@ -2711,6 +2713,14 @@
                     </div>
                     <p class="user-edit-field-meta" id="ue_oopz_name_line" hidden></p>
                     <p class="user-edit-field-hint">留空或点击「解绑」后保存，可解除 OOPZ 绑定</p>
+                </div>
+                <div class="user-edit-field">
+                    <label for="ue_member_kind">舰队成员</label>
+                    <select id="ue_member_kind">
+                        <option value="fleet">是（舰队成员）</option>
+                        <option value="civilian">否（普通注册）</option>
+                    </select>
+                    <p class="user-edit-field-hint">关闭后无法使用舰队签到、社区写权限、OOPZ 自助绑定等；不设字段的旧账号默认按「是」处理。</p>
                 </div>
                 <div class="user-edit-field">
                     <label for="ue_password">新密码</label>
@@ -3217,9 +3227,15 @@
                         userCanBeDeletedBySuperAdmin(u)
                             ? ' <button type="button" class="btn-delete-user">删除</button>'
                             : '';
+                    var mk =
+                        String(u.memberKindEffective || u.memberKind || 'fleet').toLowerCase() === 'civilian'
+                            ? '否'
+                            : '是';
                     tr.innerHTML =
                         '<td>' +
                         esc(u.bindingId) +
+                        '</td><td>' +
+                        esc(mk) +
                         '</td><td>' +
                         esc(u.oopzId || '—') +
                         '</td><td>' +
@@ -3307,6 +3323,13 @@
                 document.getElementById('ue_binding').value = row.bindingId || '';
                 document.getElementById('ue_email').value = row.email || '';
                 document.getElementById('ue_password').value = '';
+                var mkEl = document.getElementById('ue_member_kind');
+                if (mkEl) {
+                    var eff = String(row.memberKindEffective || row.memberKind || 'fleet')
+                        .trim()
+                        .toLowerCase();
+                    mkEl.value = eff === 'civilian' ? 'civilian' : 'fleet';
+                }
                 var oopzEl = document.getElementById('ue_oopz');
                 if (oopzEl) oopzEl.value = row.oopzId || '';
                 var oopzNameEl = document.getElementById('ue_oopz_name_line');
@@ -3356,6 +3379,14 @@
                     } else {
                         body.oopzId = oopzRaw;
                     }
+                }
+                var mkEl = document.getElementById('ue_member_kind');
+                if (mkEl) {
+                    var nextMk = String(mkEl.value || 'fleet').trim().toLowerCase();
+                    var origEff = String(orig.memberKindEffective || orig.memberKind || 'fleet')
+                        .trim()
+                        .toLowerCase();
+                    if (nextMk !== origEff) body.memberKind = nextMk === 'civilian' ? 'civilian' : 'fleet';
                 }
                 return body;
             }

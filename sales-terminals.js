@@ -45,7 +45,14 @@
     function listings(shop) {
         if (!shop) return null;
         var key = state.side === 'sell' ? 'sells' : 'items';
-        return Array.isArray(shop[key]) ? shop[key] : null;
+        var countKey = state.side === 'sell' ? 'sellCount' : 'itemCount';
+        var stock = shop[key];
+        if (Array.isArray(stock)) {
+            if (!stock.length && Number(shop[countKey]) > 0) return null;
+            return stock;
+        }
+        if (Number(shop[countKey]) > 0) return null;
+        return null;
     }
     function offers(shop) {
         if (state.side === 'sell') return Number(shop.sellCount) > 0 || (Array.isArray(shop.sells) && shop.sells.length > 0);
@@ -93,11 +100,13 @@
     }
     var parents = { zh: {}, places: {} };
     function applyParents() {
+        normalizeShopLocations();
         (data.shops || []).forEach(function (shop) {
             var moon = parents.places[shop.place] || (shop.planet ? '__surface__' : '');
             shop.moon = moon;
             shop.moonZh = (parents.zh && parents.zh[moon]) || '';
         });
+        applyTerminalBrands();
     }
     function moonLabel(key) {
         if (key === '__surface__') return '行星表面';
@@ -121,7 +130,63 @@
         'Green Imperial': '六角湾',
         'Grim HEX': '六角湾',
         GrimHEX: '六角湾',
+        Levski: '列夫斯基',
+        'Pyro Gateway (Nyx)': '派罗星门',
+        'Stanton Gateway (Nyx)': '斯坦顿星门',
+        "People's Service Station Alpha": '人民服务空间站 阿尔法',
+        "People's Service Station Delta": '人民服务空间站 德尔塔',
+        "People's Service Station Lambda": '人民服务空间站 拉姆达',
+        "People's Service Station Theta": '人民服务空间站 西塔',
     };
+    var FIELD_ZH_OFFICIAL = {
+        Stanton: '斯坦顿',
+        Pyro: '派罗',
+        Nyx: '尼克斯',
+        Delamar: '德拉玛',
+        Levski: '列夫斯基',
+    };
+    function hasCjk(s) {
+        return /[\u4e00-\u9fff]/.test(String(s || ''));
+    }
+    function stripLocParen(zh) {
+        return String(zh || '').replace(/\s*[（(][^）)]*[）)]\s*/g, '').trim();
+    }
+    function normalizeShopLocations() {
+        (data.shops || []).forEach(function (shop) {
+            if (shop.system === 'Nyx' && shop.place === 'Levski' && !String(shop.planet || '').trim()) {
+                shop.planet = 'Delamar';
+                if (!hasCjk(shop.planetZh)) shop.planetZh = FIELD_ZH_OFFICIAL.Delamar;
+            }
+        });
+    }
+    function applyTerminalBrands() {
+        var brands = (typeof window !== 'undefined' && window.USS_TERMINAL_BRANDS) || {};
+        var byName = {};
+        (data.shops || []).forEach(function (shop) {
+            var nz = stripLocParen(shop.nameZh);
+            if (hasCjk(nz) && shop.name) byName[shop.name] = nz;
+        });
+        (data.shops || []).forEach(function (shop) {
+            var fromCode = brands[shop.code];
+            if (fromCode && hasCjk(fromCode)) shop.nameZh = fromCode;
+            else if (!hasCjk(stripLocParen(shop.nameZh)) && byName[shop.name]) shop.nameZh = byName[shop.name];
+            ['system', 'planet', 'place'].forEach(function (field) {
+                var en = String(shop[field] || '').trim();
+                if (!en) return;
+                var zhField = field + 'Zh';
+                var cur = stripLocParen(shop[zhField]);
+                if (hasCjk(cur)) {
+                    shop[zhField] = cur;
+                    return;
+                }
+                if (FIELD_ZH_OFFICIAL[en]) shop[zhField] = FIELD_ZH_OFFICIAL[en];
+            });
+            if (shop.place && PLACE_ZH_FALLBACK[shop.place] && !hasCjk(stripLocParen(shop.placeZh))) {
+                shop.placeZh = PLACE_ZH_FALLBACK[shop.place];
+            }
+            if (hasCjk(stripLocParen(shop.nameZh))) shop.nameZh = stripLocParen(shop.nameZh);
+        });
+    }
     function fieldZh(field, en) {
         var i;
         var hit;
@@ -132,6 +197,7 @@
             }
         }
         if (field === 'place') return PLACE_ZH_FALLBACK[en] || '';
+        if (FIELD_ZH_OFFICIAL[en]) return FIELD_ZH_OFFICIAL[en];
         return '';
     }
     var ICO = {
@@ -214,13 +280,20 @@
         });
     }
     function fillSelect(el, placeholder, entries, current, enabled) {
-        var html = '<option value="" hidden>' + escapeHtml(placeholder) + '</option>';
+        var seen = {};
+        var list = [];
         entries.forEach(function (entry) {
+            if (!entry || !entry.value || seen[entry.value]) return;
+            seen[entry.value] = true;
+            list.push(entry);
+        });
+        var html = '<option value="" hidden>' + escapeHtml(placeholder) + '</option>';
+        list.forEach(function (entry) {
             html += '<option value="' + escapeHtml(entry.value) + '"' + (entry.value === current ? ' selected' : '') + '>' + escapeHtml(entry.label) + '</option>';
         });
         el.innerHTML = html;
         el.disabled = !enabled;
-        el.value = current && entries.some(function (entry) { return entry.value === current; }) ? current : '';
+        el.value = current && list.some(function (entry) { return entry.value === current; }) ? current : '';
     }
     function readQuery() {
         var q = new URLSearchParams(window.location.search);
@@ -314,16 +387,28 @@
             state.place = '';
             state.shop = '';
         }
-        var shopsHere = state.place ? scoped('place').slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'en'); }) : [];
+        var seenShopId = {};
+        var shopsHere = state.place
+            ? scoped('place').filter(function (shop) {
+                if (seenShopId[shop.id]) return false;
+                seenShopId[shop.id] = true;
+                return true;
+            }).slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'en'); })
+            : [];
         var terminalPlaceholder = state.place && !shopsHere.length ? '此站点没有这类终端' : '选择终端';
         var names = {};
-        shopsHere.forEach(function (shop) { names[shop.name] = (names[shop.name] || 0) + 1; });
+        var labels = {};
+        shopsHere.forEach(function (shop) {
+            names[shop.name] = (names[shop.name] || 0) + 1;
+            var lab = bi(shop.nameZh, shop.name);
+            labels[lab] = (labels[lab] || 0) + 1;
+        });
         fillSelect(
             els.terminals,
             terminalPlaceholder,
             shopsHere.map(function (shop) {
                 var label = bi(shop.nameZh, shop.name);
-                if (names[shop.name] > 1) {
+                if (names[shop.name] > 1 || labels[label] > 1) {
                     var branch = bi(shop.branchZh, shop.branch);
                     label += ' · ' + (branch || shop.code);
                 }
@@ -1019,17 +1104,46 @@
         if (!name) return Promise.resolve();
         if (!systemsNeeded().length || systemsNeeded().indexOf(name) < 0) return Promise.resolve();
         if (systemLoads[name]) return systemLoads[name];
-        systemLoads[name] = fetchJson(apiUrl('/api/sc/sales-terminals/system/' + encodeURIComponent(name))).then(function (json) {
-            var rows = (json && json.shops) || [];
+        function mergeSystemRows(rows) {
             var byId = {};
-            rows.forEach(function (row) { byId[row.id] = row; });
+            rows.forEach(function (row) {
+                if (!row) return;
+                byId[row.id] = row;
+                byId[String(row.id)] = row;
+            });
             (data.shops || []).forEach(function (shop) {
-                if (shop.system !== name || Array.isArray(shop.items)) return;
-                var row = byId[shop.id] || {};
-                shop.items = row.items || [];
-                shop.sells = row.sells || [];
+                if (shop.system !== name) return;
+                if (Array.isArray(shop.items) && shop.items.length) return;
+                var row = byId[shop.id] || byId[String(shop.id)] || {};
+                shop.items = Array.isArray(row.items) ? row.items : [];
+                shop.sells = Array.isArray(row.sells) ? row.sells : [];
                 queueIndex(shop);
             });
+        }
+        var systemPath = apiUrl('/api/sc/sales-terminals/system/' + encodeURIComponent(name));
+        systemLoads[name] = fetchJson(systemPath, 'sales-terminals-data.json?v=31').then(function (json) {
+            var rows = [];
+            if (json && json.system === name && Array.isArray(json.shops)) {
+                rows = json.shops;
+            } else if (json && Array.isArray(json.shops)) {
+                rows = json.shops.filter(function (shop) { return shop.system === name; });
+            }
+            mergeSystemRows(rows);
+            var pending = (data.shops || []).filter(function (shop) {
+                if (shop.system !== name) return false;
+                var n = state.side === 'sell' ? shop.sellCount : shop.itemCount;
+                var arr = state.side === 'sell' ? shop.sells : shop.items;
+                return Number(n) > 0 && (!Array.isArray(arr) || !arr.length);
+            });
+            if (pending.length) {
+                return fetch('sales-terminals-data.json?v=31').then(function (res) {
+                    if (!res.ok) return;
+                    return res.json();
+                }).then(function (full) {
+                    if (!full || !Array.isArray(full.shops)) return;
+                    mergeSystemRows(full.shops.filter(function (shop) { return shop.system === name; }));
+                }).catch(function () {});
+            }
         }).catch(function (err) {
             delete systemLoads[name];
             throw err;
@@ -1045,7 +1159,7 @@
         .catch(function () {});
     var catalogReady = false;
     Promise.all([
-        fetchJson(apiUrl('/api/sc/sales-terminals'), 'sales-terminals-data.json?v=30'),
+        fetchJson(apiUrl('/api/sc/sales-terminals'), 'sales-terminals-data.json?v=31'),
         fetchJson('sales-place-parents.json?v=3').catch(function () { return { zh: {}, places: {} }; }),
     ])
         .then(function (pair) {
